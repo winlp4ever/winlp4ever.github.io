@@ -2,12 +2,12 @@
 
 @font-face {
     font-family: 'GillSans';
-    src: url('fonts/GillSans.otf');
+    src: url('../fonts/GillSans.otf');
 }
 
 @font-face {
     font-family: 'GillSansLight';
-    src: url('fonts/GillSansLight.otf')
+    src: url('../fonts/GillSansLight.otf')
 }
 
 @font-face {
@@ -20,7 +20,7 @@ body, html {
     padding:0;
     font-family: 'GillSans';
     background-color: rgb(241, 245, 248);
-    background-image: url('background_.jpg');
+    background-image: url('../img/background_.jpg');
     background-repeat: no-repeat;
     background-attachment: fixed;
     background-position: center; 
