@@ -1,0 +1,197 @@
+
+
+@font-face {
+    font-family: 'GillSans';
+    src: url('fonts/GillSans.otf');
+}
+
+@font-face {
+    font-family: 'GillSansLight';
+    src: url('fonts/GillSansLight.otf')
+}
+
+@font-face {
+    font-family: 'Helvetica';
+    src: url('fonts/Helvetica.ttf');
+}
+
+body, html {
+    margin:0;
+    padding:0;
+    font-family: 'GillSans';
+    background-color: rgb(241, 245, 248);
+    background-image: url('background_.jpg');
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-position: center; 
+}
+
+#links {
+    position: fixed;
+    z-index: -1;
+    margin-top: 10px;
+    margin-left: 5px;
+    transition: height 0.2s linear, background-color 0.2s linear, opacity 0.2s linear;
+    overflow:hidden;
+    height: 0px;
+    width: 20%;
+    min-width: 300px;
+    opacity: 0;
+    background-color: rgb(97, 64, 84);
+}
+
+#menuclick:hover + #links, #links:hover {
+    border-radius: 3px;
+    height: 50px;  
+    font-size: 36px;
+    display: flex;
+    justify-content: space-around; 
+    background-color: rgb(97, 64, 84);
+    opacity: 1;
+    overflow: visible;
+    box-shadow: 2px 2px #888888
+}
+
+#links span {
+    height: 100%;
+}
+
+.fab.fa-github {
+    color: rgb(184, 140, 120);
+}
+
+.fab.fa-github:hover {
+    color: rgb(252, 184, 128);
+}
+
+.fab.fa-facebook {
+    color: rgb(125, 129, 197);
+}
+
+.fab.fa-facebook:hover {
+    color: rgb(158, 163, 250);
+}
+
+.fab.fa-linkedin {
+    color: rgb(125, 197, 176)
+}
+
+.fab.fa-linkedin:hover {
+    color: rgb(111, 226, 192)
+}
+
+span .fab {
+    margin-top: 10px;
+    vertical-align: middle;
+    transition: font-size 0.2s linear, transform 0.2s linear;
+}
+
+span .fab:hover {
+    margin-top: 10px;
+    transform: rotate(20deg) scale(1.7);
+}
+#ruler {
+    width: 30px;
+}
+#menuclick {
+    margin-top: 15px;
+    margin-left: 20px;
+    position: fixed;
+    z-index: 0;
+    border: None;
+    font-size: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 20px; 
+    background-color: transparent;
+    color: rgb(13, 13, 41);
+    transition: background-color 1s linear, color 1s linear;
+    margin-right: 50px;
+}
+
+#menuclick:hover {
+    animation: rot 0.8s;
+    box-shadow: 0 2px 1px 0 black, 0 2px 6px 0 black;
+    background-color: antiquewhite;
+    color: rgb(199, 63, 63);
+}
+
+@keyframes rot {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    25% {
+        transform: rotate(23deg) scale(0.8);
+    }
+    75% {
+        transform: rotate(-32deg) scale(1.2);
+    }
+    100% {
+        transform: rotate(0deg);
+    }
+}
+
+#annotate {
+    position: fixed;
+    z-index: 2;
+    font-size: 10px;
+    background-color: whitesmoke;
+}
+
+#mainbody {
+    position:absolute;
+    z-index: -2;
+    margin-top: 75px;
+    margin-left: 10%;
+    margin-right: 10%;
+    width: 80%;
+    background-color: rgb(255, 249, 249);
+}
+
+#navi {
+    display: flex;
+    direction: row;
+    margin-top: 20px;
+    margin-right: 50px;
+    font-size: 16px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    float: right;
+}
+
+#navi span {
+    border: 1px solid #ffffff00;
+    display: table-cell;
+    text-align: center;
+    margin-left: 10px;
+    margin-right: 10px;
+    color: rgb(36, 36, 36);
+    padding-top: 5px;
+    padding-left: 2px;
+    padding-right: 2px;
+}
+
+#navi span:hover {
+    color: rgb(248, 193, 193);
+    border-radius: 2px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgb(248, 193, 193);
+}
+
+.slsh {
+    margin-top: 5px;
+    width: 1px;
+    background-color: rgb(54, 54, 54);
+    height: 16px;
+}
+
+.post {
+    margin: 20px;
+}
+
+pre {
+    border-radius: 5px;
+}
+
