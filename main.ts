@@ -50,3 +50,4 @@ lin.hover(function (e) {
     annot.style.marginLeft = (e.pageX-100) + 'px';
 }, recolor);
 
+var navi = document.getElementById('navi');

@@ -180,6 +180,11 @@ span .fab:hover {
     border-color: rgb(248, 193, 193);
 }
 
+span a {
+    color: inherit;
+    text-decoration: none;
+}
+
 .slsh {
     margin-top: 5px;
     width: 1px;
