@@ -99,17 +99,20 @@ span .fab:hover {
     position: fixed;
     z-index: 0;
     border: None;
-    font-size: 20px;
+    font-size: 24px;
     width: 40px;
     height: 40px;
     border-radius: 20px; 
     background-color: transparent;
     color: rgb(13, 13, 41);
-    transition: background-color 1s linear, color 1s linear;
+    transform: rotate(12deg);
+    text-shadow: 2px 2px 0px rgba(255, 114, 114, 0.781);
+    transition: background-color 0.5s linear, color 0.5s linear, text-shadow 0.5s linear;
     margin-right: 50px;
 }
 
 #menuclick:hover {
+    text-shadow: 2px 2px 0px rgba(58, 183, 255, 0.781);
     animation: rot 0.8s;
     box-shadow: 0 2px 1px 0 black, 0 2px 6px 0 black;
     background-color: antiquewhite;
@@ -118,17 +121,17 @@ span .fab:hover {
 
 @keyframes rot {
     0% {
-        transform: rotate(0deg);
+        transform: rotate(12deg);
     }
 
     25% {
-        transform: rotate(23deg) scale(0.8);
+        transform: rotate(35deg) scale(0.8);
     }
     75% {
-        transform: rotate(-32deg) scale(1.2);
+        transform: rotate(-10deg) scale(1.2);
     }
     100% {
-        transform: rotate(0deg);
+        transform: rotate(12deg);
     }
 }
 
@@ -155,7 +158,7 @@ span .fab:hover {
     margin-top: 20px;
     margin-right: 50px;
     font-size: 16px;
-    letter-spacing: 2px;
+    letter-spacing: 3px;
     text-transform: uppercase;
     float: right;
 }
@@ -166,10 +169,11 @@ span .fab:hover {
     text-align: center;
     margin-left: 10px;
     margin-right: 10px;
-    color: rgb(36, 36, 36);
+    color: rgb(20, 20, 20);
     padding-top: 5px;
     padding-left: 2px;
     padding-right: 2px;
+    transition: border-color 0.4s linear, color 0.2s linear;
 }
 
 #navi span:hover {

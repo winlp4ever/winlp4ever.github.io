@@ -1,17 +1,34 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <!-- basic set-ups -->
         <meta charset="utf8">
         <meta name='author' content="me">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link rel="stylesheet" href="css/prism.css"/>
+        <!-- css style files (local  and fontawesome and devicon -->
         <link rel='stylesheet' href='css/style.css'>
+        <link rel='stylesheet' href='css/app.css'>
         <link rel="stylesheet" href="https://cdn.rawgit.com/konpa/devicon/df6431e323547add1b4cf45992913f15286456d3/devicon.min.css">
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
+        
+        <!-- prism.css to enable code snippets with syntax highlighting on website -->
+        <link rel="stylesheet" href="css/prism.css"/>
+
+        <!-- vega-lite to enable data visualization on website -->
+        <script src="https://cdn.jsdelivr.net/npm/vega@5.3.5/build/vega.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/vega-lite@3.2.1/build/vega-lite.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/vega-embed@4.0.0/build/vega-embed.js"></script>
+
+        <style media="screen">
+            /* Add space between Vega-Embed links  */
+            .vega-actions a {
+                margin-right: 5px;
+            }
+        </style>
     </head>
     <body>
-        
-        <button id='menuclick'><i class="fas fa-stream"></i></button>
+        <!-- links bar (where to share contacts) -->
+        <button id='menuclick'><i class="fab fa-slack-hash"></i></button>
         <div id='links'>
             <span id='ruler'></span>
             <span><a href='https://github.com/winlp4ever' target='_blank'><i class="fab fa-github"></i></a></span>
@@ -19,24 +36,40 @@
             <span><a href='https://www.linkedin.com/in/ha-quang-le/' target='_blank'><i class="fab fa-linkedin"></i></a></span>
             <div id='annotate'></div>
         </div>
+        <!-- main menu - navigator -->
         <div id='navi'>
             <span><a href='//winlp4ever.github.io/aboutme/.' target='_blank'>About me</a></span>
             <div class='slsh'></div>
             <span>Fun stuffs</span>
         </div>
+
+        <!-- mainbody, where to write posts -->
         <div id='mainbody'>
+            <!-- a post, div class post -->
             <div class='post'>
                 <h1 class='posttitle'>Example</h1>
                 <p>
                     When \(a \ne 0\), there are two solutions to \(ax^2 + bx + c = 0\) and they are
                     $$x = {-b \pm \sqrt{b^2-4ac} \over 2a}.$$
                 </p>
+                <!-- code snippets always enclosed in pre code flags -->
                 <pre class="language-python"><code>
 class foo:
     def __init__(self):
         pass
                 </code></pre>
-            
+                <p>Now a little data visualizations:</p>
+
+                <div id="plt"></div>
+
+                <script>
+    const spec = "app/data/bar.vl.json";
+  	vegaEmbed('#plt', spec)
+    	// result.view provides access to the Vega View API
+      .then(result => console.log(result))
+      .catch(console.warn);
+                
+                </script>
             </div>
             
         </div>

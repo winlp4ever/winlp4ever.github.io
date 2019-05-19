@@ -4,6 +4,7 @@ var f = function () {
     menuclick.style.boxShadow = '0 2px 1px 0 grey, 0 2px 6px 0 grey';
     menuclick.style.backgroundColor = 'antiquewhite';
     menuclick.style.color = 'rgb(199, 63, 63)';
+    menuclick.style.textShadow = '2px 2px 0px rgba(58, 183, 255, 0.781)';
 };
 links.addEventListener('mouseover', f);
 menuclick.addEventListener('mouseover', f);
@@ -11,7 +12,8 @@ var o = function () {
     menuclick.style.boxShadow = 'none';
     menuclick.style.backgroundColor = 'transparent';
     menuclick.style.color = 'rgb(13, 13, 41)';
-    menuclick.style.transition = 'background-color 1s linear, color 1s linear';
+    menuclick.style.transition = 'background-color 0.5s linear, color 0.5s linear';
+    menuclick.style.textShadow = '2px 2px 0px rgba(255, 114, 114, 0.781)';
 };
 links.addEventListener('mouseout', o);
 menuclick.addEventListener('mouseout', o);
@@ -41,3 +43,4 @@ lin.hover(function (e) {
     annot.style.marginTop = (e.pageY - 5) + 'px';
     annot.style.marginLeft = (e.pageX - 100) + 'px';
 }, recolor);
+var navi = document.getElementById('navi');
