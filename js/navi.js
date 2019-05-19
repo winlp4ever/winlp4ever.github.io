@@ -14,6 +14,7 @@ $(document).ready(function () {
         }
     });
     $('#home').click(function () {
+        $('#posts').css('background-color', 'inherit');
         $('#coding, #dl').css('display', 'none');
         $('.home').css('display', 'inherit');
         $('.coding, .dl').css('display', 'none');
