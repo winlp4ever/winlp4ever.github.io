@@ -31,3 +31,9 @@ h1:hover + .post-title-underline {
 .coding {
     display: none;
 }
+
+.post img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
