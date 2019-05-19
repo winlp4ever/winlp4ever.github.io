@@ -12,6 +12,7 @@
     letter-spacing: 3px;
     text-transform: uppercase;
     float: right;
+    color: rgb(206, 214, 219);
 }
 
 #navi span {
@@ -20,7 +21,7 @@
     text-align: center;
     margin-left: 2px;
     margin-right: 2px;
-    color: rgb(20, 20, 20);
+    
     padding-top: 4px;
     padding-left: 2px;
     padding-right: 2px;

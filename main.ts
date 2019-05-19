@@ -14,7 +14,7 @@ menuclick.addEventListener('mouseover', f);
 var o = function () {
     menuclick.style.boxShadow = 'none';
     menuclick.style.backgroundColor = 'transparent';
-    menuclick.style.color = 'rgb(13, 13, 41)';
+    menuclick.style.color = 'rgb(213, 213, 252)';
     menuclick.style.transition = 'background-color 0.5s linear, color 0.5s linear';
     menuclick.style.textShadow = '2px 2px 0px rgba(255, 114, 114, 0.781)';
 };
@@ -24,7 +24,7 @@ menuclick.addEventListener('mouseout', o);
 var annot = document.getElementById('annotate')
 
 var recolor = function () {
-    links.style.background = 'rgb(97, 64, 84)';
+    links.style.backgroundColor = '#230c0a';
     annot.innerHTML = '';
 }
 
