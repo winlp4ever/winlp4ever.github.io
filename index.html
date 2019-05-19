@@ -28,7 +28,7 @@
     </head>
     <body>
         <!-- links bar (where to share contacts) -->
-        <button id='menuclick'><i class="fab fa-slack-hash"></i></button>
+        <button id='menuclick'><i class="fa fa-hashtag"></i></button>
         <div id='links'>
             <span id='ruler'></span>
             <span><a href='https://github.com/winlp4ever' target='_blank'><i class="fab fa-github"></i></a></span>
@@ -40,7 +40,9 @@
         <div id='navi'>
             <span><a href='//winlp4ever.github.io/aboutme/.' target='_blank'>About me</a></span>
             <div class='slsh'></div>
-            <span>Fun stuffs</span>
+            <span id='fun-stuffs'>Fun stuffs</span>
+
+            <span id='posts'>Posts</span>
         </div>
 
         <!-- mainbody, where to write posts -->
@@ -77,7 +79,10 @@ class foo:
         
         <script src="http://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
         <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML' async></script>
-        <script src='js/main.js'></script>
+        
         <script src="js/prism.js"></script>
+        <!-- my js -->
+        <script src='js/main.js'></script>
+        <script src='js/navi.js'></script>
     </body>
 </html>
