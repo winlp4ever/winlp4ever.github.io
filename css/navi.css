@@ -1,0 +1,66 @@
+@font-face {
+    font-family: 'rubik';
+    src: url('../fonts/Rubik-Medium.ttf');
+}
+#navi {
+    display: flex;
+    direction: row;
+    margin-top: 20px;
+    margin-right: 50px;
+    font-family: rubik;
+    font-size: 14px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    float: right;
+}
+
+#navi span {
+    border: 1px solid #ffffff00;
+    display: table-cell;
+    text-align: center;
+    margin-left: 2px;
+    margin-right: 2px;
+    color: rgb(20, 20, 20);
+    padding-top: 4px;
+    padding-left: 2px;
+    padding-right: 2px;
+    transition: border-color 0.4s linear, color 0.2s linear;
+}
+
+#navi span:hover {
+    color: rgb(248, 193, 193);
+    border-radius: 2px;
+    border-width: 1px;
+    border-style: solid;
+    border-color: rgb(248, 193, 193);
+}
+
+span a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.slsh {
+    margin-left: 8px;
+    margin-right: 8px;
+    margin-top: 5px;
+    width: 1px;
+    background-color: rgb(54, 54, 54);
+    height: 16px;
+    transform: rotate(20deg);
+}
+
+.drleft {
+    font-size: 14px;
+    margin-left: 0px;
+    margin-top: 4px;
+    padding: auto;
+}
+
+.drleft i {
+    transition: transform 0.5s linear;
+}
+
+#coding, #dl {
+    display:none;
+}

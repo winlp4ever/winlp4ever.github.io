@@ -1,4 +1,33 @@
+.post h1 {
+    letter-spacing: 2px;
+    text-shadow: 1px 1px 0px rgba(167, 192, 230, 0.781);
+    margin-bottom: 0px;
+}
+
+.post-title-underline {
+    margin-top: 0px;
+    height: 3px;
+    width: 30px;
+    background-color: black;
+    border-radius: 1px;
+    transition: background-color 0.1s linear, width 0.2s ease-in-out;
+}
+
+h1:hover + .post-title-underline {
+    width: 75px;
+    background-color: rgb(163, 56, 56);
+}
+
 #plt {
     display: flex;
     justify-content: center;
+}
+
+.post a {
+    text-decoration: none;
+    color: rgb(79, 45, 231);
+}
+
+.coding {
+    display: none;
 }
