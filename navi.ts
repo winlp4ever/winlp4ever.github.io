@@ -15,9 +15,9 @@ $(document).ready(function () {
     });
     $('#home').click(function () {
         $('#posts').css('background-color', 'inherit');
-        $('#coding, #dl').css('display', 'none');
+        $('#coding, #dl, .coding, .dl').css('display', 'none');
         $('.home').css('display', 'inherit');
-        $('.coding, .dl').css('display', 'none');
+        $('.drleft i').css('transform', 'none');
     })
     $('#coding').click(function () {
         $('.coding').css('display', 'inherit');
