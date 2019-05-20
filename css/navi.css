@@ -3,7 +3,7 @@
     direction: row;
     margin-top: 20px;
     margin-right: 50px;
-    font-family: Helvetica;
+    font-family: elianto;
     font-size: 12px;
     letter-spacing: 0px;
     text-transform: none;
@@ -26,11 +26,11 @@
 }
 
 #navi span:hover {
-    color: rgb(248, 193, 193);
+    color: rgb(161, 241, 255);
     border-radius: 2px;
     border-width: 1px;
     border-style: solid;
-    border-color: rgb(248, 193, 193);
+    border-color: rgb(214, 250, 255);
 }
 
 span a {

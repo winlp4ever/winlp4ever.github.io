@@ -19,12 +19,12 @@ links.addEventListener('mouseout', o);
 menuclick.addEventListener('mouseout', o);
 var annot = document.getElementById('annotate');
 var recolor = function () {
-    links.style.backgroundColor = '#230c0a';
+    links.style.backgroundColor = 'rgba(0,0,0,0)';
     annot.innerHTML = '';
 };
 var git = $(".fab.fa-github");
 git.hover(function (e) {
-    links.style.backgroundColor = '#423323';
+    links.style.backgroundColor = '#c97806';
     annot.innerHTML = 'Follow me on Git!';
     annot.style.marginTop = (e.pageY - 5) + 'px';
     annot.style.marginLeft = (e.pageX - 100) + 'px';
