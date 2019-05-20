@@ -1,6 +1,6 @@
 var count = 0;
-var hidd = { 'max-width': '0px', 'opacity': 0 };
-var visi = { 'max-width': '100px', 'opacity': 1 };
+var hidd = { 'max-width': '0px', 'opacity': 0, 'margin-left': '0px', 'margin-right': '-5px' };
+var visi = { 'max-width': '100px', 'opacity': 1, 'margin-left': '2px', 'margin-right': '2px' };
 $(document).ready(function () {
     $('#coding, #dl').css(hidd);
     $('.coding, .dl').css('display', 'none');
