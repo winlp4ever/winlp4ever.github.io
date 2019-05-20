@@ -1,0 +1,32 @@
+#outline {
+    font-family: 'tnr';
+    font-size: 12px;
+    position: fixed;
+    margin-top: 75px;
+    margin-left: 10px;
+    border-radius: 2px;
+    overflow: hidden;
+    float: left;
+    width: 18%;
+    background-color: rgb(214, 191, 191);
+    display: flex;
+    flex-direction: column;
+}
+
+#outline a {
+    text-align: left;
+    word-wrap: break-word;
+    width: auto;
+    margin: 5px;
+    text-decoration: none;
+    color: rgb(5, 4, 41);
+    padding-left: 5px;
+    padding-right: 5px;
+    transition: font-size 0.2s ease-in;
+}
+
+#outline a:hover {
+    font-size: 14px;
+    color: rgb(30, 28, 110);
+}
+

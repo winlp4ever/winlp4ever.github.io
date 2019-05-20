@@ -9,6 +9,7 @@
         <link rel='stylesheet' href='css/style.css'>
         <link rel='stylesheet' href='css/app.css'>
         <link rel='stylesheet' href='css/navi.css'>
+        <link rel='stylesheet' href='css/outline.css'>
 
         <link rel="stylesheet" href="https://cdn.rawgit.com/konpa/devicon/df6431e323547add1b4cf45992913f15286456d3/devicon.min.css">
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
@@ -40,21 +41,25 @@
         </div>
         <!-- main menu - navigator -->
         <div id='navi'>
-            <span id='home'>Home</span>
-            <div class='slsh'></div>
-            <span><a href='//winlp4ever.github.io/aboutme/.' target='_blank'>About me</a></span>
-            <div class='slsh'></div>
+            
+            
             <span id='posts'>Posts</span>
-            <div class='drleft'><i class="fas fa-caret-down"></i></div>
+            <div class='drleft'><i class="fa fa-angle-down fa-fw"></i></div>
             <span id='coding'>Coding</span>
             <span id='dl'>DLearning</span>
+
+            <div class='slsh'></div>
+            <span id='home'>Home</span>
+            <span><a href='//winlp4ever.github.io/aboutme/.' target='_blank'>About me</a></span>
         </div>
+
+        <div id='outline'></div>
 
         <!-- mainbody, where to write posts -->
         <div id='mainbody'>
             <!-- a post, div class post -->
-            <div class='post home'>
-                <h1 class='posttitle'>Example</h1>
+            <div class='post home' id='example'>
+                <h1 class='posttitle'>Example i just try to make this line very long, noe</h1>
                 <p>
                     When \(a \ne 0\), there are two solutions to \(ax^2 + bx + c = 0\) and they are
                     $$x = {-b \pm \sqrt{b^2-4ac} \over 2a}.$$
@@ -82,7 +87,12 @@ class foo:
                 <img src='webicon.jpg' width='200'/>
             </div>
             
-            <div class='post dl'>dl</div>
+            <div class='post home' id='ex'>
+                <h1 class='posttitle'>something else</h1>
+            </div>
+            <div class='post dl' id='dl'>
+                <h1 class='posttitle'>dl</h1>
+            </div>
             <div class='post coding'>coding</div>
         </div>
         
@@ -94,7 +104,9 @@ class foo:
         <script src="js/prism.js"></script>
         <!-- my js -->
         <script src='js/main.js'></script>
+        <script src='js/outline.js'></script>
         <script src='js/navi.js'></script>
         <script src='js/app.js'></script>
+        
     </body>
 </html>
