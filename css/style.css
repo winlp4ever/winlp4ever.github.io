@@ -14,23 +14,13 @@
 }
 
 @font-face {
-    font-family: 'GillSans';
-    src: url('../fonts/GillSans.otf');
-}
-
-@font-face {
-    font-family: 'GillSansLight';
-    src: url('../fonts/GillSansLight.otf')
+    font-family: 'palatino';
+    src: url('../fonts/palatino.ttf');
 }
 
 @font-face {
     font-family: 'Helvetica';
     src: url('fonts/Helvetica.ttf');
-}
-
-@font-face {
-    font-family: 'tnr';
-    src: url('fonts/tnr.ttf');
 }
 
 @font-face {
@@ -41,7 +31,7 @@
 body, html {
     margin:0;
     padding:0;
-    font-family: 'tnr';
+    font-family: 'palatino';
     background-image: url('../img/background.png');
     /*background-color: rgb(24, 27, 48);*/
     background-size: 1920px;

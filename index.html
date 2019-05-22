@@ -15,7 +15,7 @@
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
         
         <!-- prism.css to enable code snippets with syntax highlighting on website -->
-        <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/styles/tomorrow.min.css">
+        <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.15.6/build/styles/tomorrow.min.css">
         
 
         <!-- vega-lite to enable data visualization on website -->
@@ -61,8 +61,8 @@
         <!-- mainbody, where to write posts -->
         <div id='mainbody'>
             <!-- a post, div class post -->
-            <div class='post home coding' id='about-me'>
-                <h1 class='posttitle'>GMM clustering visualization</h1>
+            <div class='post home coding' id='gmm'>
+                <h1>GMM clustering visualization</h1>
                 <p>
                     When it comes to clustering, <i>Gaussian Mixture model</i> is often amongst our first choices as method. Let's find out how to visualize it in a 
                     best way:
@@ -131,7 +131,75 @@
                 <img src='img/gmm.png' width='600'/>
             </div>
         
-            <div class='post coding'>coding</div>
+            <div class='post home coding' id='tokenizer'>
+                <h1>Use <code>CountVectorizer</code> as a Tokenizer</h1>
+
+                <p>People often use <code>nltk</code>'s tokenizer for text tokenization. Though it doesn't perform poorly, as a research tool it's evidently not so 
+                    well optimized, and sometimes requires a lot of engineering efforts to work perfectly. There are tons of better alternatives, though, and unknown to
+                many, <code>CountVectorizer</code> of <code>sklearn</code> can be used as a very good <code>tokenizer</code> due to some reasons:</p>
+
+                <ul>
+                    <li>As an industrial product, it is very well optimized, so we don't need to be very meticulous to make it work.</li>
+                    <li>All useful hyperparameters are there so that your program can be done in one-pass: As a matter of fact, we don't only tokenize text, we also
+                        get rid of words overwhelmingly present, or ones that rarely appear. For some tasks like topic-modeling, we even need to erase out all stop words.
+                    And that's a lot of preprocessing to do. With <code>CountVectorizer</code>, we can just simply pass all demands as params to the function, and that's all 
+                    </li>
+                    <li>When it comes to Machine Learning, <code>sklearn</code> seems inevitable. It's a must-learn toolbox. So try to keep as much as possible works
+                    inside it may be a good idea.</li>
+                </ul>
+
+                <p>So now, how do?</p>
+
+                <p>A wanderer over the sklearn's docs may find it an over-kill, but the idea behind the model itself is quite simple. In fact, a 
+                    <code>CountVectorizer</code>
+                is simply composed of a <i>tokenizer</i>, who tokenizes and normalizes all tokens, then an <i>analyzer</i> to filter them by conditions.</p>
+
+                <p>Though the model transforms texts to one-hot encodings, once fitted, its vocabulary is all what we want. With some twists, it can easily handle 
+                    <strong>text-to-bow</strong>
+                and <strong>text-to-boi</strong> and vice-versa:</p>
+                <pre><code class='python'>
+                        class Vocab(CountVectorizer):
+                        def __init__(self, texts, **kwargs):
+                            super(Vocab, self).__init__(**kwargs)
+                            self.fit(texts)
+                    
+                        def __len__(self):
+                            return len(self.vocabulary_)
+                    
+                        def _to_indices(self, sent):
+                            analyzer = self.build_analyzer()
+                            seq = analyzer(sent)
+                            indices = []
+                            for w in seq:
+                                try:
+                                    indices.append(self.vocabulary_[w])
+                                except KeyError:
+                                    continue
+                            return indices
+                </code></pre>
+            </div>
+            <div class='post home coding' id='saveloadpickle'>
+                <h1>Save and load models with <code>pickle</code></h1>
+                <p>There exist plenty formats for our <strong>ML</strong> models, as different as they are, we can actually use only one tool to load and save models in 
+                    whichever format: 
+                <code>pickle</code>.</p>
+                <pre><code class='python'>
+                    def save_model(model, filename):
+                        print('saving model to %s ...' % filename)
+                        pickle.dump(model, open(filename, 'wb'))
+                    
+                    def load_model(filename):
+                        print('loading model from %s ...' % filename)
+                        return pickle.load(open(filename, 'rb'))    
+                </code></pre>
+                <p>Assume you just create and fit a <code>CountVectorizer</code> object, just simply save and load the model with:</p>
+                <pre><code class='python'>
+                    save_model(your_object, your_savename_here)
+                    model = load_model(your_savename_here)
+                </code></pre>
+                <p><strong>P/S:</strong> When loading the model with pickle in a different file than when you define it, 
+                    you have to also re-import the object type in this file, otherwise <code>pickle</code> will complain about unknown object type.</p>
+            </div>
         </div>
         
         
@@ -146,7 +214,7 @@
         <script src='js/app.js'></script>
         
         <!-- code syntax highlighting-->
-        <script src="//cdnjs.cloudflare.com/ajax/libs/highlight.js/9.15.6/highlight.min.js"></script>
+        <script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.15.6/build/highlight.min.js"></script>
         <script>hljs.initHighlightingOnLoad();</script>
         
     </body>

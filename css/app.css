@@ -68,3 +68,9 @@ h1:hover + .post-title-underline {
     margin-left: auto;
     margin-right: auto;
 }
+
+.post strong {
+    font-size: 20px;
+    font-family: 'Helvetica';
+    color: rgb(55, 55, 180);
+}
