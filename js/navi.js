@@ -4,9 +4,9 @@ var visi = { 'max-width': '100px', 'opacity': 1, 'margin-left': '8px', 'margin-r
 $(document).ready(function () {
     $('#coding, #dl').css(hidd);
     $('.coding, .dl').css('display', 'none');
+    $('.home').css('display', 'inherit');
     $('#posts').click(function () {
         if ($('#coding').css('max-width') == '0px') {
-            $('#posts').css('background-color', 'rgba(216, 139, 134, 0.2)');
             $('#coding, #dl').css(visi);
             $('.drleft .fa').css('transform', 'rotate(-90deg)');
         }
@@ -24,11 +24,11 @@ $(document).ready(function () {
         $('.drleft .fa').css('transform', 'none');
     });
     $('#coding').click(function () {
-        $('.coding').css('display', 'inherit');
         $('.dl, .home').css('display', 'none');
+        $('.coding').css('display', 'inherit');
     });
     $('#dl').click(function () {
-        $('.dl').css('display', 'inherit');
         $('.coding, .home').css('display', 'none');
+        $('.dl').css('display', 'inherit');
     });
 });

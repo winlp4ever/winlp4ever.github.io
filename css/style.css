@@ -4,8 +4,8 @@
 }
 
 @font-face {
-    font-family: 'dyeline';
-    src: url('../fonts/DyeLine\ Regular.ttf')
+    font-family: 'ikaros';
+    src: url('../fonts/Ikaros-Regular.otf')
 }
 
 @font-face {
@@ -34,8 +34,8 @@
 }
 
 @font-face {
-    font-family: 'rubik';
-    src: url('../fonts/Rubik-Regular.ttf');
+    font-family: 'aubrey';
+    src: url('../fonts/aubrey.ttf');
 }
 
 body, html {
@@ -128,7 +128,7 @@ span .fab:hover {
     height: 32px;
     border-radius: 20px; 
     background-color: transparent;
-    color: rgb(213, 213, 252);
+    color: rgb(245, 245, 245);
     transform: rotate(12deg);
     text-shadow: 2px 2px 0px rgba(255, 114, 114, 0.781);
     transition: background-color 0.5s linear, color 0.5s linear, text-shadow 0.5s linear;

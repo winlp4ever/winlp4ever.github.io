@@ -51,52 +51,86 @@
 
             <div class='slsh'></div>
             <span id='home'>Home</span>
-            <span><a href='//winlp4ever.github.io/aboutme/.' target='_blank'>About me</a></span>
+            <span><a href='//winlp4ever.github.io/aboutme/.' target='_blank'>My CV</a></span>
         </div>
 
-        <div id='outline'></div>
+        <div id='outline'>
+            <span><i class="fa fa-hashtag"></i>Content</span>
+        </div>
 
         <!-- mainbody, where to write posts -->
         <div id='mainbody'>
             <!-- a post, div class post -->
-            <div class='post home' id='thank-you-note'>
-                <h1 class='posttitle'>Thank you notes</h1>
+            <div class='post home coding' id='about-me'>
+                <h1 class='posttitle'>GMM clustering visualization</h1>
                 <p>
-                    When \(a \ne 0\), there are two solutions to \(ax^2 + bx + c = 0\) and they are
-                    $$x = {-b \pm \sqrt{b^2-4ac} \over 2a}.$$
+                    When it comes to clustering, <i>Gaussian Mixture model</i> is often amongst our first choices as method. Let's find out how to visualize it in a 
+                    best way:
                 </p>
+                <p>First, we build up an artificial data, in real situations, of course it is provided:</p>
                 <!-- code snippets always enclosed in pre code flags -->
                 <pre><code class="python">
-class foo:
-    def __init__(self):
-        self.s = 'echo'
-
-if __name__ == '__main__':
-    print('do something')
+                        n_samples = 1000
+                        mus = [(1., 1.), (5., 2.), (3., 4.)]
+                        covs = [(0.1, 0.5), (0.5, 0.6), (0.2, 0.4)]
+                        alphas = [0.2, 0.5, 0.3]
+                        gauss = np.random.choice(3, p=alphas, size=n_samples)
+                        gauss = np.eye(3)[gaussians].astype('int')
+                        
+                        U = np.stack([np.random.multivariate_normal(mus[i], np.diag(covs[i]), size=n_samples) 
+                                             for i in range(3)], axis=1)
+                        X_train = np.zeros(shape=(n_samples, 2))
+                        X_train[:, 0] = np.einsum('ij, ij->i', gauss, U[:,:, 0])
+                        X_train[:, 1] = np.einsum('ij, ij->i', gauss, U[:,:, 1])
+                        print(X_train.shape)
                 </code></pre>
-                <p>Now a little data visualizations:</p>
+                <p>Now let define a GMM model, remember to import <code>GaussianMixture</code> model from <code>sklearn</code> already:</p>
 
-                <div id="plt"></div>
+                <pre><code class='python'>
+                        gmm = GaussianMixture(n_components=3, init_params='kmeans')
+                        Y = gmm.fit_predict(X_train) # model is train and output the final predictions on data
+                </code></pre>
 
-                <script>
-    const spec = "app/data/bar.vl.json";
-  	vegaEmbed('#plt', spec)
-    	// result.view provides access to the Vega View API
-      .then(result => console.log(result))
-      .catch(console.warn);
-                
-                </script>
+                <p>With the help of <code>contour</code> functions in <code>matplotlib</code>, we will be able to produce something pretty. The idea is 
+                quite simple, we construct a grid, compute all grid nodes' values with our model, then draw contours.</p>
+                <pre><code class='python'>
+                        gridx, gridy = np.linspace(0, 8, num=100), np.linspace(-1, 7, num=100)# on range of points
+                        x, y = np.meshgrid(gridx, gridy)
+                        xy = np.array([x.ravel(), y.ravel()]).T
+                        z = -gmm.score_samples(xy)
+                        z = z.reshape(x.shape)
+                </code></pre>
+                <p>The final plotting code:</p>
+                <pre><code class='python'>
+                        plt.figure(figsize=(15, 10))
 
-                <p>show image:</p>
-                <img src='webicon.jpg' width='200'/>
+                        mapcolor = 'Spectral'
+                        contours = plt.contour(x, y, z, norm=LogNorm(vmin=1.0, vmax=1000.0),
+                                         levels=np.logspace(0, 3, 20), cmap=mapcolor, alpha=1)
+                        plt.clabel(contours, inline=True, fontsize=12)
+                        plt.contourf(x, y, z, norm=LogNorm(vmin=1.0, vmax=1000.0),
+                                         levels=np.logspace(0, 3, 20), cmap=mapcolor, alpha=0.3)
+                        plt.imshow(z, extent=[0, 8, -1, 7], origin='lower',
+                                   cmap=mapcolor, alpha=0.3)
+                        plt.colorbar()
+                        plt.scatter(X_train[:100, 0], X_train[:100, 1], c=Y[:100], s=200, 
+                                    cmap=mapcolor, alpha=0.5, linewidths=2, edgecolors='grey')
+                        
+                        font = {'family': 'Helvetica',
+                                'color':  'black',
+                                'weight': 'bold',
+                                'size': 14,
+                                }
+                        plt.xlabel('xlabel', fontdict=font)
+                        plt.ylabel('ylabel', fontdict=font)
+                        plt.title('title', fontdict=font)
+                        plt.show()
+                </code></pre>
+
+                <p>Here the result:</p>
+                <img src='img/gmm.png' width='600'/>
             </div>
-            
-            <div class='post home' id='ex'>
-                <h1 class='posttitle'>something else</h1>
-            </div>
-            <div class='post dl' id='dl'>
-                <h1 class='posttitle'>dl</h1>
-            </div>
+        
             <div class='post coding'>coding</div>
         </div>
         

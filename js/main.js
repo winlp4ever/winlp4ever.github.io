@@ -11,7 +11,7 @@ menuclick.addEventListener('mouseover', f);
 var o = function () {
     menuclick.style.boxShadow = 'none';
     menuclick.style.backgroundColor = 'transparent';
-    menuclick.style.color = 'rgb(213, 213, 252)';
+    menuclick.style.color = 'rgb(245, 245, 245)';
     menuclick.style.transition = 'background-color 0.5s linear, color 0.5s linear';
     menuclick.style.textShadow = '2px 2px 0px rgba(255, 114, 114, 0.781)';
 };
