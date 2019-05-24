@@ -200,9 +200,82 @@
                 <p><strong>P/S:</strong> When loading the model with pickle in a different file than when you define it, 
                     you have to also re-import the object type in this file, otherwise <code>pickle</code> will complain about unknown object type.</p>
             </div>
-            <div class='post coding'>
-                <h1>testing</h1>
-                <p><b>funny</b></p>
+            <div class='post home coding' id='wordcloud'>
+                <h1><i>Topic modeling: </i>Vizualize multiple wordclouds with correlation edges</h1>
+                <p>Topic modeling is a classic task in <b>NLP</b> and <b>text-mining</b>. The objective is to extract topics from raw texts and find a good way
+                to interprete them. Why the interpretation? Because texts will be transformed to dense vectors, then our models will train on those vectors to produce probable topics,
+                under form of vectors. But a dense vector topic says little to us, we have to convert it back to words. And this part we still struggle to solve completely. Normally each topic
+                will be represented by a bunch of words apparently most coherent (computed via their frequencies amongst documents of same topic or their covariances with 
+                topic vector, it's your choice your test), and nothing visualize a bunch of words better than a wordcloud.</p>
+                
+                <p>We already know how to use <code>wordcloud</code> package to create beautiful wordclouds in whichever shape we want. But how about puting together multiple 
+                wordcloud into one window and connect those well correlated. Nothing says better than an image:</p>
+                <img src='img/wordclouds_.png' width=800/>
+
+                <p>First things firsts: Create some texts to work with:</p>
+
+                <pre><code class='python'>
+                    texts = ['Today Europe celebrates victory against Nazis Germany in World War II',
+                            'Things turn out complicated for Hillary Clinton',
+                            'Nothing is better than a glass of milk in the morning']
+                </code></pre>
+
+                <p>Now let's create the wordclouds:</p>
+
+                <pre><code class='python'>
+                    # first define some parameters to make the wordclouds more lisible
+                    kwargs = {'background_color': 'rgba(0, 0, 0, 0)', 'mode': 'RGBA', 'colormap': 'Spectral'}
+                    topic_clouds = [WordCloud(**kwargs).generate(phrase) for phrase in texts]
+                </code></pre>
+
+                <p>Next, we define to back-bone functions, get them and you can already draw graph (graph with vertices and edges) on <code>matplotlib</code>.</p>
+
+                <pre><code class='python'>
+                    def draw_line(ax, p1, p2, linewidth, color='black'):
+                        ax.annotate(p2,
+                                    xy=p2, xycoords='data',
+                                    xytext=p1, size=20, va="center", ha="center",
+                                    arrowprops=dict(arrowstyle="<|-|>",
+                                                    connectionstyle="arc3,rad=-0.2",
+                                                    fc="w", linewidth=linewidth, color=color))
+                    
+                    def im_annot(im_array, coords, zoom=0.5):
+                        imagebox = OffsetImage(im_array, interpolation='bilinear', zoom=zoom)
+                        annot = AnnotationBbox(imagebox, coords, 
+                                            bboxprops=dict(facecolor='none', edgecolor='none', boxstyle='round'),
+                                          )
+                        return annot
+                </code></pre>
+
+                <p>Finally the plotting code:</p>
+
+                <pre><code class='python'>
+                        coords = np.random.randint(2, size=(3, 2)) # define the coords for wordclouds centroids
+                        lim = np.max(coords, axis=0)
+                        
+                        fig, ax = plt.subplots(figsize=(8, 8))
+                        
+                        ax.set_xlim(-0.5, lim[0] + 0.5)
+                        ax.set_ylim(-0.5, lim[1] + 0.5)
+                        
+                        for i, topic in enumerate(topic_clouds):
+                            ax.add_artist(im_annot(topic.to_array(), coords[i])) # draw wordcloud on pre-assigned coords
+                            for j in range(3):
+                                if i >= j:
+                                    continue
+                                draw_line(ax, coords[i], coords[j], 1) # draw edge with all other clouds
+                            
+                        ax.set_yticklabels([]) #disable ticks
+                        ax.set_xticklabels([]) #disable ticks
+                        
+                        plt.grid(None)  #disable gridlines                      
+                        plt.show()
+                </code></pre>
+                <p>And here the result:</p>
+                <img src='img/ex_wordclouds.png' width=400 />
+
+                <p>This would be very helpful when you do some keyword or topic extraction, for example. Imagine you do topic modeling with <b>LDA</b> and you want to 
+                visualize how different topics correlate, you can assign their correlations to the edge weights between them. And that's it.</p>
             </div>
         </div>
         
