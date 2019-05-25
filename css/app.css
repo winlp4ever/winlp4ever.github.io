@@ -73,6 +73,12 @@ h1:hover + .post-title-underline {
     color: rgb(55, 124, 202);
 }
 
+.post > span {
+    color: rgb(21, 98, 199);
+    font-size: 23px;
+    font-family: 'Helvetica';
+}
+
 .coding {
     display: none;
 }
