@@ -9,3 +9,6 @@ navbar-links:
   CV (PDF): "/assets/cv.pdf"
   LinkedIn: "https://linkedin.com/in/ha-quang-le"
   GitHub: "https://github.com/winlp4ever"
+
+site-css:
+  - /assets/css/custom-styles.css
