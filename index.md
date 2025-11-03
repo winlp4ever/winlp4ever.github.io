@@ -9,7 +9,9 @@ subtitle: "Chief AI Officer | Senior AI Systems Engineer | AI Infrastructure Arc
 ---
 
 ## **PROFESSIONAL SUMMARY**
-AI systems engineer and architect with 5+ years of experience designing, deploying, and leading large-scale production AI systems. Currently **Chief AI Officer at [Stellia.ai](https://stellia.ai)**, a French startup building next-generation educational AI assistants. Proven ability to bridge applied research and scalable infrastructure: retrieval-augmented generation (RAG), agentic reasoning, multi-cloud orchestration, and model serving at scale.
+AI systems engineer and architect with 5+ years of experience designing, deploying, and leading large-scale production AI systems. Currently **Chief AI Officer at [Stellia.ai](https://stellia.ai)**, a French startup building next-generation educational AI assistants.
+Deeply passionate about AI systems engineering — bridging cutting-edge models with real-world reliability and scale.
+Previously collaborated with **CNRS** researchers on question and exercise generation models for educational content — early work exploring generative AI before ChatGPT.
 
 ---
 
@@ -24,11 +26,11 @@ AI systems engineer and architect with 5+ years of experience designing, deployi
 
 **Key Achievements:**
 - **Architecture & Scale:** Designed and implemented the company’s **Graph-RAG question-answering platform**, processing **~2 K concurrent LLM requests** with **1–3 s TTFT**, deployed across multi-cloud (AWS + GCP + Scaleway).
-- **Performance & Quality:** Achieved **+5–10 pp accuracy improvement** over baseline RAG pipelines (LangChain/OpenAI), with better context retention and reasoning depth.
+- **Performance & Quality:** Achieved **+5–10% accuracy improvement** over baseline RAG pipelines (LangChain/OpenAI), with better context retention and reasoning depth.
 - **Infrastructure & Reliability:** Built distributed AI infrastructure combining **vector and hybrid search** (Elasticsearch, Qdrant, Milvus) with robust orchestration using **Prefect** and **Kubernetes**.
 - **Core Systems Development:**
   - Engineered a document-ingestion and parsing stack preserving layout, tables, and hierarchy using [Tesseract](https://github.com/tesseract-ocr/tesseract), [MinerU](https://github.com/opendatalab/MinerU), and [Marker](https://github.com/datalab-to/marker).
-  - Developed an agentic AI assistant integrating retrieval, reasoning, and tool-usage (web search, code execution, API calls) with [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/) and [SmolAgents](https://github.com/huggingface/smolagents).
+  - Developed an agentic AI assistant integrating retrieval, reasoning, and tool-usage (web search, code execution, **API calls via MCP**) with [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/) and [SmolAgents](https://github.com/huggingface/smolagents).
 - **Leadership:** Managed and mentored **7 AI engineers and data scientists** from top French programs (École Polytechnique, ENS, Paris-Saclay).
 - **Collaboration:** Co-developed a **math reasoning solver** for the University of Arizona, integrated into their e-learning platform.
 - **Tech Stack:** Python, Go, TypeScript, React, Elasticsearch, Qdrant, Milvus, PyTorch, TensorFlow, Docker, Kubernetes, AWS / GCP / Scaleway.
