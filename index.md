@@ -10,7 +10,9 @@ subtitle: "Chief AI Officer | Senior AI Systems Engineer | AI Infrastructure Arc
 
 ## **PROFESSIONAL SUMMARY**
 AI systems engineer and architect with 5+ years of experience designing, deploying, and leading large-scale production AI systems. Currently **Chief AI Officer at [Stellia.ai](https://stellia.ai)**, a French startup building next-generation educational AI assistants.
+
 Deeply passionate about AI systems engineering — bridging cutting-edge models with real-world reliability and scale.
+
 Previously collaborated with **CNRS** researchers on question and exercise generation models for educational content — early work exploring generative AI before ChatGPT.
 
 ---
