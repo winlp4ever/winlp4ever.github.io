@@ -6,6 +6,6 @@ baseurl: ""
 remote_theme: daattali/beautiful-jekyll
 
 navbar-links:
-  CV: "cv"
+  CV (PDF): "/assets/cv.pdf"
   LinkedIn: "https://linkedin.com/in/ha-quang-le"
   GitHub: "https://github.com/winlp4ever"

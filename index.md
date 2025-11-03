@@ -1,6 +1,6 @@
 ---
 layout: page
-title: "Ha-Quang LE"
+title: ""
 subtitle: "Chief AI Officer | Senior AI Systems Engineer | AI Infrastructure Architect"
 ---
 
