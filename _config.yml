@@ -1,1 +1,11 @@
-theme: jekyll-theme-minimal
+title: "Ha-Quang LE"
+subtitle: "Chief AI Officer | Senior AI Systems Engineer"
+description: "Personal site and CV"
+url: "https://winlp4ever.github.io"
+baseurl: ""
+remote_theme: daattali/beautiful-jekyll
+
+navbar-links:
+  CV: "cv"
+  LinkedIn: "https://linkedin.com/in/ha-quang-le"
+  GitHub: "https://github.com/winlp4ever"
