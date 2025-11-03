@@ -1,10 +1,41 @@
-/* --- Warm color scheme overrides --- */
+@import url('https://fonts.googleapis.com/css2?family=Ubuntu:wght@300;400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Ubuntu+Mono:wght@400;700&display=swap');
+
+body, h1, h2, h3, h4, h5, h6, p, a, li, blockquote, code, pre, span, footer {
+  font-family: 'Ubuntu', sans-serif !important;
+  letter-spacing: 0.01em;
+}
+
 body {
   background-color: #faf7f2;
+  line-height: 1.55;
+  font-weight: 400;
+  font-size: 15px;
   color: #222;
 }
 
-/* Navbar background + link colors */
+h1, h2, h3 {
+  font-weight: 600;
+  color: #2c1f1f;
+}
+
+a {
+  color: #b3541e;
+}
+
+a:hover {
+  color: #8a3f17;
+  text-decoration: underline;
+}
+
+code, pre {
+  font-family: 'Ubuntu Mono', monospace !important;
+  font-size: 0.9em;
+  background-color: #fff2e6;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
 .navbar {
   background-color: #f7ede2 !important;
   border: none;
@@ -21,25 +52,28 @@ body {
   text-decoration: none;
 }
 
-/* Links inside the page */
-a {
-  color: #b3541e;
-}
-
-a:hover {
-  color: #8a3f17;
-  text-decoration: underline;
-}
-
-/* Section headers for extra warmth */
-h1, h2, h3 {
-  color: #2c1f1f;
-}
-
-/* Optional: add subtle card background for content */
 .page-content, .post-content {
   background-color: #fffaf5;
   border-radius: 8px;
   padding: 2rem;
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Footer styling */
+footer {
+  background-color: #f7ede2 !important;
+  color: #3b2f2f !important;
+  font-family: 'Ubuntu', sans-serif !important;
+  font-size: 14px;
+  padding: 1rem 0;
+  border-top: 1px solid rgba(0,0,0,0.05);
+}
+
+footer a {
+  color: #b3541e !important;
+}
+
+footer a:hover {
+  color: #8a3f17 !important;
+  text-decoration: underline;
 }
