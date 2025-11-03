@@ -1,23 +1,45 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap');
-
-body, h1, h2, h3, h4, h5, h6, p, a, li, blockquote, code, pre, span {
-  font-family: 'Inter', sans-serif !important;
-  letter-spacing: 0.01em;
-}
-
+/* --- Warm color scheme overrides --- */
 body {
-  line-height: 1.6;
-  font-weight: 400;
-  font-size: 16px;
+  background-color: #faf7f2;
   color: #222;
 }
 
-h1, h2, h3 {
-  font-weight: 600;
+/* Navbar background + link colors */
+.navbar {
+  background-color: #f7ede2 !important;
+  border: none;
 }
 
-code, pre {
-  font-family: 'JetBrains Mono', monospace !important;
-  font-size: 0.95em;
+.navbar a,
+.navbar-brand,
+.navbar-item {
+  color: #3b2f2f !important;
+}
+
+.navbar a:hover {
+  color: #b3541e !important;
+  text-decoration: none;
+}
+
+/* Links inside the page */
+a {
+  color: #b3541e;
+}
+
+a:hover {
+  color: #8a3f17;
+  text-decoration: underline;
+}
+
+/* Section headers for extra warmth */
+h1, h2, h3 {
+  color: #2c1f1f;
+}
+
+/* Optional: add subtle card background for content */
+.page-content, .post-content {
+  background-color: #fffaf5;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
