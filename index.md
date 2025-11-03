@@ -56,7 +56,9 @@ Technologies: Java, AWS, Maven, Spring Boot.
 ## **EDUCATION**
 
 **Master of Science, Data Science** — *Université Paris-Saclay, France* (2018–2019)
+
 **Engineering Diploma, Cycle Ingénieur Polytechnicien (Machine Learning & Computer Vision)** — *École Polytechnique, France* (2015–2018)
+
 **Bachelor in Mathematics** — *University of Natural Sciences, Hanoi, Vietnam* (2012–2014)
 
 ---
@@ -64,13 +66,21 @@ Technologies: Java, AWS, Maven, Spring Boot.
 ## **TECHNICAL SKILLS**
 
 **AI & ML Systems:** Graph-RAG, Retrieval-Augmented Generation, Agentic AI, LLM fine-tuning, Text Embeddings, NLP, Information Retrieval
+
 **Frameworks:** PyTorch, TensorFlow, Hugging Face, OpenAI Agents SDK, SmolAgents
+
 **Infrastructure & Orchestration:** Docker, Kubernetes, Prefect, Airflow
+
 **Databases & Search Engines:** PostgreSQL, Elasticsearch, Qdrant, Milvus
+
 **Cloud & DevOps:** AWS (EC2, RDS, S3), GCP, Scaleway, Azure, Terraform
+
 **MLOps & Observability:** model registry, eval pipelines, feature store, drift detection, canary deploys, Prometheus, Grafana
+
 **Languages:** Python, Go, Java, TypeScript, Node.js
+
 **Frontend:** React, Zustand, TanStack React Query
+
 **Others:** Linux, Git, CI/CD, REST & GraphQL APIs
 
 ---
