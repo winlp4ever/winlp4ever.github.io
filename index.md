@@ -1,10 +1,8 @@
 ---
 layout: page
-title: "Curriculum Vitae"
-subtitle: "Ha-Quang LE — Chief AI Officer | Senior AI Systems Engineer | AI Infrastructure Architect"
+title: "Ha-Quang LE"
+subtitle: "Chief AI Officer | Senior AI Systems Engineer | AI Infrastructure Architect"
 ---
-
-# **Ha-Quang LE**
 
 📍 Paris, France
 📧 [winlp4ever@gmail.com](mailto:winlp4ever@gmail.com)
