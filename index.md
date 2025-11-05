@@ -64,16 +64,24 @@ Technologies: Java, AWS, Maven, Spring Boot.
 ## **TECHNICAL SKILLS**
 
 **AI & ML Systems:** Graph-RAG, Retrieval-Augmented Generation, Agentic AI, LLM fine-tuning, Text Embeddings, NLP, Information Retrieval
-**Frameworks:** PyTorch, TensorFlow, Hugging Face Transformers, OpenAI Agents SDK, SmolAgents
+
+**Frameworks:** PyTorch, TensorFlow, Hugging Face Transformers/Text-Embeddings-Inference, vLLM, OpenAI Agents SDK, SmolAgents
+
 **Infrastructure & Orchestration:** Docker, Kubernetes, NGINX, Prefect, Airflow
+
 **Databases & Search Engines:** PostgreSQL, Elasticsearch, Qdrant, Milvus, Redis, MongoDB
+
 **Cloud & Platforms:** Production deployments across AWS, GCP, Scaleway, and Azure
 • AWS: EC2, RDS, S3, Batch, Lambda, Bedrock, SageMaker
 • GCP: Vertex AI, Compute Engine, Cloud Storage
 • IaC/automation: Terraform
+
 **MLOps & Observability:** model registry, eval pipelines, feature store, drift detection, canary deploys, Prometheus, Grafana
+
 **Languages:** Python, Go, Java, TypeScript, Node.js
+
 **Frontend:** React, Zustand, TanStack React Query, React Router, React Flow
+
 **Others:** Linux, Git, CI/CD, REST & GraphQL APIs
 
 ---
