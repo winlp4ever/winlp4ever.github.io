@@ -11,23 +11,24 @@ permalink: /
 
 ## **PROFESSIONAL SUMMARY**
 
-AI systems engineer and architect with 5+ years of experience designing, deploying, and leading large-scale AI systems. Currently Chief AI Officer at **Stellia.ai**, a French startup building next-generation educational AI assistants. Proven ability to bridge applied research and scalable infrastructure — retrieval-augmented generation (RAG), agentic reasoning, cloud-agnostic architecture, and high-performance model serving at scale.
+AI systems engineer and architect with 5+ years of experience designing, deploying, and leading large-scale AI systems. Currently Chief AI Officer at Stellia.ai, a French startup building next-generation educational AI assistants. Proven ability to bridge applied research and scalable infrastructure — retrieval-augmented generation (RAG), agentic reasoning, cloud-agnostic architecture, and high-performance model serving at scale.
 
 ---
 
 ## **PROFESSIONAL EXPERIENCE**
 
 ### [**Stellia.ai**](https://stellia.ai) — Paris, France
+
 **Chief AI Officer (formerly CTO)**
 *Jun 2019 – Present*
 
-I co-founded **ProfessorBob.ai** (later rebranded as Stellia.ai) and lead its AI team, defining the architecture and roadmap for large-scale educational AI assistants. We raised **€4 M** from Innovacom and INCO Ventures — [see announcement](https://innovacom.com/2022/09/14/professorbob-ai-the-ai-based-virtual-teaching-assistant-raises-e4-million-from-innovacom-and-inco-ventures/?lang=en&utm_source=chatgpt.com).
+I co-founded ProfessorBob.ai (later rebranded as Stellia.ai) and lead its AI team, defining the architecture and roadmap for large-scale educational AI assistants. We raised **€4 M** from Innovacom and INCO Ventures — [see announcement](https://innovacom.com/2022/09/14/professorbob-ai-the-ai-based-virtual-teaching-assistant-raises-e4-million-from-innovacom-and-inco-ventures/?lang=en).
 
 **1) Educational Assistant (core product)**
 
-- Built the backbone of an end-to-end **Graph-related RAG system**, the core of our assistant, integrating document ingestion, parsing, and agentic Q&A; **scaled to ~2 K concurrent LLM requests** with 1–3 s TTFT.
+- Built the backbone of an end-to-end **Graph-related RAG system**, the core of our assistant, integrating document ingestion, hierarchical structure parsing, and agentic Q&A; **scaled to ~2 K concurrent LLM requests** with 1–3 s TTFT.
 - Engineered the production platform:
-  - **Search cluster:** Elasticsearch + Qdrant with per-client customization; **4–5 K RPS**, ~31 ms latency, Redis caching, NGINX load balancing.
+  - **Search cluster:** Elasticsearch or Qdrant (per client); **4–5 K RPS**, ~31 ms latency, Redis caching, NGINX load balancing.
   - **Model serving:** vLLM / Text-Embedding-Inference serving Qwen, Llama 3, BGE, E5; **2–3 K concurrent requests** with ~100–200 ms latency, autoscaled via Kubernetes HPA and AWS Batch/Lambda.
   - **Orchestration:** Prefect pipelines managing complex dependencies and maximizing parallelism.
 - Improved RAG accuracy by **+7.2–10.1 % (DeepEval)** over LangChain/OpenAI baselines with stronger long-context reasoning.
@@ -36,19 +37,21 @@ I co-founded **ProfessorBob.ai** (later rebranded as Stellia.ai) and lead its AI
 
 **2) Research & initiatives**
 
-- **A.B Code (Bpifrance):** fine-tuned GPT-2 (TensorFlow) on scraped public Python code to build a coding tutor for beginners.
-- **CNRS (Paris-Saclay):** fine-tuned T5/BART (text-gen) and ColBERT/Sparse (embeddings) for educational tasks, improving accuracy by +16.2 % and “interestingness” by +9.4 %; co-authored NLP papers.
+- **A.B Code (Bpifrance):** project **winner of the i-Nov concours** for innovative tech products. Fine-tuned GPT-2 (TensorFlow) on scraped public Python code to build a coding tutor that helps beginners learn programming.
+- Collaborate with **CNRS (Paris-Saclay)** to fine-tune T5/BART (text-gen) and ColBERT/Sparse (embeddings) for educational tasks, improving accuracy by +16.2 % and “interestingness” by +9.4 %; co-authored NLP papers.
 
-**3) Agentic System (Perplexity-style alternative)**
+**3) Deep Research Agent (Perplexity-style alternative)**
 
 - Designed a next-gen **agentic system** using OpenAI Agents SDK + LiteLLM, supporting self-hosted and proprietary models; **300–700 concurrent agent requests** on a single 64 GB machine.
-  - **Capabilities:** multi-step reasoning, tool use (web search, code execution, browser navigation, MCP connectors to Notion, GitHub, Slack).
+  - **Capabilities:** capable of **multi-step reasoning**, **tool use**, and a **Deep Research mode** enabling extended exploration and synthesis across multiple sources.
+  - **Tools integrated:** web search, code execution, browser navigation, and MCP connectors to Notion, GitHub, Slack.
   - **Memory:** persistent note/message system with **Qdrant hybrid search** (keyword + vector).
-  - **Knowledge vault:** sub-agents generate schemas/mind maps with a visualization tool to explore the evolving knowledge base.
+  - **Knowledge vault:** sub-agents generate schemas and mind maps with a visualization tool to explore the evolving knowledge base.
 
 ---
 
 ### **Technicolor R&D** — Rennes, France
+
 **Deep Learning Research Intern**
 *Apr 2018 – Sep 2018*
 Researched neural architectures for image and audio style-transfer (Gatys, Fader Networks, Adversarial Autoencoders).
@@ -57,6 +60,7 @@ Technologies: PyTorch, TensorFlow, WaveNet, NSynth.
 ---
 
 ### **BioSerenity** — Paris, France
+
 **Java Backend Developer Intern**
 *Jun 2017 – Sep 2017*
 Developed real-time signal-processing pipelines for medical IoT systems (data filtering and spectrogram generation).
