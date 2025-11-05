@@ -31,6 +31,7 @@ I co-founded ProfessorBob.ai (later rebranded as Stellia.ai) and lead its AI tea
   - **Search cluster:** Elasticsearch or Qdrant (per client); **4–5 K RPS**, ~31 ms latency, Redis caching, NGINX load balancing.
   - **Model serving:** vLLM / Text-Embedding-Inference serving Qwen, Llama 3, BGE, E5; **2–3 K concurrent requests** with ~100–200 ms latency, autoscaled via Kubernetes HPA and AWS Batch/Lambda.
   - **Orchestration:** Prefect pipelines managing complex dependencies and maximizing parallelism.
+  - **MLOps:** Develop with MLflow + DeepEval to auto-evaluate/monitor and deploy ML models.
 - Improved RAG accuracy by **+7.2–10.1 % (DeepEval)** over LangChain/OpenAI baselines with stronger long-context reasoning.
 - Deployed assistants at scale, including a **math-solver AI assistant** for ASU (calculus, statistics; 600–1 000 students/semester) and deployments for **Galileo**, **ASU**, and **Enedis**.
 - Defined roadmap for **Knowledge Graph**, **Exercise Generation**, and **Recommendation Systems**, while mentoring a 7-person AI team from École Polytechnique, ENS, and Paris-Saclay.
@@ -72,7 +73,6 @@ Technologies: Java, AWS, Maven, Spring Boot.
 
 **Master of Science, Data Science** — *Université Paris-Saclay, France* (2018–2019)
 **Engineering Diploma, Cycle Ingénieur Polytechnicien (Machine Learning & Computer Vision)** — *École Polytechnique, France* (2015–2018)
-**Bachelor in Mathematics** — *University of Natural Sciences, Hanoi, Vietnam* (2012–2014)
 
 ---
 
