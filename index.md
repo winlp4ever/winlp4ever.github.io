@@ -3,8 +3,6 @@ layout: page
 permalink: /
 ---
 
-## **Ha-Quang LE**
-
 📍 Paris, France | 📧 [winlp4ever@gmail.com](mailto:winlp4ever@gmail.com) | 🔗 [linkedin.com/in/ha-quang-le](https://linkedin.com/in/ha-quang-le) | 💻 [github.com/winlp4ever](https://github.com/winlp4ever)
 
 ---
