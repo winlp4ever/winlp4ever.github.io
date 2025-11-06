@@ -43,11 +43,13 @@ I co-founded ProfessorBob.ai (later rebranded as Stellia.ai) and lead its AI tea
 
 **3) Deep Research Agent (Perplexity-style alternative)**
 
-- Designed a next-gen **agentic system** using OpenAI Agents SDK + LiteLLM, supporting self-hosted and proprietary models; **300–700 concurrent agent requests** on a single 64 GB machine.
-  - **Capabilities:** capable of **multi-step reasoning**, **tool use**, and a **Deep Research mode** enabling extended exploration and synthesis across multiple sources.
-  - **Tools integrated:** web search, code execution, browser navigation, and MCP connectors to Notion, GitHub, Slack.
-  - **Memory:** persistent note/message system with **Qdrant hybrid search** (keyword + vector).
-  - **Knowledge vault:** sub-agents generate schemas and mind maps with a visualization tool to explore the evolving knowledge base.
+Designed a next-gen agentic system using OpenAI Agents SDK + LiteLLM, supporting self-hosted and proprietary models; **300–700 concurrent agent requests** on a single 64 GB machine; the agent outperforms Grok-deeper-research and Sonar-reasoning-pro at first attempt (38.26 vs 38.22 vs 37.76 respectively) on DeepResearch benchmark.
+
+- **Capabilities:** multi-step reasoning, tool use, and a Deep Research mode enabling extended exploration and synthesis across multiple sources.
+- **Tools integrated:** web search, code execution, browser navigation, and MCP connectors to Notion, GitHub, Slack.
+- **Memory:** persistent note/message system with Qdrant hybrid search (keyword + vector).
+- **Knowledge vault:** sub-agents generate schemas and mind maps with a visualization tool to explore the evolving knowledge base.
+- **Frontend:** built the user-facing interface in **React** with real-time streaming responses and an interactive **whiteboard** featuring a rich text notion-like editor for note-taking and graph visualization (Streamdown, React Router, React Flow, Zustand, Milkdown, Tiptap).
 
 ---
 
@@ -79,25 +81,17 @@ Technologies: Java, AWS, Maven, Spring Boot.
 ## **TECHNICAL SKILLS**
 
 **AI & ML Systems:** Graph-related RAG, Retrieval-Augmented Generation, Agentic AI, LLM fine-tuning, Text Embeddings, NLP, Information Retrieval
-
-**Frameworks:** PyTorch, TensorFlow, Hugging Face Transformers, OpenAI Agents SDK, SmolAgents, vLLM, Text-Embedding-Inference
-
+**Frameworks:** PyTorch, TensorFlow, Hugging Face Transformers, vLLM, Text-Embedding-Inference, OpenAI Agents SDK, SmolAgents, LangChain, LangGraph, n8n
 **Infrastructure & Orchestration:** Docker, Kubernetes, NGINX, Prefect, Airflow
-
 **Databases & Search:** PostgreSQL, Elasticsearch, Qdrant, Milvus, Redis, MongoDB
-
 **Cloud & Platforms:** AWS, GCP, Scaleway, Azure
 • AWS: EC2, RDS, S3, Batch, Lambda, Bedrock, SageMaker
 • GCP: Vertex AI, Compute Engine, Cloud Storage
 • IaC/automation: Terraform
-
-**MLOps & Observability:** model registry, eval pipelines, feature store, drift detection, canary deploys, Prometheus, Grafana
-
+**MLOps & Observability:** model registry, eval pipelines, feature store, drift detection, canary deploys, Prometheus, Grafana, MLflow, Neptune.ai
 **Languages:** Python, Go, Java, TypeScript, Node.js
-
-**Frontend:** React, Zustand, TanStack React Query, React Router, React Flow
-
-**Others:** Linux, Git, CI/CD, REST & GraphQL APIs
+**Frontend:** React, Zustand, TanStack React Query, React Router, React Flow, Tiptap, Milkdown, d3.js, Tailwind
+**Others:** Linux, Git, Github Actions, CI/CD, REST & GraphQL APIs
 
 ---
 
