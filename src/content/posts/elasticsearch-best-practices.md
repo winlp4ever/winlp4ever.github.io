@@ -433,3 +433,16 @@ Ideally on each node:
 - Heap used < 60%
 - CPU load minor
 - Disk used < 80%
+
+## Take-home
+
+If you remember nothing else from this post, remember these:
+
+- **Shard sizing first.** Aim for 10–50 GB per shard and 50–100 shards per node. Too many tiny shards is the silent killer — file handles, merges, and JVM overhead pile up before you notice.
+- **Segments compound.** They grow with every refresh. Force-merge when they get out of hand, but know it's expensive — schedule it.
+- **Refresh is not free.** During bulk indexing, set `refresh_interval: -1`, load, then refresh once. This single change often cuts indexing time dramatically.
+- **Profile before you optimize.** `profile=True` is your friend. The bottleneck is rarely where you assume — in our case, fetch dominated even when we thought we were memory-only.
+- **`_id` lives on disk by default.** If you need score-plus-id-only queries to be fast, you need `docvalue_fields=['_id']` *and* `stored_fields="_none_"`. Either alone is not enough.
+- **Watch the boring metrics.** Rejected thread-pool requests, heap > 60%, disk > 80% — these are your early-warning signs. By the time queries slow down, you're already late.
+
+Performance work in Elasticsearch is mostly about not creating problems for yourself: right-sized shards, controlled refresh, and profiled queries. Get those three right and most of the rest takes care of itself.
