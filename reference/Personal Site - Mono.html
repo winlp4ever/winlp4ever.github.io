@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Quang Nguyen — engineer, writer</title>
+
+<!-- All three monospace candidates loaded so we can swap live -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Geist+Mono:wght@300;400;500;700&family=Fira+Code:wght@300;400;500;700&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --font: 'JetBrains Mono', ui-monospace, monospace;
+    --bg: #ffffff;
+    --ink: #111111;
+    --muted: #888888;
+    --faint: #c8c8c8;
+    --hair: #ececec;
+  }
+  html, body { margin: 0; padding: 0; background: var(--bg); }
+  * { box-sizing: border-box; }
+  body {
+    font-family: var(--font);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "calt" 1;
+  }
+  a { color: inherit; text-decoration: none; }
+  a.row:hover { background: #fafafa; }
+  a.inline { border-bottom: 1px solid var(--faint); }
+  a.inline:hover { border-bottom-color: var(--ink); }
+</style>
+
+<script>
+  // Keep this block valid JSON between the markers — host parses + rewrites it.
+  window.__TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+    "font": "JetBrains Mono",
+    "bodySize": 14,
+    "density": "regular"
+  }/*EDITMODE-END*/;
+</script>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+
+<body>
+<div id="root"></div>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<script type="text/babel" data-presets="react">
+(function () {
+  // ── Data ───────────────────────────────────────────────────────────────
+  const PROFILE = {
+    name: "Quang Nguyen",
+    role: "Senior Software Engineer",
+    location: "Berlin",
+    blurb: "I work on streaming infrastructure and developer tools. This site is where I write down what I'm learning while I figure things out in public.",
+    links: [
+      { label: "github",   handle: "github.com/qng" },
+      { label: "twitter",  handle: "twitter.com/qng" },
+      { label: "rss",      handle: "/feed.xml" },
+      { label: "email",    handle: "hi@qng.dev" },
+    ],
+  };
+
+  const ARTICLES = [
+    { date: "2026-04-12", title: "Why your retry loop is probably wrong",       tag: "distributed-systems", read: "8 min" },
+    { date: "2026-03-28", title: "Notes on building a streaming SQL engine",    tag: "build-log",           read: "14 min" },
+    { date: "2026-02-15", title: "The case for boring databases",               tag: "essay",               read: "6 min" },
+    { date: "2026-01-30", title: "Reading the Raft paper, slowly",              tag: "paper-notes",         read: "11 min" },
+    { date: "2026-01-08", title: "Build logs are the best docs",                tag: "essay",               read: "4 min" },
+    { date: "2025-12-20", title: "On leaving a job you still love",             tag: "career",              read: "7 min" },
+    { date: "2025-11-11", title: "A taxonomy of caching mistakes",              tag: "distributed-systems", read: "10 min" },
+    { date: "2025-10-02", title: "What I learned shipping a 0.1.0",             tag: "build-log",           read: "5 min" },
+    { date: "2025-08-19", title: "Three months with a Rust query planner",     tag: "build-log",           read: "12 min" },
+    { date: "2025-07-04", title: "Process boundaries are interface boundaries", tag: "essay",               read: "5 min" },
+  ];
+
+  const NOW = [
+    "Building a streaming SQL toy in Rust",
+    "Reading DDIA for the third time",
+    "One essay every two weeks, no excuses",
+  ];
+
+  // Group articles by year
+  const byYear = ARTICLES.reduce((acc, a) => {
+    const y = a.date.slice(0, 4);
+    (acc[y] = acc[y] || []).push(a);
+    return acc;
+  }, {});
+  const years = Object.keys(byYear).sort((a, b) => b.localeCompare(a));
+
+  // ── App ────────────────────────────────────────────────────────────────
+  const FONT_OPTIONS = ["JetBrains Mono", "Geist Mono", "Fira Code"];
+  const DENSITY = {
+    compact: { rowPad: 6,  gap: 28, sec: 36 },
+    regular: { rowPad: 10, gap: 40, sec: 56 },
+    comfy:   { rowPad: 16, gap: 56, sec: 80 },
+  };
+
+  function App() {
+    const [t, setTweak] = useTweaks(window.__TWEAK_DEFAULTS);
+
+    React.useEffect(() => {
+      document.documentElement.style.setProperty('--font', `"${t.font}", ui-monospace, monospace`);
+    }, [t.font]);
+
+    const d = DENSITY[t.density] || DENSITY.regular;
+    const fs = t.bodySize;
+
+    const page = {
+      maxWidth: 720,
+      margin: '0 auto',
+      padding: '72px 32px 96px',
+      fontSize: fs,
+      lineHeight: 1.6,
+    };
+    const masthead = {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'baseline',
+      marginBottom: d.sec,
+      paddingBottom: 18,
+      borderBottom: '1px solid var(--hair)',
+    };
+    const name = { fontSize: fs, fontWeight: 500, margin: 0, letterSpacing: '-0.01em', whiteSpace: 'nowrap' };
+    const meta = { fontSize: fs - 2, color: 'var(--muted)', margin: 0, whiteSpace: 'nowrap' };
+    const sectionLabel = {
+      fontSize: fs - 3, color: 'var(--muted)', margin: 0, marginBottom: 18,
+      textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 500,
+    };
+    const intro = { fontSize: fs + 1, lineHeight: 1.65, color: 'var(--ink)', margin: 0, textWrap: 'pretty' };
+    const yearRow = { display: 'flex', alignItems: 'center', gap: 14, marginBottom: 12, marginTop: 28 };
+    const yearLabel = { fontSize: fs - 3, color: 'var(--faint)', letterSpacing: '0.04em' };
+    const yearRule = { flex: 1, height: 1, background: 'var(--hair)' };
+    const row = {
+      display: 'grid', gridTemplateColumns: '64px 1fr 64px',
+      gap: 16, alignItems: 'baseline',
+      padding: `${d.rowPad}px 8px`, margin: '0 -8px',
+      borderRadius: 4, color: 'var(--ink)',
+    };
+    const rowDate = { fontSize: fs - 3, color: 'var(--muted)', whiteSpace: 'nowrap' };
+    const rowTitle = { fontSize: fs, fontWeight: 400 };
+    const rowMeta = { fontSize: fs - 3, color: 'var(--faint)', textAlign: 'right', whiteSpace: 'nowrap' };
+    const nowList = { listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 8 };
+    const nowItem = { display: 'flex', gap: 12, color: 'var(--ink)' };
+    const dash = { color: 'var(--faint)' };
+    const linkList = { listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 };
+    const linkRow = { display: 'grid', gridTemplateColumns: '90px 1fr', gap: 12, alignItems: 'baseline', fontSize: fs };
+    const linkLabel = { color: 'var(--muted)' };
+    const block = { marginBottom: d.sec };
+    const cursor = { display: 'inline-block', width: '0.55em', height: '1em', background: 'var(--ink)', verticalAlign: '-0.12em', marginLeft: 2, animation: 'blink 1.1s steps(1) infinite' };
+
+    return (
+      <>
+        <style>{`@keyframes blink { 50% { opacity: 0 } }`}</style>
+
+        <div style={page}>
+          <header style={masthead}>
+            <h1 style={name}>{PROFILE.name}<span style={cursor} /></h1>
+            <p style={meta}>{PROFILE.role.toLowerCase()} · {PROFILE.location.toLowerCase()}</p>
+          </header>
+
+          <section style={block}>
+            <p style={intro}>{PROFILE.blurb}</p>
+          </section>
+
+          <section style={block}>
+            <h2 style={sectionLabel}>Now</h2>
+            <ul style={nowList}>
+              {NOW.map((n, i) => (
+                <li key={i} style={nowItem}>
+                  <span style={dash}>—</span>
+                  <span>{n}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <section style={block}>
+            <h2 style={sectionLabel}>Writing</h2>
+            {years.map(y => (
+              <div key={y}>
+                <div style={yearRow}>
+                  <span style={yearLabel}>{y}</span>
+                  <span style={yearRule} />
+                </div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  {byYear[y].map(a => (
+                    <li key={a.title}>
+                      <a href="#" className="row" style={row}>
+                        <span style={rowDate}>{a.date.slice(5)}</span>
+                        <span style={rowTitle}>{a.title}</span>
+                        <span style={rowMeta}>{a.read}</span>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </section>
+
+          <section style={block}>
+            <h2 style={sectionLabel}>Elsewhere</h2>
+            <ul style={linkList}>
+              {PROFILE.links.map(l => (
+                <li key={l.label} style={linkRow}>
+                  <span style={linkLabel}>{l.label}</span>
+                  <a href="#" className="inline" style={{ width: 'fit-content' }}>{l.handle}</a>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          <footer style={{ paddingTop: 24, borderTop: '1px solid var(--hair)', fontSize: fs - 3, color: 'var(--faint)', display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+            <span style={{ whiteSpace: 'nowrap' }}>© 2026</span>
+            <span style={{ whiteSpace: 'nowrap' }}>set in {t.font.toLowerCase()}</span>
+          </footer>
+        </div>
+
+        <TweaksPanel title="Tweaks">
+          <TweakSection label="Typography" />
+          <TweakRadio
+            label="Font"
+            value={t.font}
+            options={FONT_OPTIONS}
+            onChange={(v) => setTweak('font', v)}
+          />
+          <TweakSlider
+            label="Body size"
+            value={t.bodySize} min={12} max={20} step={1} unit="px"
+            onChange={(v) => setTweak('bodySize', v)}
+          />
+          <TweakSection label="Layout" />
+          <TweakRadio
+            label="Density"
+            value={t.density}
+            options={['compact', 'regular', 'comfy']}
+            onChange={(v) => setTweak('density', v)}
+          />
+        </TweaksPanel>
+      </>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+})();
+</script>
+</body>
+</html>
