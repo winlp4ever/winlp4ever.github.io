@@ -1,5 +1,10 @@
 ---
+import { getCollection } from 'astro:content'
 import BaseLayout from '../layouts/BaseLayout.astro'
+
+const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
+)
 
 const profile = {
   name: 'Ha-Quang Le',
@@ -22,7 +27,7 @@ const profile = {
   <main class="page">
     <header class="masthead">
       <h1 class="name">{profile.name}<span class="cursor"></span></h1>
-      <p class="meta">{profile.role.toLowerCase()} * {profile.location.toLowerCase()}</p>
+      <p class="meta">{profile.role.toLowerCase()} · {profile.location.toLowerCase()}</p>
     </header>
 
     <section class="block">
@@ -31,6 +36,30 @@ const profile = {
         Behind <a href="https://dim0.net" class="inline">dim0.net</a> — a thinking canvas.
       </p>
     </section>
+
+    {
+      posts.length > 0 && (
+        <section class="block">
+          <h2 class="section-label">Writing</h2>
+          <ul class="post-list">
+            {posts.map((p) => (
+              <li class="post-row">
+                <a href={`/blog/${p.id}`} class="post-link">
+                  <span class="post-title">{p.data.title}</span>
+                  <span class="post-date">
+                    {p.data.date.toLocaleDateString('fr-FR', {
+                      day: 'numeric',
+                      month: 'long',
+                      year: '2-digit',
+                    })}
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )
+    }
 
     <section class="block">
       <h2 class="section-label">Elsewhere</h2>
@@ -143,6 +172,49 @@ const profile = {
 
   .link-label {
     color: var(--muted);
+  }
+
+  .post-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .post-row {
+    margin: 0;
+  }
+
+  .post-link {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    padding: 4px 0;
+    color: var(--ink);
+    font-size: 15px;
+  }
+
+  .post-link:hover .post-title {
+    border-bottom-color: var(--ink);
+  }
+
+  .post-title {
+    border-bottom: 1px solid transparent;
+    transition: border-color 80ms ease;
+    text-wrap: pretty;
+    flex: 1;
+    min-width: 0;
+    font-weight: 500;
+  }
+
+  .post-date {
+    color: var(--muted);
+    font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .footer {
