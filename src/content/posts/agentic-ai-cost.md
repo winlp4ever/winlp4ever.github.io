@@ -26,7 +26,7 @@ That works fine for a chatbot. It breaks completely for agents.
 Here's what actually goes into a single model call in an agentic system:
 
 - **System prompt** - instructions, tool schemas, behavioral rules. Usually 500–2,000 tokens.
-- **Conversation history** - every prior message, every prior response. Grows with every step.
+- **Conversation history** - every prior message, every prior response. Grows with every step. Even with conversation compression (which you'll need at some point to keep the context manageable), it's easy to hit 30k–40k tokens once the conversation drags on long enough.
 - **Tool call records** - both the arguments you sent and the results you got back. A single web search result can inject 5,000–15,000 tokens of raw page content into the context.
 - **Reasoning traces** - if the model thinks before acting, that thinking goes into the next step's context too.
 
