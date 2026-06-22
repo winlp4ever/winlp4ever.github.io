@@ -270,4 +270,4 @@ The two surviving splits correspond to:
 
 ---
 
-*The images in this article were created with [dim0.net](https://dim0.net).*
+*The visual explainers in this article were created with [dim0.net](https://dim0.net).*
