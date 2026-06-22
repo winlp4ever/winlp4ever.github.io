@@ -267,3 +267,7 @@ The two surviving splits correspond to:
 > previous chunk needs an LCP-powered substring compare.
 
 ![Prefix-sum optimization recap: the O(n²) solution and how the pieces fit together](/images/posts/leetcode-1977-separate-numbers/prefix-sum-optimization.png)
+
+---
+
+*The images in this article were created with [dim0.net](https://dim0.net).*
