@@ -142,6 +142,8 @@ export class Figure extends HTMLElement {
     this.raf = requestAnimationFrame(tick); this.sync();
   }
   pause() { this.playing = false; cancelAnimationFrame(this.raf); this.sync(); }
+  // interactive figures (no timeline) don't need to implement render
+  render() {}
   seek(t) { this.t = t; this.render(t); this.sync(); }
   sync() {
     if (this.btn) {
