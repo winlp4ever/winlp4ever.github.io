@@ -103,7 +103,7 @@ const jsonld = {
           <svg viewBox="0 0 320 170">
             <rect x="34" y="34" width="86" height="40" rx="6" class="box" /><text x="46" y="58">idea</text>
             <rect x="186" y="22" width="96" height="46" rx="6" class="box" /><text x="198" y="49">mini-app</text>
-            <rect x="128" y="104" width="104" height="40" rx="6" class="box acc" /><text x="140" y="128" class="acc">@board agent</text>
+            <rect x="128" y="104" width="104" height="40" rx="6" class="box acc" /><text x="140" y="128" class="acc-t">@board agent</text>
             <path d="M120 54 C150 54 160 46 186 46 M78 74 C78 110 100 124 128 124 M234 68 C240 92 236 110 232 118" class="wire" />
           </svg>
         </div>
@@ -116,7 +116,7 @@ const jsonld = {
             <rect x="0" y="0" width="86" height="170" class="side" /><path d="M86 0v170" class="ln" />
             <text x="12" y="26" class="s">api</text><text x="12" y="50" class="s">web</text><text x="12" y="74" class="s">docs</text>
             <circle cx="72" cy="23" r="3" class="g" /><circle cx="72" cy="47" r="3" class="o" /><circle cx="72" cy="71" r="3" class="i" />
-            <text x="102" y="30"><tspan class="acc">~/minmux</tspan> main ❯ claude</text>
+            <text x="102" y="30"><tspan class="acc-t">~/minmux</tspan> main ❯ claude</text>
             <text x="102" y="50">● reading src/pane.rs</text><text x="102" y="70">● editing 2 files</text>
             <text x="102" y="90" class="oc">● needs input</text>
             <rect x="102" y="104" width="8" height="14" class="g blink" />
@@ -251,7 +251,7 @@ const jsonld = {
   .thumb .s { font-size: 9px; }
   .thumb .box { fill: var(--bg); stroke: var(--rule-2); }
   .thumb .box.acc { stroke: var(--green); }
-  .thumb .acc { fill: var(--green-t); }
+  .thumb .acc-t { fill: var(--green-t); }
   .thumb .oc { fill: var(--ochre-t); }
   .thumb .wire { fill: none; stroke: var(--ink-3); stroke-width: 1.3; }
   .thumb .side { fill: var(--bg); opacity: 0.6; }

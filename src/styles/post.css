@@ -104,6 +104,15 @@
 .prose figcaption { font: 13.5px/1.6 var(--mono); color: var(--ink-2); margin: 12px 4px 0; max-width: var(--measure); }
 .prose figcaption b { color: var(--ink); font-weight: 600; margin-right: 6px; }
 .prose figure > img { border-radius: 14px; }
+/* phones: wide figures scroll sideways instead of shrinking their text to nothing */
+.fsv { position: relative; }
+.fsv > svg { display: block; width: 100%; height: auto; margin: 6px 0 4px; overflow: visible; user-select: none; -webkit-user-select: none; }
+@media (max-width: 620px) {
+  .fsv { overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; margin: 0 -10px; padding: 0 10px;
+    -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); }
+  .fsv.end { -webkit-mask-image: none; mask-image: none; }
+  .fsv > svg { width: 560px; max-width: none; }
+}
 .fallback { margin: 28px 6px; color: var(--ink-2); font: 14px/1.6 var(--mono); }
 .fh { display: flex; justify-content: space-between; align-items: center; font: 500 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
 .fs { letter-spacing: 0; text-transform: none; font-size: 12px; color: var(--ink-2); }

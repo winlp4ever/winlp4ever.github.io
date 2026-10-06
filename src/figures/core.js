@@ -158,7 +158,10 @@ export class Figure extends HTMLElement {
     this.statusEl.innerHTML = `<i class="dot ${cls || s}"></i>${s}`;
   }
   svgRoot(w, h, label) {
-    return this.svg = S('svg', { viewBox: `0 0 ${w} ${h}`, role: 'img', 'aria-label': label }, this);
+    // on phones the svg keeps a readable minimum width and scrolls sideways inside this wrapper
+    const wrap = H('div', { class: 'fsv' }, this);
+    wrap.addEventListener('scroll', () => wrap.classList.toggle('end', wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 4), { passive: true });
+    return this.svg = S('svg', { viewBox: `0 0 ${w} ${h}`, role: 'img', 'aria-label': label }, wrap);
   }
 }
 
