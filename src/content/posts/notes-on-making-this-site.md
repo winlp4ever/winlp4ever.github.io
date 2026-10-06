@@ -34,7 +34,7 @@ So before designing anything, I measured. We fetched one article from each of a 
 
 The surprise was the bottom of the chart. Sam Rose ships his simulations as small custom elements with almost nothing up front, and they're some of the liveliest pages on the list. The heavy ones are heavy because of the framework around the figures, not the figures. That settled most of the architecture.
 
-Fonts are the honest exception here. Instrument Sans and JetBrains Mono come to about 98 KB of woff2 between them, which makes them the heaviest thing on any page. They get cached after the first one.
+Fonts are the honest exception here. Hanken Grotesk, Instrument Sans and JetBrains Mono come to about 132 KB of woff2 between them, plus 36 KB when a post uses italics, which makes them the heaviest thing on any page. They get cached after the first one.
 
 ## a critter, because I can't help it
 
@@ -81,7 +81,7 @@ Each figure also carries a plain text description of what it shows, inside the e
 
 ## the rest of it
 
-Reading text is Instrument Sans now, and JetBrains Mono does everything that's a label, a number or code. The paper is a warm off-white. The top of the home page borrows from newspapers: a masthead, double rules, columns with thin lines between them.
+Reading text is Hanken Grotesk now, headlines are a narrowed Instrument Sans, and JetBrains Mono does everything that's a label, a number or code. The paper is a warm off-white. The top of the home page borrows from newspapers: a masthead, double rules, columns with thin lines between them.
 
 At the bottom of every page there's a status bar that I stole from minmux. On the home page it shows how many posts are published, the commit the site was built from, how long ago it was built, and the time in Paris. On a post it turns into a reading progress bar.
 

@@ -2,7 +2,7 @@
 
 Ha-Quang Le's blog: long-form writing on AI systems, infrastructure and algorithms, where every figure is running code. Live at https://winlp4ever.github.io.
 
-Static [Astro](https://astro.build) site, no UI framework. Instrument Sans and JetBrains Mono, self-hosted. Figures are small custom elements that load only when you scroll near them.
+Static [Astro](https://astro.build) site, no UI framework. Hanken Grotesk for reading, Instrument Sans for headlines and JetBrains Mono for code, all self-hosted. Figures are small custom elements that load only when you scroll near them.
 
 ```sh
 npm ci
