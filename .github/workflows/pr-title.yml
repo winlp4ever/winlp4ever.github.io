@@ -1,0 +1,33 @@
+name: PR title
+
+# PRs are squash-merged, so the title becomes the commit on main and drives the
+# changelog and the next semver bump. Enforce `type(scope): message`.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  conventional-title:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            perf
+            refactor
+            docs
+            style
+            chore
+            ci
+            build
+            revert
+          requireScope: true
+          subjectPattern: ^[a-z].+[^.]$
+          subjectPatternError: 'The subject "{subject}" must start lowercase and not end with a period.'
