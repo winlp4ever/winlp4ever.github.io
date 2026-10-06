@@ -8,7 +8,7 @@ const BLOGS = [
   ['joshwcomeau.com', 286], ['ciechanow.ski', 207], ['acko.net', 169], ['redblobgames.com', 62],
   ['pudding.cool', 10], ['samwho.dev', 0],
 ];
-const US = { before: 1.1, after: 15.5 };
+const US = { before: 1.3, after: 15.8 };
 
 class SiteWeight extends Figure {
   build() {
@@ -190,8 +190,8 @@ class SiteTime extends Figure {
 // ── fig 4 · what loads, and when ───────────────────────────────────────────
 // gzipped bytes from the built transformer post (dist/)
 const FILES = [
-  ['index.html', 7.633, 'html'], ['BaseLayout.css', 4.997, 'css'], ['post.css + katex', 10.527, 'css'], ['loader.js', 1.065, 'js'],
-  ['core.js', 2.752, 'lazy'], ['figures module', 11.655, 'lazy'],
+  ['index.html', 7.628, 'html'], ['BaseLayout.css', 4.997, 'css'], ['post.css', 2.842, 'css'], ['loader.js', 1.284, 'js'],
+  ['core.js', 2.826, 'lazy'], ['figures module', 11.654, 'lazy'],
 ];
 class SiteLazy extends Figure {
   constructor() { super(); this.duration = 12; this.loop = false; this.poster = 12; }

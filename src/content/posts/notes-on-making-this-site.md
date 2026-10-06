@@ -27,7 +27,7 @@ So before designing anything, I measured. We fetched one article from each of a 
 
 <figure class="wide">
 <site-weight data-fig data-label="fig 1 · javascript before you scroll">
-<p class="fallback">A bar chart of gzipped JavaScript loaded up front by one article on each blog: emilkowal.ski 911 KB, maximeheckel.com 861, nan.fyi 416, gwern.net 403, joshwcomeau.com 286, ciechanow.ski 207, acko.net 169, redblobgames.com 62, pudding.cool 10, samwho.dev about 0. This site loads 1.1 KB before you scroll, and 15.5 KB once every figure in the transformer post has loaded.</p>
+<p class="fallback">A bar chart of gzipped JavaScript loaded up front by one article on each blog: emilkowal.ski 911 KB, maximeheckel.com 861, nan.fyi 416, gwern.net 403, joshwcomeau.com 286, ciechanow.ski 207, acko.net 169, redblobgames.com 62, pudding.cool 10, samwho.dev about 0. This site loads 1.3 KB before you scroll, and 15.8 KB once every figure in the transformer post has loaded.</p>
 </site-weight>
 <figcaption><b>fig 1</b>Initial JavaScript, gzipped, one article per site (our measurement with curl, analytics included, inline scripts not counted). Flip to "after every figure" to see this site with all nine transformer figures loaded.</figcaption>
 </figure>
@@ -68,11 +68,11 @@ It also made the one bad bug easy to find. Scroll back and forth fast enough and
 
 ## loading only what you scroll to
 
-A post ships as HTML and CSS. The figure code waits. A loader of about 1 KB watches for the first figure to come within 600 px of the screen, then pulls in the shared figure runtime (2.8 KB) and that post's own module (11.7 KB for the transformer post). Read only the intro and you never download any of it.
+A post ships as HTML and CSS. The figure code waits. A loader of about 1.3 KB watches for the first figure to come within 600 px of the screen, then pulls in the shared figure runtime (2.8 KB) and that post's own module (11.7 KB for the transformer post). Read only the intro and you never download any of it.
 
 <figure class="wide">
 <site-lazy data-fig data-label="fig 4 · what loads, and when">
-<p class="fallback">A long page scrolls past a viewport. The page's HTML, CSS and a small loader arrive first, 24.2 KB in total. When the area 600 pixels below the viewport touches the first figure, the figure runtime and the post's module load, adding 14.4 KB for a total of 38.6 KB.</p>
+<p class="fallback">A long page scrolls past a viewport. The page's HTML, CSS and a small loader arrive first, 16.8 KB in total. When the area 600 pixels below the viewport touches the first figure, the figure runtime and the post's module load, adding 14.5 KB for a total of 31.2 KB.</p>
 </site-lazy>
 <figcaption><b>fig 4</b>Byte counts are gzipped sizes from the built transformer post. The page here is a stand-in with its first figure two screens down.</figcaption>
 </figure>
