@@ -2,7 +2,7 @@
 // Encoding used everywhere: GLM = green, DeepSeek = ochre, Claude / GPT = ink.
 // Filled dot = big tier (GLM-5.3, V4-Pro), ring = small tier (GLM-5.3-Flash, V4.1-Flash).
 // Data fetched 2026-10-06; sources are in each figure's caption.
-import { S, H, attr, op, seg, ease, inout, lerp, clamp, REDUCED, STILL, Figure, define } from './core.js';
+import { S, H, attr, op, seg, ease, inout, lerp, clamp, handArrow, REDUCED, STILL, Figure, define } from './core.js';
 
 const M = {
   glm: { name: 'GLM-5.3', c: 'green', big: true },
@@ -71,7 +71,7 @@ class GxTiers extends Figure {
         S('line', { x1: p.x0, x2: p.x1, y1: y, y2: y, class: 's-rule', 'stroke-width': 1 }, svg);
         if (r.opus <= r.max) {
           S('line', { x1: X(r.opus), x2: X(r.opus), y1: y - 9, y2: y + 9, class: 's-ink3', 'stroke-width': 1.5 }, svg);
-          if (i === 0 && p.a === 'dsp') S('text', { x: X(r.opus) + 6, y: y - 12, class: 't3', 'font-size': 10, 'text-anchor': 'start', text: 'Opus' }, svg);
+          if (i === 0 && p.a === 'dsp') S('text', { x: X(r.opus) - 5, y: y - 12, class: 't3', 'font-size': 10, 'text-anchor': 'end', text: 'Opus' }, svg);
         } else S('text', { x: p.x1, y: y + 22, class: 't3', 'font-size': 10, 'text-anchor': 'end', text: `Opus 5.5 ${r.fmt(r.opus)} →` }, svg);
         const dots = [p.a, p.b].map((k) => ({ k, d: mdot(svg, k), t: S('text', { 'font-size': 11, class: 't', 'text-anchor': 'middle', style: `fill:${tcol(k)}` }, svg) }));
         return { X, y, r, dots };
@@ -99,7 +99,7 @@ const CLOSED = [['2025-11-24', 29.1, 'Opus 4.5'], ['2025-12-11', 30.4, 'GPT-5.2'
   ['2026-07-23', 50.8, 'Opus 5'], ['2026-08-03', 53.4, 'Qwen3.8 Max'], ['2026-09-21', 57.6, 'Opus 5.5']];
 // [date, score, label, colour, (big?), label dx, label dy, anchor]
 const OPEN = [['2026-02-11', 27.9, 'GLM-5', 'green', true, 0, 17, 'middle'], ['2026-04-23', 30.4, 'V4 Pro', 'ochre', true, 0, -9, 'middle'], ['2026-06-16', 33.7, 'GLM-5.2', 'green', true, 0, -9, 'middle'],
-  ['2026-07-15', 43.6, 'Kimi K3', 'ink', true, -6, -8, 'end'], ['2026-08-16', 44.8, 'GLM-5.3', 'green', true, 0, -10, 'middle'], ['2026-09-21', 46.3, 'MiMo-V2.6-Pro', 'ink', true, 0, -9, 'end']];
+  ['2026-07-15', 43.6, 'Kimi K3', 'ink', true, -6, -8, 'end'], ['2026-08-16', 44.8, 'GLM-5.3', 'green', true, -8, 4, 'end'], ['2026-09-21', 46.3, 'MiMo-V2.6-Pro', 'ink', true, 0, -9, 'end']];
 const FAMILY = [['2026-07-31', 34.3, 'V4-Flash 0731', 'ochre', false, 0, 17, 'middle'], ['2026-08-13', 36.0, 'V4-Pro 0813', 'ochre', true, 8, 4, 'start'],
   ['2026-08-26', 41.8, 'GLM-5.3-Flash', 'green', false, -8, 4, 'end'], ['2026-09-10', 39.5, 'V4.1-Flash', 'ochre', false, 8, 4, 'start']];
 const D = (s) => Date.parse(s + 'T00:00:00Z') / 864e5;
@@ -107,22 +107,26 @@ const best = (list, d) => { let v = null; for (const r of list) if (D(r[0]) <= d
 export function lagAt(d) {
   const o = best(OPEN, d); if (!o) return null;
   const c = CLOSED.find((r) => r[1] >= o[1]);
-  return { open: o, closed: c, days: Math.round(d - D(c[0])) };
+  return { open: o, closed: c || null, days: c ? Math.round(d - D(c[0])) : 0 };
 }
 class GxGap extends Figure {
   constructor() { super(); this.duration = 11; this.poster = 11; }
   build() {
     const svg = this.svgRoot(600, 320, 'Best open and best closed model scores through 2026, and how many days the open models are behind');
-    this.d0 = D('2026-01-01'); this.d1 = D('2026-10-06'); this.dStart = D('2026-02-11');
+    this.d0 = D('2025-11-15'); this.d1 = D('2026-10-06'); this.dStart = D('2026-02-11');
     this.X = (d) => 56 + (Math.max(d, this.d0) - this.d0) / (this.d1 - this.d0) * 520;
     this.Y = (v) => 266 - (v - 25) / 35 * 226;
     [30, 40, 50, 60].forEach((v) => {
       S('line', { x1: 56, x2: 576, y1: this.Y(v), y2: this.Y(v), class: 's-rule', 'stroke-width': 1 }, svg);
       S('text', { x: 48, y: this.Y(v) + 4, class: 't3', 'font-size': 11, 'text-anchor': 'end', text: v }, svg);
     });
-    ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct'].forEach((m, i) => {
-      S('text', { x: this.X(D(`2026-${String(i + 1).padStart(2, '0')}-01`)), y: 286, class: 't3', 'font-size': 11, text: m }, svg);
+    ['2025-12', '2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10'].forEach((ym) => {
+      const m = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'][+ym.slice(5) - 1];
+      S('text', { x: this.X(D(ym + '-01')), y: 286, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: m }, svg);
     });
+    // 7: one hand-drawn note, on the September releases
+    S('text', { x: this.X(D('2026-06-20')), y: this.Y(58.5), class: 'hand', 'font-size': 14, 'text-anchor': 'end', text: 'four closed releases in four weeks' }, svg);
+    S('path', { d: handArrow(this.X(D('2026-06-24')), this.Y(58.2), this.X(D('2026-09-02')), this.Y(55.2), -0.15), class: 'f-none s-ink2', 'stroke-width': 1.3, 'stroke-linecap': 'round' }, svg);
     const step = (list, from) => {
       let d = '', prev = null;
       for (let day = from; day <= this.d1; day += 1) {
@@ -135,7 +139,7 @@ class GxGap extends Figure {
     };
     this.closedPath = S('path', { d: step(CLOSED, this.d0), class: 'f-none s-ink', 'stroke-width': 2 }, svg);
     this.openPath = S('path', { d: step(OPEN, this.dStart), class: 'f-none s-ink3', 'stroke-width': 2, 'stroke-dasharray': '5 4' }, svg);
-    S('text', { x: this.X(D('2026-01-08')), y: this.Y(30.4) - 8, class: 't', 'font-size': 11.5, text: 'best closed' }, svg);
+    S('text', { x: this.X(D('2025-11-20')), y: this.Y(30.4) - 8, class: 't', 'font-size': 11.5, text: 'best closed' }, svg);
     S('text', { x: this.X(D('2026-05-01')), y: this.Y(30.4) + 16, class: 't3', 'font-size': 11.5, text: 'best open' }, svg);
     [['2026-03-05', 39, 'GPT-5.4', 'end', -4], ['2026-06-09', 49.6, 'Fable 5', 'end', -4], ['2026-09-21', 57.6, 'Opus 5.5', 'end', -4]].forEach(([d, v, n, a, dx]) => S('text', { x: this.X(D(d)) + dx, y: this.Y(v) - 6, class: 't2', 'font-size': 10.5, 'text-anchor': a, text: n }, svg));
     const dot = ([d, v, label, c, big, dx, dy, anchor]) => {
@@ -158,9 +162,15 @@ class GxGap extends Figure {
     const d = this.day(t), x = this.X(d), L = lagAt(d);
     attr(this.head, { x1: x, x2: x });
     this.dots.forEach((o) => op(o.g, d >= o.day ? 1 : 0.15));
+    const date = new Date(d * 864e5).toISOString().slice(0, 10);
+    if (!L.closed) {
+      this.lagLine.setAttribute('d', '');
+      this.read.textContent = `${date}: best open is ${L.open[2]} (${L.open[1]}), ahead of every closed model`;
+      this.read2.textContent = '';
+      return;
+    }
     const xc = this.X(D(L.closed[0])), y = this.Y(L.open[1]);
     this.lagLine.setAttribute('d', `M${xc} ${y}H${x} M${xc + 6} ${y - 4}L${xc} ${y}L${xc + 6} ${y + 4}`);
-    const date = new Date(d * 864e5).toISOString().slice(0, 10);
     this.read.textContent = `${date}: best open is ${L.open[2]} (${L.open[1]}), ${L.days} days behind`;
     this.read2.textContent = `${L.closed[2]} first reached ${L.open[1]} on ${L.closed[0]}`;
   }
@@ -197,6 +207,7 @@ class GxTasks extends Figure {
       });
       return { r, y, dots };
     });
+    S('text', { x: this.X(4), y: 76 + 2 * 56 + 30, class: 'hand', 'font-size': 14, text: 'the spread opens up on long tasks' }, svg);
     pills(this, [[null, 'all models'], ...Object.entries(M).map(([k, m]) => [k, m.name])], null, (v) => { this.sel = v; this.paint(1); });
     entrance(this, (k) => this.paint(k));
     this.idleText = 'interactive';
@@ -238,7 +249,7 @@ class GxHarness extends Figure {
       S('text', { x: 20, y: y + 10, class: 't', 'font-size': 12, text: h }, svg);
       rows.forEach(([n, v, c]) => {
         S('text', { x: 162, y: y + 9, class: 't2', 'font-size': 10.5, 'text-anchor': 'end', text: n, style: c === 'green' ? 'fill:var(--green-t)' : '' }, svg);
-        const b = S('rect', { x: 170, y: y, height: 11, rx: 2, class: c === 'green' ? 'f-green' : 'f-ink3' }, svg);
+        const b = S('rect', { x: this.B(0), y: y, height: 11, rx: 2, class: c === 'green' ? 'f-green' : 'f-ink3' }, svg);
         const t = S('text', { y: y + 9.5, class: 't2', 'font-size': 10.5 }, svg);
         this.bars.push({ v, b, t });
         y += 17;
@@ -249,7 +260,7 @@ class GxHarness extends Figure {
   }
   paint(k) {
     this.h.forEach((o) => { const x = this.X(lerp(87, o.v, k)); attr(o.d, { cx: x }); attr(o.t, { x }); op(o.t, k); });
-    this.bars.forEach((o) => { const w = o.v / 60 * 390 * k; attr(o.b, { width: Math.max(1, w) }); attr(o.t, { x: 176 + w }); o.t.textContent = (o.v * k).toFixed(1); });
+    this.bars.forEach((o) => { const w = (this.B(o.v) - this.B(0)) * k; attr(o.b, { width: Math.max(1, w) }); attr(o.t, { x: this.B(0) + w + 6 }); o.t.textContent = (o.v * k).toFixed(1); });
   }
 }
 
@@ -259,7 +270,7 @@ const BOARD = [['GPT-6 Luna', 16.4, 1.34], ['GPT-6.1 Sol', 58.2, 3.30], ['GPT-6 
 const MIX = { u: 164.3, c: 8444, o: 68.66, n: 330, p: 0.418 }; // millions of tokens, trials, success rate
 const HOSTS = [
   ['zai', 'Z.ai API', [1.40, 0.26, 4.40]], ['base', 'BaseTen', [1.40, 0.14, 4.40]], ['dinf', 'DeepInfra', [0.5625, 0.125, 2.50]],
-  ['nov', 'Novita', [0.42, 0.078, 1.32]], ['plan', 'Coding Plan, off-peak', [6.9, 1.7, 24], 0.72], ['dsp', 'at DeepSeek prices', [0.15, 0.003, 0.60]],
+  ['nov', 'Novita', [0.42, 0.078, 1.32]], ['plan', 'Coding Plan, off-peak', [6.9, 1.7, 24], 0.72], ['dsp', 'DeepSeek off-peak prices', [0.15, 0.003, 0.60]],
 ];
 export function glmCost([pi, pc, po], fixed) {
   const parts = [MIX.u * pi, MIX.c * pc, MIX.o * po];
@@ -289,7 +300,7 @@ class GxCost extends Figure {
       S('circle', { cx: this.X(c), cy: this.Y(p), r: 5, class: 'f-panel s-ink2', 'stroke-width': 1.6 }, svg);
       S('text', { x: this.X(c) + (left ? -8 : 8), y: this.Y(p) + 4, class: 't2', 'font-size': 10.5, 'text-anchor': left ? 'end' : 'start', text: n }, svg);
     });
-    const z = glmCost(HOSTS[0][2]);
+    const z = (this.base = glmCost(HOSTS[0][2]));
     S('circle', { cx: this.X(z.solved), cy: this.Y(41.8), r: 6, class: 'f-none s-green', 'stroke-width': 1.2, 'stroke-dasharray': '2 2' }, svg);
     this.trail = S('line', { y1: this.Y(41.8), y2: this.Y(41.8), class: 's-green', 'stroke-width': 1.2, 'stroke-dasharray': '3 3' }, svg);
     this.g = S('circle', { cy: this.Y(41.8), r: 7, class: 'f-green' }, svg);
@@ -304,19 +315,22 @@ class GxCost extends Figure {
       S('text', { x: 343 + i * 92, y: 342, class: 't3', 'font-size': 10.5, text: n }, svg);
     });
     pills(this, HOSTS.map(([k, n]) => [k, n]), 'zai', (v) => this.go(v));
-    this.cur = z.solved; this.paint(this.cur, glmCost(HOSTS[0][2]));
+    this.cur = z.solved; this.paint(this.cur, z);
+    // 7: one hand-drawn note, on what the host change does
+    S('text', { x: this.X(2.4), y: this.Y(27), class: 'hand', 'font-size': 14, text: 'same tokens, cheaper host' }, svg);
   }
   go(k) {
     const h = HOSTS.find((x) => x[0] === k), to = glmCost(h[2], h[3]), from = this.cur, t0 = performance.now();
+    cancelAnimationFrame(this.raf);
     const f = (now) => {
       const e = REDUCED ? 1 : inout(clamp((now - t0) / 700));
       this.cur = Math.exp(lerp(Math.log(from), Math.log(to.solved), e)); this.paint(this.cur, to);
-      if (e < 1) requestAnimationFrame(f);
+      if (e < 1) this.raf = requestAnimationFrame(f);
     };
-    requestAnimationFrame(f);
+    this.raf = requestAnimationFrame(f);
   }
   paint(solved, c) {
-    const x = this.X(solved), zx = this.X(glmCost(HOSTS[0][2]).solved);
+    const x = this.X(solved), zx = this.X(this.base.solved);
     attr(this.g, { cx: x }); attr(this.gt, { x }); this.gt.textContent = `GLM-5.3 $${solved.toFixed(2)}`;
     attr(this.trail, { x1: Math.min(x, zx), x2: Math.max(x, zx) });
     this.billT.textContent = `$${c.task.toFixed(2)} per task`;
@@ -341,7 +355,7 @@ class GxShare extends Figure {
     cols.forEach((c) => S('text', { x: c.x, y: 24, class: 'sl', 'font-size': 11, text: c.t }, svg));
     this.W = (v) => v / 32 * 180;
     this.rows = SHARE.map(([n, tok, usd, k], i) => {
-      const y = 50 + i * 34, cls = k ? (M[k].big ? 'f-' + M[k].c : 'f-' + M[k].c) : 'f-ink3';
+      const y = 50 + i * 34, cls = k ? 'f-' + M[k].c : 'f-ink3';
       S('text', { x: 20, y: y + 12, class: 't', 'font-size': 12.5, text: n, style: k ? `fill:${tcol(k)}` : '' }, svg);
       const bars = [tok, usd].map((v, j) => {
         const b = S('rect', { x: cols[j].x, y, height: 16, rx: 2, class: cls, opacity: k && !M[k].big ? 0.55 : 1 }, svg);

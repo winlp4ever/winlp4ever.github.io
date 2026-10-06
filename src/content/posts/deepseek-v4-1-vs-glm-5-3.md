@@ -51,11 +51,11 @@ Artificial Analysis runs every model through the same tasks and combines them in
 
 To turn a score gap into time, find when a closed model first reached the open model's score. GLM-5.3's 44.8 was first passed by Claude Fable 5 on 9 June, so on 6 October GLM-5.3 is about four months behind. V4.1-Flash's 39.5 was first passed by Claude Opus 4.7 in April.
 
-When GLM-5.3 came out in August it was about two months behind the best closed model on this index. Then four closed frontier models arrived in four weeks (Fable 5.1, GPT-6 Astra, Opus 5.5 and Sonnet 5.5) and no open model followed, so the gap reopened.
+When GLM-5.3 came out in August it was about two months behind the best closed model on this index. Then four closed frontier models arrived in four weeks (Fable 5.1, GPT-6 Astra, Opus 5.5 and Sonnet 5.5). The best open release in that time, MiMo-V2.6-Pro, added only 1.5 points, so the gap reopened.
 
 <figure class="wide">
 <gx-gap data-fig data-label="fig 2 · best open vs best closed, 2026">
-<p class="fallback">Two step lines from January to October 2026: the best closed model's index score and the best open model's. The closed line climbs from 31.9 (Claude Opus 4.6, February) to 57.6 (Claude Opus 5.5, September). The open line jumps in steps: GLM-5 at 27.9 in February, DeepSeek V4 Pro at 30.4 in April, GLM-5.2 at 33.7 in June, Kimi K3 at 43.6 in July, GLM-5.3 at 44.8 in August and MiMo-V2.6-Pro at 46.3 in September. The open line trails by one to four months depending on the date.</p>
+<p class="fallback">Two step lines from January to October 2026: the best closed model's index score and the best open model's. The closed line climbs from 31.9 (Claude Opus 4.6, February) to 57.6 (Claude Opus 5.5, September). The open line jumps in steps: GLM-5 at 27.9 in February, DeepSeek V4 Pro at 30.4 in April, GLM-5.2 at 33.7 in June, Kimi K3 at 43.6 in July, GLM-5.3 at 44.8 in August and MiMo-V2.6-Pro at 46.3 in September. The open line trails by between about one month and six, depending on the date.</p>
 </gx-gap>
 <figcaption><b>fig 2</b>The best open model gains ground when a big open release lands and loses it as closed models ship, so this year the gap has ranged from about one month (after Kimi K3 in July) to six (in mid-June, just before GLM-5.2). <span class="m">Artificial Analysis Intelligence Index v4.3.2, which re-scores older models on the current version. "Behind" is the date gap between the open model's score and the first closed model to reach it.</span></figcaption>
 </figure>
@@ -106,7 +106,7 @@ On the official Terminal-Bench 4.0 board, a GLM-5.3 run costs $8.27 per task and
 
 <figure class="wide">
 <gx-cost data-fig data-label="fig 5 · cost per solved task">
-<p class="fallback">Cost per solved task against success rate on Terminal-Bench 4.0. GPT-6 Luna: 16.4% at $1.34. GPT-6.1 Sol: 58.2% at $3.30. GPT-6 Astra (low): 50.6% at $9.33. Claude Fable 5.1 (low): 43.3% at $16.49. Claude Opus 5.5: 64.9% at $22.05. Claude Sonnet 5.5: 61.8% at $35.95. GLM-5.3 at 41.8% costs $19.77 per solved task on Z.ai's API, $12.42 on BaseTen, $9.56 on DeepInfra, $5.93 on Novita, about $1.72 on Z.ai's Coding Plan off-peak, and $0.66 if its tokens were priced at DeepSeek's rates. On Z.ai's API, cache reads are 80% of its bill.</p>
+<p class="fallback">Cost per solved task against success rate on Terminal-Bench 4.0. GPT-6 Luna: 16.4% at $1.34. GPT-6.1 Sol: 58.2% at $3.30. GPT-6 Astra (low): 50.6% at $9.33. Claude Fable 5.1 (low): 43.3% at $16.49. Claude Opus 5.5: 64.9% at $22.05. Claude Sonnet 5.5: 61.8% at $35.95. GLM-5.3 at 41.8% costs $19.77 per solved task on Z.ai's API, $12.43 on BaseTen, $9.57 on DeepInfra, $5.93 on Novita, about $1.72 on Z.ai's Coding Plan off-peak, and $0.66 if its tokens were priced at DeepSeek's off-peak rates. On Z.ai's API, cache reads are 80% of its bill.</p>
 </gx-cost>
 <figcaption><b>fig 5</b>The same GLM-5.3 tokens cost $19.77 per solved task on Z.ai's API and under $2 on its Coding Plan, which puts it next to GPT-6.1 Sol. <span class="m">Official Terminal-Bench 4.0 leaderboard (Claude Code for Claude and GLM, Codex for GPT), list prices. GLM-5.3's token mix repriced with each host's published prices; Coding Plan estimated from Z.ai's credit formula.</span></figcaption>
 </figure>
