@@ -1,4 +1,5 @@
 ---
-// Only posts with `math: true` pull in the KaTeX stylesheet.
-import 'katex/dist/katex.min.css'
+// Only posts with `math: true` link the KaTeX stylesheet (copied to public/katex,
+// so it isn't bundled into every post's CSS). Its fonts load only when glyphs need them.
 ---
+<link rel="stylesheet" href="/katex/katex.min.css" />
