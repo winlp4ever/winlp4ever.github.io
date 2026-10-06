@@ -60,6 +60,8 @@
   border-radius: 12px; padding: 16px 20px; overflow-x: auto; margin: 0 0 1.5em;
 }
 .prose pre code { font: inherit; }
+/* code must show what you type: no != → ≠ ligatures */
+.prose pre, .prose code, .prose kbd { font-variant-ligatures: none; font-feature-settings: 'calt' 0, 'liga' 0; }
 .prose table { width: 100%; border-collapse: collapse; margin: 0 0 1.6em; font-size: 15.5px; display: block; overflow-x: auto; }
 .prose th { font: 500 11.5px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-3); text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid var(--heavy); }
 .prose td { padding: 9px 14px 9px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
