@@ -40,6 +40,10 @@ class SiteWeight extends Figure {
     });
     H('span', { class: 'grow' }, bar);
     this.hint = H('span', { class: 't3', text: '' }, bar);
+    this.grow = 0;
+    this.tgt = this.layout();
+    this.rows.forEach((r, i) => { r.fy = r.cy = this.tgt[i].y; r.fv = r.cv = this.tgt[i].v; });
+    this.paint(1);
   }
   layout() {
     this.us.v = US[this.mode];
@@ -69,11 +73,11 @@ class SiteWeight extends Figure {
     this.rows.forEach(r => { r.fy = r.cy; r.fv = r.cv; });
     this.tgt = this.layout();
     if (first) this.rows.forEach((r, i) => { r.fy = this.tgt[i].y; r.fv = this.tgt[i].v; });
-    const t0 = performance.now(), D = REDUCED || STILL ? 1 : first ? 1100 : 600;
+    const t0 = performance.now(), D = REDUCED || STILL ? 1 : first ? 1100 : 600, g0 = first ? 0 : this.grow;
     cancelAnimationFrame(this.raf);
     const step = now => {
       const k = clamp((now - t0) / D);
-      if (first) this.grow = ease(k);
+      this.grow = first ? ease(k) : lerp(g0, 1, inout(k));
       this.paint(first ? 1 : inout(k));
       if (k < 1) this.raf = requestAnimationFrame(step);
     };
@@ -238,8 +242,11 @@ class SiteLazy extends Figure {
     attr(this.marginR, { y: py + (y + this.view) * k, height: mh * k }); op(this.marginR, mh > 0 ? 1 : 0); op(this.marL, mh > 120 ? 1 : 0);
     attr(this.viewL, { y: py + y * k + 12 }); attr(this.marL, { y: py + (y + this.view) * k + 12 });
     // when does the lazy part arrive? the scroll time that reaches the trigger
-    let tTrig = null;
-    for (let s = 1.2; s <= 10.5; s += .02) if (this.scroll(s) >= this.trig()) { tTrig = s; break; }
+    if (this.tTrig === undefined) {
+      this.tTrig = null;
+      for (let s = 1.2; s <= 10.5; s += .02) if (this.scroll(s) >= this.trig()) { this.tTrig = s; break; }
+    }
+    const tTrig = this.tTrig;
     const hit = tTrig != null && t >= tTrig;
     let total = 0;
     this.reqs.forEach((r, i) => {

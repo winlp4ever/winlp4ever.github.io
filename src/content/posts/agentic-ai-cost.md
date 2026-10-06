@@ -49,7 +49,7 @@ $0.45 for one user question. At 150 questions a month, which is realistic for an
 
 <figure class="wide">
 <cost-calc data-fig data-label="fig 2 · one run, priced">
-<p class="fallback">An interactive calculator. Sliders set the number of steps, the context size, how much the context grows per step and runs per month; a toggle turns prefix caching on. With the defaults (5 steps, 25k tokens, no growth, 150 runs) one run costs $0.45 and one user costs $67.50 a month, far above a €15 plan. Turning caching on drops one run to $0.18.</p>
+<p class="fallback">An interactive calculator. Sliders set the number of steps, the context size, how much the context grows per step and runs per month; a toggle turns prefix caching on. With the defaults (5 steps, 25k tokens, no growth, 150 runs) one run costs $0.45 and one user costs $67.50 a month, far above a €15 plan (about $17 at an assumed 1.15 $/€). Turning caching on drops one run to $0.18.</p>
 </cost-calc>
 <figcaption><b>fig 2</b>The real formula at Sonnet's April 2026 prices, with 1,000 output tokens per step. Each critter is one call to the model; green means most of its prompt came from cache.</figcaption>
 </figure>

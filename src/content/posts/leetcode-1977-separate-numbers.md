@@ -44,7 +44,7 @@ A string of length `n` has `n − 1` gaps, so `2^(n-1)` cut patterns. Fig 1 can 
 
 <figure class="wide">
 <lc-explode data-fig data-label="fig 2 · how big is big">
-<p class="fallback">A chart of how many digits the operation count has as n grows from 1 to 3500. The 2^(n-1) line climbs straight to about 1,053 digits. The n³ and n² lines stay almost flat near zero. At n = 3500 and a billion operations per second, n² takes about 12 ms, n³ about 43 seconds, and 2^(n-1) about 10^1044 seconds.</p>
+<p class="fallback">A chart of how many digits the operation count has as n grows from 1 to 3500. The 2^(n-1) line climbs straight to 1,054 digits at n = 3500. The n³ and n² lines stay almost flat near zero. At n = 3500 and a billion operations per second, n² takes about 12 ms, n³ about 43 seconds, and 2^(n-1) about 10^1044 seconds.</p>
 </lc-explode>
 <figcaption><b>fig 2</b>The y axis counts digits, not operations, otherwise nothing would fit. Times assume a billion simple operations per second.</figcaption>
 </figure>

@@ -1,5 +1,8 @@
 import { S, H, attr, op, seg, ease, inout, lerp, clamp, critter, handArrow, drawOn, CW, Figure, define } from './core.js';
 
+// the €15 plan is compared in dollars at this assumed exchange rate (shown in the figure)
+const EUR_USD = 1.15;
+
 const k = n => n >= 1000 ? (n / 1000).toFixed(n % 1000 ? 1 : 0).replace(/\.0$/, '') + 'k' : String(Math.round(n));
 const usd = (x, d = 3) => '$' + x.toFixed(d);
 
@@ -141,16 +144,17 @@ class CostCalc extends Figure {
     S('text', { x: 30, y: y0, class: 't2', 'font-size': 12, text: 'one run' }, s);
     S('text', { x: 30, y: y0 + 24, class: 't', 'font-size': 20, text: usd(run, run < .1 ? 3 : 2) }, s);
     S('text', { x: 150, y: y0, class: 't2', 'font-size': 12, text: `one user, ${this.v.q} runs/month` }, s);
-    S('text', { x: 150, y: y0 + 24, class: 't', 'font-size': 20, text: usd(month, 2), style: month > 15 ? 'fill:var(--ochre-t)' : 'fill:var(--green-t)' }, s);
-    // against a €15/month plan
-    const scale = 230 / Math.max(15, month) , bx = 340;
-    S('text', { x: bx, y: y0, class: 't2', 'font-size': 12, text: 'vs a €15/month plan' }, s);
+    S('text', { x: 150, y: y0 + 24, class: 't', 'font-size': 20, text: usd(month, 2), style: month > 15 * EUR_USD ? 'fill:var(--ochre-t)' : 'fill:var(--green-t)' }, s);
+    // against a €15/month plan, converted to dollars at a stated rate so the bill and the plan share a currency
+    const plan = 15 * EUR_USD;
+    const scale = 230 / Math.max(plan, month), bx = 340;
+    S('text', { x: bx, y: y0, class: 't2', 'font-size': 12, text: `vs a €15/month plan (≈ ${usd(plan, 2)})` }, s);
     S('rect', { x: bx, y: y0 + 10, width: 230, height: 12, rx: 3, class: 'f-rule' }, s);
-    S('rect', { x: bx, y: y0 + 10, width: Math.max(2, month * scale), height: 12, rx: 3, class: month > 15 ? 'f-ochre' : 'f-green' }, s);
-    S('line', { x1: bx + 15 * scale, x2: bx + 15 * scale, y1: y0 + 4, y2: y0 + 28, class: 's-ink', 'stroke-width': 1.5 }, s);
-    S('text', { x: bx + 15 * scale, y: y0 + 42, class: 't3', 'font-size': 11, 'text-anchor': month > 15 && 15 * scale < 60 ? 'start' : 'middle', text: '€15' }, s);
-    const m = 15 - month;
-    S('text', { x: 570, y: y0 + 58, class: 't2', 'font-size': 12, 'text-anchor': 'end', text: m >= 0 ? `~${usd(m, 2)} left for everything else` : `${usd(-m, 2)} under water, per user` }, s);
+    S('rect', { x: bx, y: y0 + 10, width: Math.max(2, month * scale), height: 12, rx: 3, class: month > plan ? 'f-ochre' : 'f-green' }, s);
+    S('line', { x1: bx + plan * scale, x2: bx + plan * scale, y1: y0 + 4, y2: y0 + 28, class: 's-ink', 'stroke-width': 1.5 }, s);
+    S('text', { x: bx + plan * scale, y: y0 + 42, class: 't3', 'font-size': 11, 'text-anchor': month > plan && plan * scale < 60 ? 'start' : 'middle', text: '€15' }, s);
+    const m = plan - month;
+    S('text', { x: 570, y: y0 + 58, class: 't2', 'font-size': 12, 'text-anchor': 'end', text: (m >= 0 ? `~${usd(m, 2)} left for everything else` : `${usd(-m, 2)} under water, per user`) + ` · at ${EUR_USD} $/€` }, s);
   }
   render() {}
 }

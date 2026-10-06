@@ -52,11 +52,11 @@ The famous party trick: the step from *man* to *woman* points roughly the same w
 
 There's a catch. The next part of the model, attention, treats its input like a bag of tokens. Shuffle them and each one gets exactly the same result, so *dog bites man* and *man bites dog* would look identical.
 
-The original paper fixes this by adding a position signal to every embedding: a stack of sine waves at different speeds, read off at the token's position. Fast waves tell neighbours apart. Slow waves tell the start of a long text from its end. Together they give every position its own fingerprint.<span class="sn">Most recent models use RoPE instead, which rotates the query and key vectors by an angle that depends on position. Same idea, position turns into geometry.</span>
+The original paper fixes this by adding a position signal to every embedding: a stack of sine and cosine waves at different speeds, read off at the token's position. Fast waves tell neighbours apart. Slow waves tell the start of a long text from its end. Together they give every position its own fingerprint.<span class="sn">Most recent models use RoPE instead, which rotates the query and key vectors by an angle that depends on position. Same idea, position turns into geometry.</span>
 
 <figure class="wide">
 <tf-position data-fig data-label="fig 4 · position">
-<p class="fallback">Eight sine waves of decreasing frequency are stacked vertically across 64 positions. A marker sweeps across the positions; at each one, the eight wave values are read off into a column that forms that position's vector.</p>
+<p class="fallback">Eight waves are stacked vertically across 64 positions: four frequencies, each as a sine and a cosine, from fast to slow. A marker sweeps across the positions; at each one, the eight wave values are read off into a column that forms that position's vector.</p>
 </tf-position>
 <figcaption><b>fig 4</b>A position's vector is a vertical slice through the waves. This is the real formula, with base 100 instead of 10,000 so the slow waves actually move on screen.</figcaption>
 </figure>
@@ -94,7 +94,7 @@ That sum is the token's new vector. It's all multiplication and addition, which 
 
 <figure class="wide">
 <tf-qkv data-fig data-label="fig 6 · one query">
-<p class="fallback">Three tokens, "the", "cat" and "sat", each with a query, key and value vector of size four. The query of "sat" is dotted with each key, giving scores of -0.22, 3.02 and 1.04. After scaling and softmax the weights are 13%, 64% and 24%. The values are scaled by those weights and summed into a new vector for "sat".</p>
+<p class="fallback">Three tokens, "the", "cat" and "sat", each with a query, key and value vector of size four. The query of "sat" is dotted with each key, giving scores of -0.22, 3.02 and 1.04. After scaling and softmax the weights are 12.6%, 63.7% and 23.7%. The values are scaled by those weights and summed into a new vector for "sat".</p>
 </tf-qkv>
 <figcaption><b>fig 6</b>One query, worked through with real numbers (d = 4). Green cells are positive, ochre ones negative.</figcaption>
 </figure>

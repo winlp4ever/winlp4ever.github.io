@@ -195,9 +195,11 @@ class TfEmbed extends Figure {
 class TfPosition extends Figure {
   constructor() { super(); this.duration = 16; this.loop = true; this.poster = 4.2; }
   build() {
-    const svg = this.svgRoot(600, 330, 'Sine waves of decreasing frequency, sampled at a position');
+    const svg = this.svgRoot(600, 330, 'Sine and cosine waves in pairs of decreasing frequency, sampled at a position');
     this.K = 8; this.N = 64; this.x0 = 64; this.x1 = 440;
-    this.w = Array.from({ length: this.K }, (_, k) => 1 / Math.pow(100, k / this.K));
+    // even dims: sin, odd dims: cos, each pair sharing the frequency base^(-2i/d) (base 100 here, 10,000 in the paper)
+    this.w = Array.from({ length: this.K }, (_, k) => 1 / Math.pow(100, 2 * Math.floor(k / 2) / this.K));
+    this.f = k => (k % 2 ? Math.cos : Math.sin);
     const X = p => this.x0 + p / (this.N - 1) * (this.x1 - this.x0);
     this.X = X;
     S('text', { x: 24, y: 24, class: 'sl', 'font-size': 11, text: 'DIMENSION' }, svg);
@@ -208,7 +210,7 @@ class TfPosition extends Figure {
       S('text', { x: 24, y: y + 4, class: 't3', 'font-size': 13, text: 'd' + k }, svg);
       S('line', { x1: this.x0, x2: this.x1, y1: y, y2: y, class: 's-rule', 'stroke-width': 1 }, svg);
       let d = '';
-      for (let i = 0; i <= 240; i++) { const p = i / 240 * (this.N - 1); d += (i ? 'L' : 'M') + X(p).toFixed(1) + ' ' + (y - Math.sin(p * this.w[k]) * 11).toFixed(1); }
+      for (let i = 0; i <= 240; i++) { const p = i / 240 * (this.N - 1); d += (i ? 'L' : 'M') + X(p).toFixed(1) + ' ' + (y - this.f(k)(p * this.w[k]) * 11).toFixed(1); }
       S('path', { d, class: 'f-none s-ink2', 'stroke-width': 1.3 }, svg);
     }
     this.ticks = [0, 8, 16, 24, 32, 40, 48, 56, 63].map(p => S('text', { x: X(p), y: 312, class: 't3', 'font-size': 12, 'text-anchor': 'middle', text: p }, svg));
@@ -233,7 +235,7 @@ class TfPosition extends Figure {
     this.ticks.forEach(e => op(e, Math.abs(+e.getAttribute('x') - x) < 40 ? 0 : 1));
     attr(this.posBg, { x: x - 27 }); attr(this.posT, { x, y: 313 }); this.posT.textContent = 'pos ' + p;
     for (let k = 0; k < this.K; k++) {
-      const v = Math.sin(p * this.w[k]), y = this.rowY(k);
+      const v = this.f(k)(p * this.w[k]), y = this.rowY(k);
       attr(this.dots[k], { cx: x, cy: y - v * 11 });
       paint(this.cells[k], v);
       this.vals[k].textContent = (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(2);
@@ -327,8 +329,10 @@ class TfAttention extends Figure {
   select(i) { this.q = i; this.retarget(); }
   retarget() {
     const from = (this.cur || Array(12).fill(1 / 12)).slice(), to = this.target(), t0 = performance.now(), D = REDUCED ? 1 : 520;
-    if (this.mode === 'row') this.items[10].qt.textContent = this.end;
-    else { this.items[10].qt.textContent = this.end; this.items[10].kt.textContent = this.end; }
+    const it10 = this.items[10];
+    it10.w = this.end; it10.g.setAttribute('aria-label', 'Attend from ' + this.end);
+    if (this.mode === 'row') it10.qt.textContent = this.end;
+    else { it10.qt.textContent = this.end; it10.kt.textContent = this.end; }
     cancelAnimationFrame(this.raf);
     this.setStatus('running');
     const step = now => {
@@ -416,14 +420,14 @@ class TfQKV extends Figure {
     S('text', { x: 40, y: 222, class: 't2', 'font-size': 14, text: 'q·k' }, svg);
     S('text', { x: 40, y: 268, class: 't2', 'font-size': 14, text: 'weight' }, svg);
     this.sc = this.cx.map((cx, i) => S('text', { x: cx, y: 224, class: 't', 'font-size': 20, 'text-anchor': 'middle', text: fmt(this.scores[i]) }, svg));
-    this.wt = this.cx.map((cx, i) => S('text', { x: cx, y: 268, class: 't', 'font-size': 20, 'text-anchor': 'middle', text: pct(this.w[i]), style: i === 1 ? 'fill:var(--green-t);font-weight:700' : '' }, svg));
+    this.wt = this.cx.map((cx, i) => S('text', { x: cx, y: 268, class: 't', 'font-size': 20, 'text-anchor': 'middle', text: (this.w[i] * 100).toFixed(1) + '%', style: i === 1 ? 'fill:var(--green-t);font-weight:700' : '' }, svg));
     this.wb = this.cx.map((cx, i) => S('rect', { x: cx - 50, y: 278, height: 5, rx: 2.5, class: i === 1 ? 'f-green' : 'f-ink3' }, svg));
     this.sum = S('text', { x: 584, y: 268, class: 't3', 'font-size': 13, 'text-anchor': 'end', text: 'Σ = 100%' }, svg);
     this.scale = S('text', { x: 40, y: 246, class: 't3', 'font-size': 12, text: '÷ √4, softmax ↓' }, svg);
     // scaled values travelling down
     this.vm = this.cx.map((cx, i) => {
       const g = row(svg, Vs[i], 0, 0);
-      const lab = S('text', { x: rw / 2, y: -6, class: 't3', 'font-size': 12, 'text-anchor': 'middle', text: '× ' + pct(this.w[i]) }, g);
+      const lab = S('text', { x: rw / 2, y: -6, class: 't3', 'font-size': 12, 'text-anchor': 'middle', text: '× ' + (this.w[i] * 100).toFixed(1) + '%' }, g);
       return { g, lab };
     });
     S('text', { x: 40, y: 394, class: 't', 'font-size': 17, 'font-weight': 700, text: 'z' }, svg);
@@ -673,13 +677,19 @@ class TfSample extends Figure {
     this.tl = H('span', { class: 'fc-l', text: 'T = 0.80' }, bar);
     this.sampleBtn = H('button', { class: 'pill', type: 'button', text: 'sample →' }, bar);
     this.resetBtn = H('button', { class: 'pill', type: 'button', text: 'reset' }, bar);
-    this.slider.oninput = () => { this.T = this.slider.value / 100; this.tl.textContent = 'T = ' + this.T.toFixed(2); this.held = true; this.draw(); };
+    this.slider.oninput = () => { this.cancelFlight(); this.T = this.slider.value / 100; this.tl.textContent = 'T = ' + this.T.toFixed(2); this.held = true; this.draw(); };
     this.sampleBtn.onclick = () => { this.held = true; this.step(); };
     this.resetBtn.onclick = () => { this.held = true; this.reset(); };
     this.rand = STILL ? rng(4) : Math.random;
     this.reset();
   }
-  reset() { this.toks = ['the', 'cat']; this.pick = -1; this.dartX = null; this.draw(); }
+  // a pending flight belongs to the old sentence and temperature; drop it
+  cancelFlight() {
+    this.gen = (this.gen || 0) + 1;
+    cancelAnimationFrame(this.flyRaf); clearTimeout(this.landT);
+    if (this.busy) { this.busy = false; this.setStatus('interactive', 'idle'); }
+  }
+  reset() { this.cancelFlight(); this.toks = ['the', 'cat']; this.pick = -1; this.dartX = null; this.draw(); }
   cands() {
     const last = this.toks[this.toks.length - 1], c = this.toks.length > 13 ? [['.', 3]] : (TABLE[last] || END);
     const p = softmax(c.map(x => x[1]), this.T);
@@ -723,17 +733,22 @@ class TfSample extends Figure {
     if (this.busy) return;
     if (this.done()) { this.reset(); return; }
     this.busy = true;
+    const gen = this.gen = (this.gen || 0) + 1;
     const u = this.rand(), segs = this.segs, hit = segs.find(s => u * 552 + 24 < s.x1) || segs[segs.length - 1];
     const from = this.dartX ?? 24, to = 24 + u * 552, t0 = performance.now(), D = REDUCED ? 1 : 700;
     this.setStatus('running');
     const f = now => {
+      if (gen !== this.gen) return;
       const k = seg(now - t0, 0, D), x = lerp(from, to, inout(k)), hop = Math.sin(k * Math.PI) * 18;
       attr(this.dart, { transform: `translate(${x - 11} ${290 - 24 - hop})` });
-      if (k < 1) return requestAnimationFrame(f);
+      if (k < 1) { this.flyRaf = requestAnimationFrame(f); return; }
       hit.r.setAttribute('class', 'f-green');
-      setTimeout(() => { this.toks.push(hit.w); this.dartX = to; this.busy = false; this.draw(true); this.setStatus('interactive', 'idle'); this.next(); }, REDUCED ? 0 : 380);
+      this.landT = setTimeout(() => {
+        if (gen !== this.gen) return;
+        this.toks.push(hit.w); this.dartX = to; this.busy = false; this.draw(true); this.setStatus('interactive', 'idle'); this.next();
+      }, REDUCED ? 0 : 380);
     };
-    requestAnimationFrame(f);
+    this.flyRaf = requestAnimationFrame(f);
   }
   next() {
     clearTimeout(this.timer);
