@@ -1,4 +1,4 @@
-import { S, H, attr, op, seg, ease, inout, lerp, clamp, handArrow, drawOn, critter, Figure, define } from './core.js';
+import { S, H, attr, op, seg, ease, inout, lerp, clamp, handArrow, drawOn, critter, REDUCED, Figure, define } from './core.js';
 
 // ── small control helpers ──────────────────────────────────────────────────
 const bar = parent => H('div', { class: 'fc' }, parent);
@@ -144,13 +144,23 @@ class EsRefresh extends Figure {
     this.dots.forEach((d, i) => op(d, i < pending ? 1 : 0));
     const fresh = s.times.length && t - s.times[s.times.length - 1] < .45;
     this.buf.setAttribute('class', 'f-bg ' + (fresh ? 's-green' : 's-rule'));
-    this.segG.replaceChildren();
-    s.segs.forEach((sg, i) => {
+    this.pool = this.pool || [];
+    this.empty = this.empty || T(this.segG, 234, 56, 'nothing searchable yet', 't3', 12);
+    while (this.pool.length < s.segs.length) {
+      const r = S('rect', { x: 234, height: 9, rx: 2 }, this.segG);
+      this.pool.push({ r, txt: T(this.segG, 0, 0, '', 't3', 10.5) });
+    }
+    this.pool.forEach((p, i) => {
+      const sg = s.segs[i];
+      op(p.r, sg ? 1 : 0); op(p.txt, sg ? 1 : 0);
+      if (!sg) return;
       const y = 46 + i * 15, w = 6 + sg.d * 3.6, young = t - sg.b < .6;
-      S('rect', { x: 234, y, width: w, height: 9, rx: 2, class: young ? (sg.m ? 'f-ochre' : 'f-green') : sg.m ? 'f-ink2' : 'f-ink3' }, this.segG);
-      T(this.segG, 240 + w, y + 8.5, `${sg.d} docs${young && sg.m ? ' · merged' : ''}`, 't3', 10.5);
+      attr(p.r, { y, width: w, class: young ? (sg.m ? 'f-ochre' : 'f-green') : sg.m ? 'f-ink2' : 'f-ink3' });
+      attr(p.txt, { x: 240 + w, y: y + 8.5 });
+      const label = `${sg.d} docs${young && sg.m ? ' · merged' : ''}`;
+      if (p.txt.textContent !== label) p.txt.textContent = label;
     });
-    if (!s.segs.length) T(this.segG, 234, 56, 'nothing searchable yet', 't3', 12);
+    op(this.empty, s.segs.length ? 0 : 1);
     this.counter.textContent = `indexed ${s.indexed} · searchable ${s.searchable} · segments ${s.segs.length} · refreshes ${s.times.length} · merges ${s.merges}`;
     attr(this.clipR, { width: this.cx(t) + 1 });
     const x = this.cx(t); attr(this.mark, { x1: x, x2: x });
@@ -362,7 +372,7 @@ class EsDisk extends Figure {
     S('rect', { x: 310, y: 220, width: 270, height: 70, rx: 10, class: 'f-bg s-rule', 'stroke-width': 1 }, svg);
     T(svg, 32, 238, 'node-1', 't3', 11); T(svg, 322, 238, 'node-2', 't3', 11);
     this.tiles = [0, 1, 2, 3, 4].map(k => {
-      const g = S('g', { style: 'transition: transform .6s cubic-bezier(.2,.7,.2,1)' }, svg);
+      const g = S('g', { style: REDUCED ? null : 'transition: transform .6s cubic-bezier(.2,.7,.2,1)' }, svg);
       S('rect', { x: 36 + k * 48, y: 248, width: 40, height: 30, rx: 5, class: 'f-panel s-ink3', 'stroke-width': 1.2 }, g);
       T(g, 56 + k * 48, 268, 'P' + k, 't2', 11, { 'text-anchor': 'middle' });
       return g;
