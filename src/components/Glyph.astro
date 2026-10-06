@@ -1,0 +1,56 @@
+---
+// One small drawing per article, made from the article's own subject.
+interface Props { name: string; size?: number }
+const { name, size = 52 } = Astro.props
+---
+<svg class="glyph-svg" viewBox="0 0 52 52" width={size} height={size} aria-hidden="true">
+  {name === 'attention' && (
+    <g>
+      <path class="k3" d="M8 38 Q14 22 20 38 M20 38 Q26 30 32 38 M38 38 Q41 30 44 38" />
+      <path class="ka mv" d="M8 38 Q23 8 38 38" />
+      <circle class="f3" cx="8" cy="42" r="2.2" /><circle class="f3" cx="20" cy="42" r="2.2" /><circle class="f3" cx="32" cy="42" r="2.2" />
+      <circle class="fa" cx="38" cy="42" r="2.8" /><circle class="f3" cx="44" cy="42" r="2.2" />
+    </g>
+  )}
+  {name === 'kv' && (
+    <g>
+      {[0, 1, 2, 3].map((c) => [0, 1, 2, 3].map((r) => c <= r && (
+        <rect class={c === r ? 'fa mv' : 'f3'} x={8 + c * 9} y={8 + r * 9} width="7" height="7" rx="1.4" />
+      )))}
+      <path class="k3" d="M8 46h36" />
+    </g>
+  )}
+  {name === 'cost' && (
+    <g>
+      <rect class="f3" x="8" y="34" width="6" height="8" rx="1" /><rect class="f3" x="16" y="27" width="6" height="15" rx="1" />
+      <rect class="f3" x="24" y="19" width="6" height="23" rx="1" /><rect class="fo mv" x="32" y="9" width="6" height="33" rx="1" />
+      <rect class="fa" x="40" y="31" width="6" height="11" rx="1" /><path class="k3" d="M6 44h42" />
+    </g>
+  )}
+  {name === 'dp' && (
+    <g>
+      {[0, 1, 2, 3, 4].map((r) => [0, 1, 2, 3, 4].map((c) => c <= r && (
+        <rect class={r === 4 && c === 4 ? 'fa mv' : (r + c) % 3 === 0 ? 'f' : 'f3'} x={7 + c * 8} y={7 + r * 8} width="6" height="6" rx="1" />
+      )))}
+      <path class="k3" d="M7 47h38" />
+    </g>
+  )}
+  {name === 'search' && (
+    <g>
+      <path class="k3" d="M8 12h10 M8 24h10 M8 36h10" />
+      <path class="k3" d="M20 12 L31 11 M20 12 L31 24 M20 24 L31 24 M20 36 L31 37 M20 36 L31 11" />
+      <g class="mv"><rect class="f3" x="32" y="7" width="12" height="8" rx="1.5" /><rect class="fa" x="32" y="20" width="12" height="8" rx="1.5" /><rect class="f3" x="32" y="33" width="12" height="8" rx="1.5" /></g>
+    </g>
+  )}
+  {name === 'cursor' && (
+    <g><path class="k" d="M15 15 L6 26 L15 37 M37 15 L46 26 L37 37" /><rect class="fa mv" x="21" y="17" width="10" height="18" /></g>
+  )}
+</svg>
+<style>
+  .glyph-svg { overflow: visible; display: block; }
+  .glyph-svg :global(.k) { fill: none; stroke: var(--ink); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .glyph-svg :global(.k3) { fill: none; stroke: var(--ink-3); stroke-width: 1.3; stroke-linecap: round; }
+  .glyph-svg :global(.ka) { fill: none; stroke: var(--green); stroke-width: 2.4; stroke-linecap: round; }
+  .glyph-svg :global(.f) { fill: var(--ink); } .glyph-svg :global(.f3) { fill: var(--ink-3); }
+  .glyph-svg :global(.fa) { fill: var(--green); } .glyph-svg :global(.fo) { fill: var(--ochre); }
+</style>

@@ -1,12 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" fill="#111111" />
-  <text
-    x="16"
-    y="22"
-    font-family="Inconsolata, ui-monospace, 'SF Mono', Menlo, monospace"
-    font-size="20"
-    font-weight="700"
-    fill="#fafafa"
-    text-anchor="middle"
-  >hq</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 13" shape-rendering="crispEdges"><path fill="#1a7f45" d="M7 1h1v2h-1z M5 0h2v1h-2z M8 0h2v1h-2z M4 1h1v1h-1z M10 1h1v1h-1z"/><path fill="#4c9b5c" d="M4 3h6v1h-6z M2 4h10v1h-10z M1 5h12v2h-12z M0 7h14v4h-14z M1 11h12v1h-12z M2 12h3v1h-3z M9 12h3v1h-3z"/><path fill="#211f1c" d="M3 6h2v2h-2z M9 6h2v2h-2z M5 9h1v1h-1z M8 9h1v1h-1z M6 10h2v1h-2z"/><path fill="#fff" d="M3 6h1v1h-1z M9 6h1v1h-1z"/><path fill="#e4a594" d="M1 8h2v1h-2z M11 8h2v1h-2z"/></svg>

@@ -2,6 +2,11 @@
   "name": "my-website",
   "type": "module",
   "version": "0.0.1",
+  "description": "field notes: Ha-Quang Le's blog, where every figure is running code",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/winlp4ever/winlp4ever.github.io"
+  },
   "engines": {
     "node": ">=22.12.0"
   },
@@ -9,22 +14,67 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "release": "commit-and-tag-version"
   },
   "dependencies": {
-    "@astrojs/react": "^5.0.4",
-    "@fontsource-variable/inconsolata": "^5.2.8",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
+    "@astrojs/rss": "^4.0.19",
+    "@astrojs/sitemap": "^3.7.4",
+    "@fontsource-variable/instrument-sans": "^5.3.0",
+    "@fontsource-variable/jetbrains-mono": "^5.3.0",
+    "@fontsource/architects-daughter": "^5.3.0",
     "astro": "^6.1.9",
     "katex": "^0.16.45",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0"
   },
   "devDependencies": {
+    "commit-and-tag-version": "^13.2.1",
     "prettier": "^3.8.3",
     "prettier-plugin-astro": "^0.14.1"
+  },
+  "commit-and-tag-version": {
+    "types": [
+      {
+        "type": "feat",
+        "section": "Features"
+      },
+      {
+        "type": "fix",
+        "section": "Fixes"
+      },
+      {
+        "type": "perf",
+        "section": "Performance"
+      },
+      {
+        "type": "docs",
+        "section": "Writing & docs"
+      },
+      {
+        "type": "refactor",
+        "section": "Refactors"
+      },
+      {
+        "type": "style",
+        "hidden": true
+      },
+      {
+        "type": "chore",
+        "hidden": true
+      },
+      {
+        "type": "ci",
+        "hidden": true
+      },
+      {
+        "type": "build",
+        "hidden": true
+      }
+    ],
+    "releaseCommitMessageFormat": "chore(release): {{currentTag}}",
+    "commitUrlFormat": "https://github.com/winlp4ever/winlp4ever.github.io/commit/{{hash}}",
+    "compareUrlFormat": "https://github.com/winlp4ever/winlp4ever.github.io/compare/{{previousTag}}...{{currentTag}}",
+    "issueUrlFormat": "https://github.com/winlp4ever/winlp4ever.github.io/issues/{{id}}"
   }
 }

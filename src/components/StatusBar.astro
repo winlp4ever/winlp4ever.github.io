@@ -1,0 +1,48 @@
+---
+import { execSync } from 'node:child_process'
+interface Props { published: number; drafts: number; reading?: { minutes: number; figures: number } }
+const { published, drafts, reading } = Astro.props
+let sha = 'main'
+try { sha = execSync('git rev-parse --short HEAD').toString().trim() } catch {}
+const built = new Date().toISOString()
+---
+<div class="bar" aria-hidden="true">
+  {reading ? (
+    <>
+      <span><i class="dot running"></i>reading</span>
+      <span><span class="prog"><i id="prog"></i></span><span id="pct">0%</span></span>
+      <span class="hide-s">{reading.minutes} min{reading.figures ? ` · ${reading.figures} figures` : ''}</span>
+    </>
+  ) : (
+    <>
+      <span><i class="dot"></i>{published} published</span>
+      {drafts > 0 && <span class="hide-s"><i class="dot draft"></i>{drafts} draft{drafts > 1 ? 's' : ''}</span>}
+    </>
+  )}
+  <span class="hide-s">⎇ {sha} · built <span id="built-at" data-t={built}>today</span></span>
+  <span class="sp"></span>
+  <a class="hide-s" href="/rss.xml">rss</a>
+  <span>paris <span id="clock">--:--</span></span>
+  <span class="hide-s">utf-8</span>
+</div>
+<script>
+  const clock = document.getElementById('clock')!
+  const fmt = new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' })
+  const tick = () => (clock.textContent = fmt.format(new Date()))
+  tick(); setInterval(tick, 20000)
+  const b = document.getElementById('built-at')!
+  const h = (Date.now() - Date.parse(b.dataset.t!)) / 36e5
+  b.textContent = h < 1 ? 'just now' : h < 48 ? `${Math.round(h)}h ago` : `${Math.round(h / 24)}d ago`
+  const prog = document.getElementById('prog'), pct = document.getElementById('pct')
+  if (prog && pct) {
+    const art = document.querySelector('article') as HTMLElement
+    let raf = 0
+    const upd = () => {
+      raf = 0
+      const r = art.getBoundingClientRect(), p = Math.min(1, Math.max(0, -r.top / Math.max(1, r.height - innerHeight)))
+      prog.style.width = (p * 100).toFixed(1) + '%'; pct.textContent = Math.round(p * 100) + '%'
+    }
+    addEventListener('scroll', () => { if (!raf) raf = requestAnimationFrame(upd) }, { passive: true })
+    upd()
+  }
+</script>

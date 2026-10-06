@@ -1,0 +1,16 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import Critter from '../components/Critter.astro'
+---
+<BaseLayout title="not found">
+  <div class="page lost">
+    <Critter size={110} live />
+    <h1>404</h1>
+    <p>This page wandered off. The <a class="u" href="/">front page</a> is still here.</p>
+  </div>
+</BaseLayout>
+<style>
+  .lost { min-height: 60vh; display: grid; place-content: center; justify-items: center; text-align: center; gap: 10px; }
+  h1 { font: 650 96px/1 var(--sans); font-stretch: 75%; margin: 18px 0 0; }
+  p { color: var(--ink-2); margin: 0; }
+</style>

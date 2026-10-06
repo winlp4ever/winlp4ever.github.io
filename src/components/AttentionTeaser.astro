@@ -1,0 +1,73 @@
+---
+// Home-page teaser: the attention figure from "How a transformer reads", in miniature.
+// The first frame is drawn on the server so it shows without JS.
+const W = ['the', 'animal', "didn't", 'cross', 'the', 'street', 'because', 'it', 'was', 'too', 'tired']
+const fs = 15, cw = fs * 0.6, gap = 11
+const total = W.reduce((s, w) => s + w.length * cw, 0) + gap * (W.length - 1)
+let x = (600 - total) / 2
+const X = W.map((w) => { const c = x + (w.length * cw) / 2; x += w.length * cw + gap; return +c.toFixed(1) })
+const weights = (q: number, bonus: Record<number, number>) => {
+  const s = W.map((_, i) => -0.6 + (i === q ? 1 : 0) + (Math.abs(i - q) === 1 ? 0.35 : 0) + (bonus[i] || 0))
+  const m = Math.max(...s), e = s.map((v) => Math.exp(v - m)), z = e.reduce((a, b) => a + b)
+  return e.map((v) => v / z)
+}
+const q0 = 7, w0 = weights(q0, { 1: 3.6, 5: 1.1, 10: 1.6 })
+const arc = (q: number, i: number) => {
+  const h = Math.min(160, 24 + Math.abs(X[i] - X[q]) * 0.42)
+  return i === q ? `M${X[q] - 6} 192 C${X[q] - 20} 160 ${X[q] + 20} 160 ${X[q] + 6} 192` : `M${X[q]} 188 C${X[q]} ${188 - h} ${X[i]} ${188 - h} ${X[i]} 196`
+}
+---
+<svg id="teaser" viewBox="0 0 600 232" role="img" aria-label="Attention arcs: the word 'it' looks mostly at 'animal'" data-x={JSON.stringify(X)}>
+  <text class="note" x="300" y="26" text-anchor="middle">"it" looks at "animal" · {Math.round(w0[1] * 100)}%</text>
+  {W.map((_, i) => <path class="arc" d={arc(q0, i)} stroke-width={(0.6 + 7 * w0[i]).toFixed(2)} opacity={(0.1 + 0.9 * Math.pow(w0[i], 0.7)).toFixed(3)} />)}
+  {W.map((w, i) => <text class="w" x={X[i]} y="214" text-anchor="middle" data-q={i === q0 ? '' : undefined} opacity={i === q0 ? 1 : (0.35 + 0.65 * Math.min(1, w0[i] * 3)).toFixed(2)}>{w}</text>)}
+</svg>
+<script>
+  const svg = document.getElementById('teaser')
+  if (svg && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const W = ['the', 'animal', "didn't", 'cross', 'the', 'street', 'because', 'it', 'was', 'too', 'tired']
+    const X: number[] = JSON.parse(svg.dataset.x!)
+    const arcs = [...svg.querySelectorAll<SVGPathElement>('.arc')], txt = [...svg.querySelectorAll<SVGTextElement>('.w')]
+    const note = svg.querySelector('.note')!
+    const tour: [number, Record<number, number>][] = [[7, { 1: 3.6, 5: 1.1, 10: 1.6 }], [10, { 1: 2.2, 7: 1.6, 9: 1.2 }], [3, { 1: 1.6, 5: 1.8 }], [5, { 3: 1.8, 4: 1.2 }]]
+    const weights = (q: number, b: Record<number, number>) => {
+      const s = W.map((_, i) => -0.6 + (i === q ? 1 : 0) + (Math.abs(i - q) === 1 ? 0.35 : 0) + (b[i] || 0))
+      const m = Math.max(...s), e = s.map((v) => Math.exp(v - m)), z = e.reduce((a, c) => a + c)
+      return e.map((v) => v / z)
+    }
+    const paint = (q: number, w: number[]) => {
+      arcs.forEach((a, i) => {
+        const h = Math.min(160, 24 + Math.abs(X[i] - X[q]) * 0.42)
+        a.setAttribute('d', i === q ? `M${X[q] - 6} 192 C${X[q] - 20} 160 ${X[q] + 20} 160 ${X[q] + 6} 192` : `M${X[q]} 188 C${X[q]} ${188 - h} ${X[i]} ${188 - h} ${X[i]} 196`)
+        a.setAttribute('stroke-width', (0.6 + 7 * w[i]).toFixed(2))
+        a.setAttribute('opacity', (0.1 + 0.9 * Math.pow(w[i], 0.7)).toFixed(3))
+        if (i === q) txt[i].setAttribute('data-q', ''); else txt[i].removeAttribute('data-q')
+        txt[i].setAttribute('opacity', i === q ? '1' : (0.35 + 0.65 * Math.min(1, w[i] * 3)).toFixed(2))
+      })
+      const top = w.map((v, i) => [v, i]).filter((p) => p[1] !== q).sort((a, b) => b[0] - a[0])[0]
+      note.textContent = `"${W[q]}" looks at "${W[top[1]]}" · ${Math.round(top[0] * 100)}%`
+    }
+    let cur = weights(7, tour[0][1]), k = 1, raf = 0, timer = 0
+    const go = () => {
+      const [q, b] = tour[k++ % tour.length], to = weights(q, b), from = cur.slice(), t0 = performance.now()
+      cancelAnimationFrame(raf)
+      const step = (now: number) => {
+        const p = Math.min(1, (now - t0) / 650), e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2
+        cur = from.map((f, i) => f + (to[i] - f) * e); paint(q, cur)
+        if (p < 1) raf = requestAnimationFrame(step)
+      }
+      raf = requestAnimationFrame(step)
+    }
+    new IntersectionObserver(([e]) => {
+      clearInterval(timer)
+      if (e.isIntersecting) timer = window.setInterval(go, 2600)
+    }).observe(svg)
+  }
+</script>
+<style>
+  svg { display: block; width: 100%; height: auto; margin-top: 6px; }
+  .arc { fill: none; stroke: var(--ink); stroke-linecap: round; }
+  .w { font: 15px var(--mono); fill: var(--ink); }
+  .w[data-q] { fill: var(--green-t); font-weight: 700; }
+  .note { font: 13px var(--mono); fill: var(--ink-3); }
+</style>

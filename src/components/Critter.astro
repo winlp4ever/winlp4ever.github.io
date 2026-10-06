@@ -1,0 +1,47 @@
+---
+// The site's mascot: a small round sprout with big eyes. Pixel art, drawn as one svg.
+// Eyes, cheeks and sprout are separate layers so they can blink, look around and sway.
+interface Props { size?: number; class?: string; live?: boolean }
+const { size = 120, class: cls = '', live = false } = Astro.props
+
+const BODY = [
+  '..............',
+  '..............',
+  '..............',
+  '....XXXXXX....',
+  '..XXXXXXXXXX..',
+  '.XXXXXXXXXXXX.',
+  '.XXXXXXXXXXXX.',
+  'XXXXXXXXXXXXXX',
+  'XXXXXXXXXXXXXX',
+  'XXXXXXXXXXXXXX',
+  'XXXXXXXXXXXXXX',
+  '.XXXXXXXXXXXX.',
+  '..XXX....XXX..',
+]
+const path = (rows: string[], ch = 'X') => {
+  let d = ''
+  rows.forEach((r, j) => [...r].forEach((c, i) => { if (c === ch) d += `M${i} ${j}h1v1h-1z` }))
+  return d
+}
+const body = path(BODY)
+---
+<svg class={`critter ${cls}`} data-live={live ? '' : undefined} viewBox="0 0 14 13" width={size} height={size * 13 / 14} shape-rendering="crispEdges" aria-hidden="true">
+  <g class="sprout"><path d="M7 1h1v2h-1z M5 0h2v1h-2z M8 0h2v1h-2z M4 1h1v1h-1z M10 1h1v1h-1z" fill="var(--green-t)"/></g>
+  <path d={body} fill="var(--green)"/>
+  <path d="M4 3h6v1h-6z M2 4h2v1h-2z M10 4h2v1h-2z" fill="#fff" opacity=".28"/>
+  <g class="eyes">
+    <rect x="3" y="6" width="2" height="2" fill="#211f1c"/><rect x="9" y="6" width="2" height="2" fill="#211f1c"/>
+    <rect class="spark" x="3" y="6" width="1" height="1" fill="#fff"/><rect class="spark" x="9" y="6" width="1" height="1" fill="#fff"/>
+  </g>
+  <rect x="1" y="8" width="2" height="1" fill="var(--blush)"/><rect x="11" y="8" width="2" height="1" fill="var(--blush)"/>
+  <path d="M5 9h1v1h-1z M8 9h1v1h-1z M6 10h2v1h-2z" fill="#211f1c"/>
+</svg>
+<style>
+  .critter { display: block; overflow: visible; }
+  .sprout { transform-origin: 7.5px 3px; }
+  .eyes { transform-origin: 7px 7px; transition: transform .12s; }
+  [data-live] .sprout { animation: sway 3.6s ease-in-out infinite; }
+  @keyframes sway { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg); } }
+  @media (prefers-reduced-motion: reduce) { [data-live] .sprout { animation: none; } }
+</style>
