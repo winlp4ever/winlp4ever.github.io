@@ -121,7 +121,7 @@ class VsHorizon extends Figure {
     const lg = S('g', { transform: 'translate(360 24)' }, svg);
     S('circle', { cx: 0, cy: -4, r: 5, class: 'f-green' }, lg); S('text', { x: 9, y: 0, class: 't2', 'font-size': 11.5, text: 'GLM-5.3' }, lg);
     S('circle', { cx: 80, cy: -4, r: 5, class: 'f-ochre' }, lg); S('text', { x: 89, y: 0, class: 't2', 'font-size': 11.5, text: 'V4-Flash-0731' }, lg);
-    this.vnote = S('text', { x: 250, y: 274, class: 'hand', 'font-size': 14, text: 'what the launch posts said' }, svg);
+    this.vnote = S('text', { x: 250, y: 274, class: 'hand', 'font-size': 14, text: 'launch post numbers' }, svg);
     const bar = controls(this);
     this.show = false;
     pills(bar, [[false, 'independent runs'], [true, '+ vendor claims']], false, (v) => { this.show = v; this.paint(1); });
