@@ -143,7 +143,7 @@
 .click { cursor: pointer; }
 
 /* end of article */
-.post-end { margin: 72px 0 0; padding-top: 18px; border-top: 3px solid var(--heavy); display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.post-end { margin-top: 72px; padding-top: 18px; border-top: 3px solid var(--heavy); display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 .post-end a { display: block; padding: 4px 0; }
 .post-end .label { display: block; margin-bottom: 10px; }
 .post-end b { font: 650 22px/1.2 var(--sans); font-stretch: 85%; display: block; }
