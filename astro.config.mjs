@@ -12,7 +12,8 @@ export default defineConfig({
       themes: { light: 'github-light', dark: 'github-dark' },
       defaultColor: false,
     },
-    remarkPlugins: [remarkMath],
+    // single $ is money on this blog, not math: only $$…$$ is parsed as LaTeX
+    remarkPlugins: [[remarkMath, { singleDollarTextMath: false }]],
     rehypePlugins: [rehypeKatex],
   },
 })
