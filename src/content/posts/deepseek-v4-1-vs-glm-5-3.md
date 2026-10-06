@@ -1,7 +1,7 @@
 ---
 title: DeepSeek V4.1 vs GLM-5.3, and how far both are from Claude Code and Codex
 date: 2026-10-06
-description: The two Chinese open-weights families compared on agentic work and coding, in two weight classes, against the closed models behind Claude Code and Codex. How close they get depends on the length of the task, and what they cost depends on how you run them.
+description: DeepSeek V4.1 and GLM-5.3 compared on agentic work and coding in two weight classes, next to the closed models behind Claude Code and Codex, with benchmark scores by task type, speed, cost per solved task and reports from daily use.
 tags: [ai, llm, agents, benchmarks]
 category: ai
 glyph: versus
@@ -10,9 +10,9 @@ figures: 6
 
 Z.ai shipped the GLM-5.3 family in late August, and DeepSeek shipped V4.1-Flash on 10 September. On Hacker News both get recommended as cheap alternatives to Claude Code and Codex, often with a line like ["GLM 5.3 is at most 6 months away from the frontier models, and good enough for most tasks already"](https://news.ycombinator.com/item?id=49883892). I wanted to check both parts of that claim on agentic work and coding.
 
-How close these models get to Claude and GPT depends mostly on how long the task is. On short, tool-driven work the best of them are level with Opus 5.5, and on multi-hour jobs in a terminal they reach between a quarter and 70% of its score. What a model costs you depends more on how you run it (the host, the cache price, the harness, the subscription) than on its price list.
+On short, tool-driven work the best of these open models score about the same as Opus 5.5. On multi-hour jobs in a terminal they reach between a quarter and 70% of its score. Cost per solved task moves a lot with the host, the cache price, the harness and the subscription: the same GLM-5.3 run costs $19.77 per solved task on Z.ai's API and about $1.72 on its Coding Plan off-peak.
 
-I didn't run benchmarks myself. Everything below comes from the vendors' model cards and docs, four independent leaderboards (Artificial Analysis, Vals, the official Terminal-Bench board and Andon Labs' Vending-Bench), OpenRouter's public usage data, and a few hundred comments and bug reports from people who use these models every day. All numbers are as of 6 October 2026.
+The numbers below come from the vendors' model cards and docs, four independent leaderboards (Artificial Analysis, Vals, the official Terminal-Bench board and Andon Labs' Vending-Bench), OpenRouter's public usage data, and a few hundred comments and bug reports from people who use these models every day. All of them are as of 6 October 2026.
 
 ## two weight classes
 
