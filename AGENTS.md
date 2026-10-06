@@ -46,7 +46,7 @@ Semantic versioning, driven by commit types through `commit-and-tag-version` (co
 - `src/lib/site.ts`: site constants (name, author, `now` line, links) and date / reading-time helpers.
 - `public/katex/`: KaTeX css + woff2, linked only by posts with `math: true`.
 - `docs/AUTHORING.md`: how to write a post and its figures. **Read it before touching a post.**
-- `docs/ai-writing-patterns-to-avoid.md`: the voice checklist. **Run its 60-second check on any prose you write.**
+- `ai-patterns-to-avoid.md`: the writing guide. **Run its 60-second check and its full pass on any prose you write, captions and descriptions included.**
 
 ## Hard rules
 
