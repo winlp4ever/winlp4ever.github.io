@@ -1,50 +1,57 @@
 ---
-title: "LeetCode 1977 — Number of Ways to Separate Numbers"
+title: "LeetCode 1977: number of ways to separate numbers"
 date: 2026-06-22
-description: A good-to-know hard DP problem that blends partition DP, prefix sums, and an LCP table — going from O(n³) to O(n²).
+updated: 2026-10-06
+description: A hard DP that's worth knowing, because it stacks three classics in one problem. Partition DP, prefix sums and an LCP table take it from O(n³) to O(n²).
 tags: [leetcode, dynamic-programming, algorithms]
+category: algo
+glyph: dp
+figures: 5
+math: true
 ---
 
-![Mind map of the solution: split into a strictly non-decreasing sequence, the dp recurrence, prefix-sum and LCP optimizations, and the final O(n²) result](/images/posts/leetcode-1977-separate-numbers/mindmap.png)
+I like this one because it's three classic techniques stacked on top of each other: partition DP, prefix sums, and a longest-common-prefix table. Each one is simple on its own. Together they turn something that looks hopeless into a clean O(n²) solution, and it's a nice problem to come back to when you want to revise all three at once.
 
-A good-to-know DP problem. It's a combination of three classic algorithm techniques — partition DP, prefix sums, and an LCP table — which makes it a fascinating problem to study or to revise.
+## the problem
 
-Let's dive in:
-
-## Problem
-
-Given a string `num` of digits, count how many ways you can split it into a
-**non-decreasing list of positive integers** with **no leading zeros**.
-Return the count modulo `10^9 + 7`.
+You get a string `num` of digits. Count the ways to cut it into a **non-decreasing list of positive integers** where no number has a leading zero. Return the count modulo `10^9 + 7`.
 
 - `1 <= num.length <= 3500`
-- `num` consists of digits only.
+- `num` is digits only
 
-Examples:
+| `num`             | answer | the valid splits               |
+| ----------------- | ------ | ------------------------------ |
+| `"327"`           | 2      | `327` and `3, 27`              |
+| `"094"`           | 0      | every split has a leading zero |
+| `"9999999999999"` | 101    | lots                           |
 
-| `num`               | answer | valid splits                       |
-| ------------------- | ------ | ---------------------------------- |
-| `"327"`             | 2      | `327` and `3, 27`                  |
-| `"094"`             | 0      | every split has a leading zero     |
-| `"9999999999999"`   | 101    | many                               |
+Before any algorithm, it helps to play with it. Every gap between two digits is a place where you can cut or not.
 
----
+<figure class="wide">
+<lc-cuts data-fig data-label="fig 1 · cut it yourself">
+<p class="fallback">The digits 1 2 1 3 1 4 with a clickable gap between each pair. Cutting after the 2 and after the 3 gives 12, 13, 14, which is non-decreasing and valid. A row of 32 dots stands for every possible cut pattern; 8 of them are green, the valid ones.</p>
+</lc-cuts>
+<figcaption><b>fig 1</b>Click the gaps, or type your own digits (up to 12). Each dot at the bottom is one cut pattern and green means valid. The count is computed for real, by brute force, every time you change something.</figcaption>
+</figure>
 
-## First impression
+## first impression
 
-It has vibes of a "dynamic programming" problem from the first moment we look at it. But the constraint of keeping the list non-decreasing makes us feel a bit uneasy. However, it's hard to try a different approach without trying DP first. But why not a naive approach first? Well..
+It smells like dynamic programming from the first read. The non-decreasing rule is what made me uneasy, because whether a cut is allowed depends on the chunk before it, not just on where you are. Still, it's hard to think of anything else here before trying DP. But why not brute force first? Well.
 
-## Why naive enumeration explodes
+## why brute force explodes
 
-A string of length `n` has `2^(n-1)` cut patterns. With `n = 3500` that is
-astronomical — we need DP. The non-decreasing constraint also depends on the
-**length** of the previous chunk, so length has to be part of the state.
+A string of length `n` has `n − 1` gaps, so `2^(n-1)` cut patterns. Fig 1 can afford to check every one of them because it stops at 12 digits. At `n = 3500` the number of patterns has over a thousand digits.
 
----
+<figure class="wide">
+<lc-explode data-fig data-label="fig 2 · how big is big">
+<p class="fallback">A chart of how many digits the operation count has as n grows from 1 to 3500. The 2^(n-1) line climbs straight to about 1,053 digits. The n³ and n² lines stay almost flat near zero. At n = 3500 and a billion operations per second, n² takes about 12 ms, n³ about 43 seconds, and 2^(n-1) about 10^1044 seconds.</p>
+</lc-explode>
+<figcaption><b>fig 2</b>The y axis counts digits, not operations, otherwise nothing would fit. Times assume a billion simple operations per second.</figcaption>
+</figure>
 
-So let's now try DP.
+There's a second thing to notice. Whether the next chunk is allowed depends on the previous chunk's value, and to compare values you need to know the previous chunk's **length**. So the length has to be part of the state.
 
-## DP state
+## the dp state
 
 Let
 
@@ -53,47 +60,40 @@ dp[i][j] = number of valid splits of num[:i]
            whose last chunk has length exactly j
 ```
 
-The current chunk occupies `num[start : i]` where `start = i - j`.
-It must not start with `'0'`.
+The last chunk is `num[start:i]` with `start = i - j`, and it can't start with `'0'`. The answer is everything that ends exactly at the end of the string:
 
-With this the **final answer** will be `sum(dp[n][j] for j in 1..n)`.
+$$
+\text{answer} = \sum_{j=1}^{n} dp[n][j]
+$$
 
-But what is our recursive formula?
+## the transition
 
-![DP definition, base case, recurrence, and the filled dp table for "114"](/images/posts/leetcode-1977-separate-numbers/dp-state.png)
+A split ending in the chunk `num[start:i]` is a split of `num[:start]` (whose last chunk has some length `k`) plus this chunk on the end. It's allowed when the previous chunk is not bigger than the current one:
 
----
+$$
+dp[i][j] = \sum_{k} dp[\text{start}][k] \cdot \big[\, \text{num}[\text{start}-k:\text{start}] \le \text{num}[\text{start}:i] \,\big]
+$$
 
-## The transition formula
+The trick is to split that sum by comparing `k` with `j`:
 
-```
-dp[i][j] = sum (dp[i - j][k] * (if num[i - j - k: i - j] <= num[i - j: i]))
-```
-
-i hope the formula is clear enough. basically `dp[i][j]` is the sum over `dp[i - j][k]` of which k satisfies condition `num[i - j - k: i - j] <= num[i - j: i]`, which is trivial, because we want non-decreasing values.
-
-From this, we split into two cases based on `k`:
-
-1. **`k < j`** — previous chunk is strictly *shorter*. Two positive integers
-   with different digit counts compare by length, so the previous one is
-   automatically smaller. **No comparison needed.** Sum over all such `k`:
+1. **`k < j`**: the previous chunk is shorter. Two positive numbers without leading zeros compare by length first, so a shorter one is always smaller. No comparison needed, every such `k` counts:
 
    ```
-   dp[i][j] += dp[start][1] + dp[start][2] + ... + dp[start][j-1]
+   dp[i][j] += dp[start][1] + ... + dp[start][min(j-1, start)]
    ```
 
-2. **`k == j`** — previous chunk is the *same length*. Now we need a true
-   string comparison: `num[start-j : start] <= num[start : i]`.
+2. **`k == j`**: same length. Now we really have to compare the two strings:
 
    ```
    if num[start-j : start] <= num[start : i]:
        dp[i][j] += dp[start][j]
    ```
 
-3. **Base case** — `start == 0`. The current chunk is the very first one and
-   there is no previous chunk, so `dp[i][j] = 1`.
+3. **`k > j`**: a longer previous chunk is always bigger. Never allowed, so it's not in the sum at all.
 
-A naive implementation of this idea
+And the base case: when `start == 0` the chunk is the first one and there's nothing before it. Seeding `dp[0][0] = 1` makes that fall out of the same formula, since the "shorter previous chunk" sum then picks up `dp[0][0]`.
+
+Written straight from that, with no cleverness:
 
 ```python
 def nbOfWays(num: str) -> int:
@@ -103,75 +103,78 @@ def nbOfWays(num: str) -> int:
     dp[0][0] = 1
     for i in range(1, n + 1):
         for j in range(1, i + 1):
-            if num[i - j] == '0':            # leading zero, this block is illegal
+            if num[i - j] == '0':            # leading zero, this chunk is illegal
                 continue
             for k in range(min(j, i - j) + 1):
-                if k < j or (k == j and num[i-j:i] >= num[i-2*j:i-j]):
+                if k < j or num[i-j:i] >= num[i-2*j:i-j]:
                     dp[i][j] = (dp[i][j] + dp[i - j][k]) % MOD
     return sum(dp[n]) % MOD
 ```
 
-give us O(n^3) time complexity. Not bad. But we wonder if we can do better.
+Here's that table filling up, cell by cell. Each cell only ever reads from one earlier row: a run of shorter cells (green) and at most one same-length cell (ochre).
 
-so looking at the solution, what makes it O(n^3) is that we have 3 loops. As our dp array is two-sized array, first two loops is expected. The third one however we can try a bit harder.
+<figure class="wide">
+<lc-table data-fig data-label="fig 3 · the table">
+<p class="fallback">The dp table for "327" filling in. dp[1][1] = 1 (first chunk "3"). dp[2][1] = 0 because "3" ≤ "2" is false. dp[2][2] = 1 ("32"). dp[3][1] = 0, dp[3][2] = 1 because the previous chunk "3" is shorter than "27", and dp[3][3] = 1 ("327"). The answer is the sum of the last row, 0 + 1 + 1 = 2.</p>
+</lc-table>
+<figcaption><b>fig 3</b>Pick a string and scrub through it. The green outline is the run of shorter previous chunks, the ochre one is the single same-length chunk, and the underlines show both chunks in the string. Try <code>"094"</code> to watch the leading zero kill everything.</figcaption>
+</figure>
 
-Like intuitively we can set `dp[i][j]` to sum of `dp[i - j][k]` with k from `0 -> min(j, i - j)`. Then whether or not we add the case `dp[j][i - j]` is entirely up to whether `num[i-j:i] >= num[i-2*j:i-j]`. Let's optimize each.
+That's O(n³): two loops for the table, which we can't avoid, and a third loop over `k`. The third one is where we can do better, and the two cases above each get their own fix.
 
----
+## optimisation 1: prefix sums
 
-## Optimization 1 — prefix sums
-
-Define
-
-```
-pref[i][j] = dp[i][1] + dp[i][2] + ... + dp[i][j]
-```
-
-Now the sum becomes a single lookup:
+Case 1 sums a run of cells from the same row, `dp[start][1..j-1]`, and we do that for every `(i, j)`. That's the same additions over and over. Keep a running total of each row instead:
 
 ```
-dp[i][j] += pref[start][j-1]
+pre[i][j] = dp[i][0] + dp[i][1] + ... + dp[i][j]
 ```
 
-Build `pref[i][*]` row-by-row right after finishing all `dp[i][*]`.
+and case 1 becomes a single lookup, `pre[start][min(j-1, start)]`. You fill `pre[i][j]` right after `dp[i][j]`, so it's always ready by the time a later row needs it.
 
----
+<figure class="wide">
+<lc-prefix data-fig data-label="fig 4 · prefix sums">
+<p class="fallback">Row 6 of the dp table for "111111111111" is 1, 3, 3, 2, 1, 1, and its running sum row is 1, 4, 7, 9, 10, 11. The shorter-chunk part of dp[11][5] needs the first four cells: the naive version adds 1 + 3 + 3 + 2 = 9, the prefix version reads one cell, pre[6][4] = 9.</p>
+</lc-prefix>
+<figcaption><b>fig 4</b>A real row from the table for twelve 1s. The running sum costs one addition per cell once, and after that any "sum of the first j−1 cells" is a single read.</figcaption>
+</figure>
 
-## Optimization 2 — LCP table for equal-length comparison
+## optimisation 2: an LCP table for the equal-length compare
 
-In the second part we need to find a better way to compare two length-`j` substrings. Doing it character-by-character
-costs `O(j)` and ruins the `O(n^2)` bound.
-
-This is where the **Longest Common Prefix** of every pair of suffixes helps us:
+Case 2 compares two strings of length `j`. Character by character that's O(j), which puts us back at O(n³) in the worst case. The fix is to precompute, for every pair of starting positions, how far the two suffixes agree:
 
 ```
-lcp[i][j] = length of the longest common prefix of num[i:] and num[j:]
+lcp[a][b] = length of the longest common prefix of num[a:] and num[b:]
 ```
 
-Built bottom-up in `O(n^2)`:
+It fills from the bottom-right corner in O(n²), because if `num[a] == num[b]` then the answer is one more than for the next pair:
 
 ```python
-for i in range(n - 1, -1, -1):
-    for j in range(n - 1, -1, -1):
-        if num[i] == num[j]:
-            lcp[i][j] = lcp[i + 1][j + 1] + 1
+for a in range(n - 1, -1, -1):
+    for b in range(n - 1, -1, -1):
+        if num[a] == num[b]:
+            lcp[a][b] = lcp[a + 1][b + 1] + 1
 ```
 
-Then `num[a:a+L] <= num[b:b+L]` is `O(1)`:
+Then comparing `num[a:a+L]` with `num[b:b+L]` is O(1):
 
 ```python
 c = lcp[a][b]
-return c >= L or num[a + c] < num[b + c]
+return c >= L or num[a + c] < num[b + c]      # num[a:a+L] <= num[b:b+L]
 ```
 
-If they agree on the first `c >= L` characters they are equal. Otherwise the
-first differing character `num[a+c]` vs `num[b+c]` decides.
+If the two agree on at least `L` characters they're equal. Otherwise the first character where they differ decides everything.
 
-![O(1) equal-length comparison via the LCP table, with a worked example on "1234"](/images/posts/leetcode-1977-separate-numbers/lcp-comparison.png)
+<figure class="wide">
+<lc-lcp data-fig data-label="fig 5 · lcp table">
+<p class="fallback">The 7 by 7 LCP table for "3123124", filled from the bottom-right corner, each matching cell copying its lower-right neighbour plus one. Then three comparisons: num[1:4] = "123" and num[4:7] = "124" share 2 characters and differ at 3 vs 4, so the first is smaller; "312" and "312" share all 3, so they are equal; "24" vs "23" share 1 and then 4 beats 3.</p>
+</lc-lcp>
+<figcaption><b>fig 5</b>The table for <code>"3123124"</code>. After it fills, click any cell to compare the two suffixes it describes, trimmed to the same length.</figcaption>
+</figure>
 
-## Final solution
+## the final solution
 
-With these two optimizations, we can now implement the final solution:
+Both fixes together:
 
 ```python
 def nbOfWays(num: str) -> int:
@@ -184,7 +187,7 @@ def nbOfWays(num: str) -> int:
             if num[i] == num[j]:
                 lcp[i][j] = lcp[i + 1][j + 1] + 1
 
-    def ge(i1, l1, i2, l2):
+    def ge(i1, l1, i2, l2):                 # num[i1:i1+l1] >= num[i2:i2+l2]
         if l1 != l2:
             return l1 > l2
         k = lcp[i1][i2]
@@ -207,67 +210,37 @@ def nbOfWays(num: str) -> int:
     return sum(dp[n]) % MOD
 ```
 
----
+I ran it against a brute force that tries every cut pattern, on the examples (`"327"` → 2, `"094"` → 0, `"0"` → 0, `"9999999999999"` → 101) and on 400 random strings up to 12 digits. They all agree, and so does the O(n³) version above.
 
-## Walkthrough: `"327"`
+## walkthrough: "327"
 
-Initial: `num[0] = '3'`, OK to proceed.
+`num[0]` is `'3'`, so we're not dead on arrival.
 
-| `i` | `j` | `start` | computation                               | `dp[i][j]` |
-| --- | --- | ------- | ----------------------------------------- | ---------- |
-| 1   | 1   | 0       | base case                                 | 1          |
-| 2   | 1   | 1       | `pref[1][0]=0`; equal-len `"3"<="2"`? no  | 0          |
-| 2   | 2   | 0       | base case                                 | 1          |
-| 3   | 1   | 2       | `pref[2][0]=0`; equal-len `"2"<="7"`? yes, `dp[2][1]=0` | 0 |
-| 3   | 2   | 1       | `pref[1][1]=1`; no equal-len (start<j)    | 1          |
-| 3   | 3   | 0       | base case                                 | 1          |
+| `i` | `j` | `start` | what happens                                               | `dp[i][j]` |
+| --- | --- | ------- | ---------------------------------------------------------- | ---------- |
+| 1   | 1   | 0       | first chunk `"3"`                                          | 1          |
+| 2   | 1   | 1       | no shorter chunk; same length: `"3" <= "2"`? no            | 0          |
+| 2   | 2   | 0       | first chunk `"32"`                                         | 1          |
+| 3   | 1   | 2       | no shorter chunk; same length: `"2" <= "7"`? yes, but `dp[2][1] = 0` | 0 |
+| 3   | 2   | 1       | shorter: `pre[1][1] = 1`; same length: no room             | 1          |
+| 3   | 3   | 0       | first chunk `"327"`                                        | 1          |
 
-Answer = `dp[3][1] + dp[3][2] + dp[3][3] = 0 + 1 + 1 = 2`. ✅
+Answer: `dp[3][1] + dp[3][2] + dp[3][3] = 0 + 1 + 1 = 2`. The two that survive are `dp[3][2]`, which is `3, 27`, and `dp[3][3]`, which is `327`. This is the same run as fig 3 with `"327"` picked.
 
-The two surviving splits correspond to:
-- `dp[3][2] = 1` → `"3", "27"`
-- `dp[3][3] = 1` → `"327"`
+## complexity
 
----
+- LCP table: O(n²) time and space
+- dp and prefix tables: O(n²) time and space
+- total O(n²), about 12 million cells at `n = 3500`, which is fine (fig 2 has the numbers)
 
-## Complexity
+## the bugs I'd watch for
 
-- LCP table: `O(n^2)` time and space
-- DP table + prefix sums: `O(n^2)` time and space
-- Total: **`O(n^2)`** time, **`O(n^2)`** space — fine for `n = 3500`.
+1. **A leading zero in the very first chunk.** If `num[0] == '0'` the answer is 0. Hard-coding `dp[1][1] = 1` as the seed is the classic way to get this wrong, it sneaks in a fake split for `"094"` and `"0"`. Seeding `dp[0][0] = 1` and letting the zero check run avoids it.
+2. **The comparison direction.** Non-decreasing means previous ≤ current. Be careful which substring goes first in `ge`.
+3. **Only adding `dp[start][j-1]`.** It looks like "the shorter case", but it misses lengths `1..j-2`. That's what the prefix sum is for.
+4. **Forgetting the `min(j-1, start)` cap.** The previous chunk can't be longer than what's left before `start`.
+5. **Skipping the modulo.** Python ints never overflow, so forgetting `% MOD` mid-loop still gives the right answer here, just with enormous numbers and a slower run. In Java or C++ it overflows and you get garbage. Take it on every addition.
 
----
+## the whole thing in one line
 
-## Common pitfalls
-
-1. **Leading zero in the very first chunk.** If `num[0] == '0'` the answer is
-   immediately `0`. Setting `dp[1][1] = 1` unconditionally is a classic bug —
-   it sneaks a phantom split for inputs like `"094"` and `"0"`.
-
-2. **Comparison direction.** Non-decreasing means *previous <= current*. Be
-   careful which substring is `a` and which is `b` in your `ge` helper.
-
-3. **Only counting previous length `j-1`.** A frequent mistake is
-   `dp[i][j] += dp[start][j-1]`, which misses lengths `1..j-2`. Use the prefix
-   sum.
-
-4. **Forgetting the `start == 0` base case.** Without it nothing seeds the DP,
-   or you bake the seed into `dp[1][1]` and re-hit pitfall #1.
-
-5. **Modular arithmetic.** Take `% MOD` on every additive step. With
-   `n = 3500` and 64-bit Python ints this is fine even if you forget mid-loop,
-   but make a habit of it.
-
----
-
-## Mental model in one line
-
-> `dp[i][j]` = "I've finished a chunk of length `j` ending at position `i`";
-> a shorter previous chunk is always OK (`pref[i-j][j-1]`), an equal-length
-> previous chunk needs an LCP-powered substring compare.
-
-![Prefix-sum optimization recap: the O(n²) solution and how the pieces fit together](/images/posts/leetcode-1977-separate-numbers/prefix-sum-optimization.png)
-
----
-
-*The visual explainers in this article were created with [dim0.net](https://dim0.net).*
+`dp[i][j]` means "I just finished a chunk of length `j` at position `i`". A shorter previous chunk is always fine, so add the prefix sum `pre[i-j][min(j-1, i-j)]`. An equal-length one needs a real comparison, and the LCP table makes that comparison one lookup.
