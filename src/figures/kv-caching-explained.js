@@ -3,11 +3,14 @@ import { S, H, attr, op, seg, ease, inout, lerp, softmax, critter, handArrow, dr
 
 const WORDS = ['the', 'cat', 'sat', 'on', 'the', 'mat', 'and', 'purred'];
 const fmtN = n => Math.round(n).toLocaleString('en-US');
-const pills = (bar, opts, cur, on) => opts.map(([v, label]) => {
-  const b = H('button', { class: 'pill', type: 'button', text: label, 'aria-pressed': v === cur }, bar);
-  b.onclick = () => { bar.querySelectorAll('.pill').forEach(x => x.setAttribute('aria-pressed', x === b)); on(v); };
-  return b;
-});
+const pills = (bar, opts, cur, on) => {
+  const btns = opts.map(([v, label]) => {
+    const b = H('button', { class: 'pill', type: 'button', text: label, 'aria-pressed': v === cur }, bar);
+    b.onclick = () => { btns.forEach(x => x.setAttribute('aria-pressed', x === b)); on(v); };
+    return b;
+  });
+  return btns;
+};
 
 // ── fig 1 · the generation loop, with and without a cache ───────────────────
 class KvLoop extends Figure {
@@ -133,9 +136,10 @@ class KvWork extends Figure {
     this.r2 = S('text', { x: 590, y: 148, class: 'hand', 'font-size': 15, 'text-anchor': 'end' }, svg);
     const bar = H('div', { class: 'fc' }, this);
     H('span', { text: 'tokens generated', class: 'mono' }, bar);
-    const sl = H('input', { type: 'range', min: 0, max: 100, value: 60, 'aria-label': 'Tokens generated' }, bar);
+    const NS = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000];
+    const sl = H('input', { type: 'range', min: 0, max: NS.length - 1, step: 1, value: 6, 'aria-label': 'Tokens generated' }, bar);
     this.nl = H('span', { class: 'fc-l' }, bar);
-    sl.oninput = () => { this.n = Math.round(Math.pow(10, 1 + sl.value / 100 * 3) / 10) * 10 || 10; this.draw(); };
+    sl.oninput = () => { this.n = NS[+sl.value]; this.draw(); };
     sl.oninput();
   }
   draw() {
