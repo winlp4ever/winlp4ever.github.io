@@ -18,7 +18,7 @@ There is no test suite. `npm run build` is the gate: it type-checks content fron
 
 - Conventional Commits with a **mandatory, specific scope**: `type(scope): message`.
 - Types: `feat`, `fix`, `perf`, `refactor`, `docs`, `style`, `chore`, `ci`, `build`, `revert`.
-- Scopes in use: `post` (prose of a post), `figures` (figure runtime or a post's figure module), `home`, `layout`, `styles`, `seo` (rss, sitemap, llms.txt, meta), `content` (schema, collections), `deps`, `ci`, `release`.
+- Scopes in use: `site` (site-wide changes), `post` (prose of a post), `figures` (figure runtime or a post's figure module), `home`, `layout`, `styles`, `seo` (rss, sitemap, llms.txt, meta), `content` (schema, collections), `deps`, `ci`, `release`.
 - Message: short, imperative, lowercase, no trailing period. One logical change per commit.
 - Breaking changes (URL changes, removed posts, schema changes that break old frontmatter): `feat(scope)!: …` plus a `BREAKING CHANGE:` footer.
 - Writing a new post is `feat(post): …`; editing one is `docs(post): …`.
