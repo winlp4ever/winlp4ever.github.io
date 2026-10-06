@@ -13,5 +13,5 @@
 - [ ] PR title follows Conventional Commits with a scope (`type(scope): message`)
 - [ ] `npm run build` passes
 - [ ] Checked affected pages in light, dark and at phone width
-- [ ] New or edited prose passes the 60-second check in `docs/ai-writing-patterns-to-avoid.md`
+- [ ] New or edited prose passes the 60-second check in `ai-patterns-to-avoid.md`
 - [ ] Page weight still under 30 KB gzipped before figures load

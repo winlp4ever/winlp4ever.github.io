@@ -19,7 +19,7 @@ featured: false              # newest featured post is the home page hero
 
 ## Voice
 
-Read `docs/ai-writing-patterns-to-avoid.md` and run its 60-second check. The short version:
+Read `ai-patterns-to-avoid.md` and run its 60-second check. The short version:
 
 - lowercase `##` headings, conversational, first person, opinionated
 - almost no em-dashes; use commas, colons, periods, parentheses
