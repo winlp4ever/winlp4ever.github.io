@@ -1,234 +1,302 @@
 ---
-import { getCollection } from 'astro:content'
 import BaseLayout from '../layouts/BaseLayout.astro'
+import Critter from '../components/Critter.astro'
+import Glyph from '../components/Glyph.astro'
+import AttentionTeaser from '../components/AttentionTeaser.astro'
+import { SITE, CATEGORIES, frDate, isoDate, minutes } from '../lib/site'
+import { published } from '../lib/posts'
 
-const posts = (await getCollection('posts', ({ data }) => !data.draft)).sort(
-  (a, b) => b.data.date.valueOf() - a.data.date.valueOf(),
-)
-
-const profile = {
-  name: 'Ha-Quang Le',
-  role: 'Lead AI Engineer',
-  location: 'Paris',
-  bio: "AI engineer with interests in building useful apps and scalable AI systems. I also love to draw and play PES in my free time (and Age of Empires, but I'm null at it). Root for Barça and Arsenal, both teams, all the way.",
-  links: [
-    { label: 'github', handle: 'github.com/winlp4ever', href: 'https://github.com/winlp4ever' },
-    { label: 'email', handle: 'quang@dim0.net', href: 'mailto:quang@dim0.net' },
-  ],
+const posts = await published()
+const featured = posts.find((p) => p.data.featured) ?? posts[0]
+const now = new Date()
+const vol = String(now.getFullYear() - SITE.firstYear + 1).padStart(2, '0')
+const counts = Object.fromEntries(Object.keys(CATEGORIES).map((c) => [c, posts.filter((p) => p.data.category === c).length]))
+const jsonld = {
+  '@context': 'https://schema.org',
+  '@type': 'Blog',
+  name: SITE.name,
+  url: SITE.url,
+  author: { '@type': 'Person', name: SITE.author, url: SITE.url, jobTitle: 'Lead AI Engineer' },
+  blogPost: posts.map((p) => ({ '@type': 'BlogPosting', headline: p.data.title, datePublished: isoDate(p.data.date), url: `${SITE.url}/blog/${p.id}` })),
 }
 ---
-
-<BaseLayout title={`${profile.name} — ${profile.role}`}>
-  <main class="page">
-    <header class="masthead">
-      <h1 class="name">{profile.name}<span class="cursor"></span></h1>
-      <p class="meta">{profile.role.toLowerCase()} · {profile.location.toLowerCase()}</p>
+<BaseLayout home jsonld={jsonld}>
+  <div class="page">
+    <header class="mast">
+      <span class="name">{SITE.author}<span class="cur" aria-hidden="true"></span></span>
+      <h1 class="wordmark">{SITE.name}<i>.</i></h1>
+      <span class="issue">vol. {vol} · no. {String(posts.length).padStart(2, '0')}<br />{frDate(now).slice(3)} · {SITE.city}</span>
     </header>
+    <div class="subrule"></div>
 
-    <section class="block">
-      <p class="bio">{profile.bio}</p>
-      <p class="bio-aside">
-        Behind <a href="https://dim0.net" class="inline">dim0.net</a> — a thinking canvas.
-      </p>
+    <section class="intro" id="about">
+      <div class="portrait">
+        <Critter size={150} live class="pet" />
+        <span class="tag">~/hql <b>hi!</b></span>
+      </div>
+      <div>
+        <p class="lede">I build AI systems that are useful and cheap to run, then write about how they actually work, with <span class="hl">figures you can poke</span>. Lead AI engineer in Paris, behind <a href="https://dim0.net">dim0</a>, <a href="https://minmux.dev">minmux</a> and <a href="https://github.com/vcmf/kiframe">kiframe</a>.</p>
+        <div class="facts">
+          <span>also: draws, plays PES, null at Age of Empires</span>
+          <span>barça · arsenal, all the way</span>
+        </div>
+      </div>
     </section>
 
-    {
-      posts.length > 0 && (
-        <section class="block">
-          <h2 class="section-label">Writing</h2>
-          <ul class="post-list">
-            {posts.map((p) => (
-              <li class="post-row">
-                <a href={`/blog/${p.id}`} class="post-link">
-                  <span class="post-title">{p.data.title}</span>
-                  <span class="post-date">
-                    {p.data.date.toLocaleDateString('fr-FR', {
-                      day: 'numeric',
-                      month: 'long',
-                      year: '2-digit',
-                    })}
-                  </span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )
-    }
+    {featured && (
+      <>
+        <div class="sect">
+          <h2><svg viewBox="0 0 16 16"><path d="M2 13 L7 4 L9 8 L14 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg>Latest, interactive</h2>
+          {featured.data.figures > 0 && <span class="label">{featured.data.figures} figures · all running code</span>}
+        </div>
+        <article class="feature">
+          <a class="stage" href={`/blog/${featured.id}`} aria-label={`Open: ${featured.data.title}`}>
+            <span class="x tl"></span><span class="x tr"></span><span class="x bl"></span><span class="x br"></span>
+            <div class="stage-h"><span>{featured.data.glyph === 'attention' ? 'FIG 5 · ATTENTION' : 'PREVIEW'}</span><span><i class="dot"></i>running</span></div>
+            {featured.data.glyph === 'attention' ? <AttentionTeaser /> : <div class="big-glyph"><Glyph name={featured.data.glyph} size={140} /></div>}
+          </a>
+          <div class="copy">
+            <div class="kicker"><span><i class="dot ochre"></i>latest</span><span>{frDate(featured.data.date)}</span><span>{minutes(featured.body)} min</span>{featured.data.tags.slice(0, 2).map((t) => <span>#{t}</span>)}</div>
+            <h3><a href={`/blog/${featured.id}`}>{featured.data.title}</a></h3>
+            <p>{featured.data.description}</p>
+            <a class="read" href={`/blog/${featured.id}`}>read it <span>→</span></a>
+          </div>
+        </article>
+      </>
+    )}
 
-    <section class="block">
-      <h2 class="section-label">Elsewhere</h2>
-      <ul class="link-list">
-        {
-          profile.links.map((l) => (
-            <li class="link-row">
-              <span class="link-label">{l.label}</span>
-              <a href={l.href} class="inline">
-                {l.handle}
-              </a>
-            </li>
-          ))
-        }
-      </ul>
+    <div class="sect" id="writing">
+      <h2><svg viewBox="0 0 16 16"><path d="M3 3h10M3 7h10M3 11h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>Writing</h2>
+      <div class="chips" role="group" aria-label="Filter posts">
+        <button class="chip" aria-pressed="true" data-f="all">all<span>{posts.length}</span></button>
+        {Object.entries(CATEGORIES).filter(([c]) => counts[c] > 0).map(([c, label]) => (
+          <button class="chip" aria-pressed="false" data-f={c}>{label}<span>{counts[c]}</span></button>
+        ))}
+      </div>
+    </div>
+    <ol class="index">
+      {posts.map((p, i) => (
+        <li class="row" data-t={p.data.category}>
+          <span class="n">{String(posts.length - i).padStart(2, '0')}</span>
+          <span class="glyph"><Glyph name={p.data.glyph} /></span>
+          <div>
+            <h4><a href={`/blog/${p.id}`}>{p.data.title}</a></h4>
+            <div class="tags">
+              {p.data.figures > 0 && <span class="tag live"><i class="dot"></i>{p.data.figures} live figures</span>}
+              {p.data.tags.slice(0, 3).map((t) => <span class="tag">{t}</span>)}
+            </div>
+          </div>
+          <p class="dek">{p.data.description}</p>
+          <span class="meta"><b><time datetime={isoDate(p.data.date)}>{frDate(p.data.date)}</time></b>{minutes(p.body)} min</span>
+          <span class="go" aria-hidden="true">→</span>
+        </li>
+      ))}
+    </ol>
+
+    <div class="sect" id="built">
+      <h2><svg viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.6" /><path d="M6 8h4M8 6v4" stroke="currentColor" stroke-width="1.6" /></svg>Built</h2>
+      <span class="label">open source</span>
+    </div>
+    <section class="built">
+      <a class="card" href="https://dim0.net">
+        <div class="thumb dots">
+          <svg viewBox="0 0 320 170">
+            <rect x="34" y="34" width="86" height="40" rx="6" class="box" /><text x="46" y="58">idea</text>
+            <rect x="186" y="22" width="96" height="46" rx="6" class="box" /><text x="198" y="49">mini-app</text>
+            <rect x="128" y="104" width="104" height="40" rx="6" class="box acc" /><text x="140" y="128" class="acc">@board agent</text>
+            <path d="M120 54 C150 54 160 46 186 46 M78 74 C78 110 100 124 128 124 M234 68 C240 92 236 110 232 118" class="wire" />
+          </svg>
+        </div>
+        <h5>dim0 <small>dim0.net ↗</small></h5>
+        <p>A thinking canvas. Notes, mini-apps and agents on one infinite board, and the AI reads the board before it acts.</p>
+      </a>
+      <a class="card" href="https://minmux.dev">
+        <div class="thumb">
+          <svg viewBox="0 0 320 170">
+            <rect x="0" y="0" width="86" height="170" class="side" /><path d="M86 0v170" class="ln" />
+            <text x="12" y="26" class="s">api</text><text x="12" y="50" class="s">web</text><text x="12" y="74" class="s">docs</text>
+            <circle cx="72" cy="23" r="3" class="g" /><circle cx="72" cy="47" r="3" class="o" /><circle cx="72" cy="71" r="3" class="i" />
+            <text x="102" y="30"><tspan class="acc">~/minmux</tspan> main ❯ claude</text>
+            <text x="102" y="50">● reading src/pane.rs</text><text x="102" y="70">● editing 2 files</text>
+            <text x="102" y="90" class="oc">● needs input</text>
+            <rect x="102" y="104" width="8" height="14" class="g blink" />
+            <path d="M86 146h234" class="ln" /><text x="100" y="161" class="s">● 2 running  ● 1 waiting   utf-8</text>
+          </svg>
+        </div>
+        <h5>minmux <small>minmux.dev ↗</small></h5>
+        <p>A terminal for agentic coding. Tabs, splits and real shells, plus the panels that show what your agents actually did.</p>
+      </a>
+      <a class="card" href="https://github.com/vcmf/kiframe">
+        <div class="thumb">
+          <svg viewBox="0 0 320 170" class="kf">
+            <rect x="18" y="14" width="200" height="104" rx="7" class="box" />
+            <circle cx="30" cy="25" r="2.5" class="i" /><circle cx="39" cy="25" r="2.5" class="i" /><circle cx="48" cy="25" r="2.5" class="i" />
+            <rect x="32" y="40" width="80" height="8" rx="2" class="fill3" /><rect x="32" y="56" width="120" height="6" rx="2" class="fill2" />
+            <rect x="32" y="68" width="100" height="6" rx="2" class="fill2" /><rect x="132" y="88" width="64" height="18" rx="5" class="btn" />
+            <path class="cursor" d="M160 94 l0 15 l4 -4 l3 7 l3 -1 l-3 -7 l5 0 z" />
+            <circle class="ripple" cx="160" cy="94" r="9" />
+            <g transform="translate(236 26) scale(.27)">
+              <path d="M41 78 L128 128 L128 228 L41 178 Z" fill="#6E9445" stroke="#6E9445" stroke-width="14" stroke-linejoin="round" />
+              <path d="M128 128 L215 78 L215 178 L128 228 Z" fill="#8BB25C" stroke="#8BB25C" stroke-width="14" stroke-linejoin="round" />
+              <path d="M128 28 L215 78 L128 128 L41 78 Z" fill="#fff" stroke="#6E9445" stroke-width="10" stroke-linejoin="round" />
+              <path d="M67 123 L93 158 L67 163 M154 183 L189 163" fill="none" stroke="#fff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" />
+            </g>
+            <path d="M18 138h284" class="ln" />
+            <path d="M18 152h284" class="track" />
+            <path d="M58 147l5 5-5 5-5-5z M126 147l5 5-5 5-5-5z M200 147l5 5-5 5-5-5z M262 147l5 5-5 5-5-5z" class="key" />
+            <path d="M164 132v34" class="head" />
+            <text x="236" y="98" class="s">scenario →</text><text x="236" y="112" class="s">demo video</text>
+          </svg>
+        </div>
+        <h5>kiframe <small><i class="dot ochre"></i>in dev ↗</small></h5>
+        <p>An agent that turns a written scenario into a product demo video: it drives a real browser, moves like a person, and cuts the footage.</p>
+      </a>
     </section>
-
-    <footer class="footer">
-      <span>© 2026</span>
-      <span>set in inconsolata</span>
-    </footer>
-  </main>
+  </div>
 </BaseLayout>
 
+<script>
+  // critter: blink now and then, eyes follow the pointer
+  const pet = document.querySelector<SVGSVGElement>('.pet')
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (pet && !reduced) {
+    const eyes = pet.querySelector<SVGGElement>('.eyes')!
+    let look = ''
+    setInterval(() => { eyes.style.transform = look + ' scaleY(.15)'; setTimeout(() => (eyes.style.transform = look), 140) }, 3800)
+    addEventListener('pointermove', (ev) => {
+      const r = pet.getBoundingClientRect()
+      const dx = Math.max(-1, Math.min(1, Math.round((ev.clientX - r.left - r.width / 2) / 220)))
+      const dy = Math.max(-1, Math.min(1, Math.round((ev.clientY - r.top - r.height / 2) / 260)))
+      look = `translate(${dx * 0.5}px, ${dy * 0.5}px)`
+      eyes.style.transform = look
+    }, { passive: true })
+  }
+  // filter chips
+  const chips = document.querySelectorAll<HTMLButtonElement>('.chip')
+  chips.forEach((c) => c.addEventListener('click', () => {
+    chips.forEach((o) => o.setAttribute('aria-pressed', String(o === c)))
+    document.querySelectorAll<HTMLElement>('.row').forEach((r) => { r.hidden = !(c.dataset.f === 'all' || r.dataset.t === c.dataset.f) })
+  }))
+</script>
+
 <style>
-  .page {
-    max-width: 720px;
-    margin: 0 auto;
-    padding: 72px 32px 96px;
-  }
+  .mast { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; padding: 6px 0 14px; border-bottom: 3px solid var(--heavy); }
+  .name { font: 600 15px var(--mono); }
+  .wordmark { font: 650 78px/0.86 var(--sans); font-stretch: 75%; letter-spacing: -0.02em; text-align: center; margin: 0; }
+  .wordmark i { font-style: normal; color: var(--green); }
+  .issue { text-align: right; font: 12px/1.5 var(--mono); color: var(--ink-2); }
+  .subrule { border-bottom: 1px solid var(--heavy); margin-top: 3px; }
 
-  .masthead {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    margin-bottom: 56px;
-    padding-bottom: 18px;
-    border-bottom: 1px solid var(--hair);
-  }
+  .intro { display: grid; grid-template-columns: 220px 1fr; gap: 48px; align-items: center; padding: 56px 0 60px; }
+  .portrait { position: relative; width: 220px; aspect-ratio: 1; border: 1px solid var(--rule-2); border-radius: 16px; display: grid; place-items: center;
+    background: radial-gradient(circle, var(--rule-2) 1px, transparent 1.2px) 0 0 / 16px 16px, var(--panel); }
+  .portrait :global(.pet) { width: 64%; height: auto; margin-top: -6px; }
+  .tag { position: absolute; left: 12px; bottom: 10px; font: 11px var(--mono); color: var(--ink-3); }
+  .portrait .tag b { color: var(--green-t); font-weight: 500; }
+  .lede { font: 400 38px/1.22 var(--sans); letter-spacing: -0.012em; margin: 0; max-width: 840px; text-wrap: pretty; }
+  .lede a { border-bottom: 2px solid var(--rule-2); }
+  .lede a:hover { border-color: var(--ink); }
+  .hl { font-family: var(--mono); font-size: 0.76em; letter-spacing: -0.02em; background: var(--panel); border: 1px solid var(--rule); border-radius: 8px; padding: 0 0.3em; }
+  .facts { display: flex; flex-wrap: wrap; gap: 6px 22px; margin-top: 22px; font: 13px var(--mono); color: var(--ink-2); }
 
-  .name {
-    font-size: 15px;
-    font-weight: 700;
-    margin: 0;
-    letter-spacing: -0.01em;
-    white-space: nowrap;
-  }
+  .feature { display: grid; grid-template-columns: 1.25fr 1fr; margin-bottom: 64px; border-bottom: 1px solid var(--rule-2); }
+  .stage { position: relative; background: var(--panel); border: 1px solid var(--rule); border-radius: 14px; padding: 22px 22px 16px; margin: 0 32px 32px 0; transition: border-color 0.2s; }
+  .stage:hover { border-color: var(--rule-2); }
+  .x { position: absolute; width: 9px; height: 9px; color: var(--ink-3); }
+  .x::before, .x::after { content: ''; position: absolute; left: 4px; top: 0; width: 1px; height: 9px; background: currentColor; }
+  .x::after { transform: rotate(90deg); }
+  .x.tl { left: -5px; top: -5px; } .x.tr { right: -5px; top: -5px; } .x.bl { left: -5px; bottom: -5px; } .x.br { right: -5px; bottom: -5px; }
+  .stage-h { display: flex; justify-content: space-between; font: 11px var(--mono); color: var(--ink-3); letter-spacing: 0.06em; }
+  .big-glyph { display: grid; place-items: center; padding: 40px 0; }
+  .copy { padding: 4px 0 32px 32px; border-left: 1px solid var(--rule-2); display: flex; flex-direction: column; }
+  .kicker { font: 12px var(--mono); color: var(--ink-2); display: flex; gap: 14px; flex-wrap: wrap; }
+  .feature h3 { font: 650 52px/1 var(--sans); font-stretch: 78%; letter-spacing: -0.02em; margin: 18px 0 16px; text-wrap: balance; }
+  .feature p { color: var(--ink-2); margin: 0 0 24px; font-size: 18px; max-width: 440px; }
+  .read { margin-top: auto; display: inline-flex; align-items: center; gap: 10px; font: 500 14px var(--mono); align-self: flex-start; border: 1px solid var(--ink); border-radius: 999px; padding: 9px 16px; transition: 0.15s; }
+  .read:hover { background: var(--ink); color: var(--bg); }
 
-  .cursor {
-    display: inline-block;
-    width: 0.55em;
-    height: 1em;
-    background: var(--ink);
-    vertical-align: -0.12em;
-    margin-left: 2px;
-    animation: blink 1.1s steps(1) infinite;
-  }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font: 12px var(--mono); color: var(--ink-2); background: transparent; border: 1px solid var(--rule-2); border-radius: 999px; padding: 4px 11px; cursor: pointer; }
+  .chip span { color: var(--ink-3); margin-left: 5px; }
+  .chip[aria-pressed='true'] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .chip[aria-pressed='true'] span { color: inherit; opacity: 0.6; }
 
-  .meta {
-    font-size: 13px;
-    color: var(--muted);
-    margin: 0;
-    white-space: nowrap;
-  }
+  .index { list-style: none; margin: 0 0 72px; padding: 0; border-top: 1px solid var(--rule-2); }
+  .row { display: grid; grid-template-columns: 40px 76px minmax(0, 1.15fr) minmax(0, 1fr) 112px; gap: 24px; align-items: center; padding: 22px 0; border-bottom: 1px solid var(--rule); position: relative; }
+  .row:hover { background: linear-gradient(90deg, transparent, var(--panel) 10%, var(--panel) 90%, transparent); }
+  .n { font: 12px var(--mono); color: var(--ink-3); }
+  .glyph { width: 76px; height: 76px; border: 1px solid var(--rule); border-radius: 12px; background: var(--panel); display: grid; place-items: center; }
+  .row:hover .glyph :global(.mv) { animation: nudge 0.9s ease-in-out infinite alternate; }
+  @keyframes nudge { to { transform: translateY(-3px); } }
+  .row h4 { margin: 0; font: 650 23px/1.18 var(--sans); font-stretch: 88%; letter-spacing: -0.01em; text-wrap: balance; }
+  .row h4 a::after { content: ''; position: absolute; inset: 0; }
+  .dek { color: var(--ink-2); font-size: 15.5px; line-height: 1.5; margin: 0; }
+  .tags { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
+  .tags .tag { position: static; font: 11px var(--mono); color: var(--ink-2); border: 1px solid var(--rule); border-radius: 5px; padding: 1px 6px; }
+  .tags .tag.live { color: var(--green-t); border-color: color-mix(in srgb, var(--green) 40%, transparent); }
+  .tags .tag .dot { width: 5px; height: 5px; margin-right: 5px; }
+  .meta { text-align: right; font: 12px/1.7 var(--mono); color: var(--ink-2); }
+  .meta b { display: block; color: var(--ink); font-weight: 500; }
+  .go { position: absolute; right: -26px; top: 50%; transform: translateY(-50%); opacity: 0; transition: 0.15s; font: 14px var(--mono); }
+  .row:hover .go { opacity: 1; right: -22px; }
 
-  .block {
-    margin-bottom: 56px;
-  }
+  .built { display: grid; grid-template-columns: 1fr 1fr 1fr; margin-bottom: 24px; border-top: 1px solid var(--rule-2); }
+  .card { padding: 22px 24px 26px; border-right: 1px solid var(--rule-2); display: flex; flex-direction: column; gap: 12px; }
+  .card:first-child { padding-left: 0; } .card:last-child { border-right: 0; padding-right: 0; }
+  .thumb { height: 170px; border-radius: 12px; border: 1px solid var(--rule); background: var(--panel); overflow: hidden; transition: border-color 0.2s; }
+  .card:hover .thumb { border-color: var(--rule-2); }
+  .thumb.dots { background: radial-gradient(circle, var(--rule-2) 1px, transparent 1.3px) 0 0 / 14px 14px, var(--panel); }
+  .thumb svg { width: 100%; height: 100%; font: 10px var(--mono); }
+  .thumb text { fill: var(--ink-2); }
+  .thumb .s { font-size: 9px; }
+  .thumb .box { fill: var(--bg); stroke: var(--rule-2); }
+  .thumb .box.acc { stroke: var(--green); }
+  .thumb .acc { fill: var(--green-t); }
+  .thumb .oc { fill: var(--ochre-t); }
+  .thumb .wire { fill: none; stroke: var(--ink-3); stroke-width: 1.3; }
+  .thumb .side { fill: var(--bg); opacity: 0.6; }
+  .thumb .ln { stroke: var(--rule-2); }
+  .thumb .g { fill: var(--green); } .thumb .o { fill: var(--ochre); } .thumb .i { fill: none; stroke: var(--ink-3); stroke-width: 1.2; }
+  .thumb .fill2 { fill: var(--rule-2); } .thumb .fill3 { fill: var(--ink-3); opacity: 0.6; }
+  .thumb .btn { fill: var(--green); opacity: 0.85; }
+  .thumb .cursor { fill: var(--ink); stroke: var(--bg); stroke-width: 1; }
+  .thumb .ripple { fill: none; stroke: var(--green); stroke-width: 1.5; opacity: 0; }
+  .thumb .track { stroke: var(--rule-2); stroke-width: 6; stroke-linecap: round; }
+  .thumb .key { fill: var(--ochre); }
+  .thumb .head { stroke: var(--green); stroke-width: 1.5; }
+  .card:hover .blink { animation: blink 1.1s steps(1) infinite; }
+  .card:hover .kf .cursor { animation: drag 2.4s ease-in-out infinite; }
+  .card:hover .kf .ripple { animation: ripple 2.4s ease-out infinite; }
+  .card:hover .kf .head { animation: scrub 2.4s linear infinite; }
+  @keyframes drag { 0%, 100% { transform: translate(-70px, -40px); } 45%, 70% { transform: translate(0, 0); } }
+  @keyframes ripple { 0%, 44% { opacity: 0; transform: scale(0.3); transform-origin: 160px 94px; } 50% { opacity: 1; } 80% { opacity: 0; transform: scale(1.6); transform-origin: 160px 94px; } }
+  @keyframes scrub { from { transform: translateX(-140px); } to { transform: translateX(130px); } }
+  .card h5 { margin: 6px 0 0; font: 650 26px/1 var(--sans); font-stretch: 85%; display: flex; justify-content: space-between; align-items: baseline; }
+  .card h5 small { font: 12px var(--mono); color: var(--ink-3); }
+  .card p { margin: 0; color: var(--ink-2); font-size: 15.5px; }
 
-  .bio {
-    font-size: 16px;
-    line-height: 1.65;
-    color: var(--ink);
-    margin: 0;
-    text-wrap: pretty;
+  @media (max-width: 900px) {
+    .mast { grid-template-columns: 1fr; gap: 8px; }
+    .wordmark { font-size: 54px; text-align: left; }
+    .issue { text-align: left; }
+    .name { display: none; }
+    .intro { grid-template-columns: 1fr; gap: 26px; padding: 36px 0 44px; }
+    .portrait { width: 140px; }
+    .lede { font-size: 27px; }
+    .feature { grid-template-columns: 1fr; }
+    .stage { margin: 0 0 24px; }
+    .copy { border-left: 0; padding: 0 0 32px; }
+    .feature h3 { font-size: 40px; }
+    .row { grid-template-columns: 60px 1fr; gap: 6px 16px; padding: 18px 0; align-items: start; }
+    .n, .go { display: none; }
+    .glyph { width: 60px; height: 60px; grid-row: span 3; }
+    .glyph :global(svg) { width: 40px; height: 40px; }
+    .meta { text-align: left; display: flex; gap: 12px; }
+    .meta b { display: inline; }
+    .built { grid-template-columns: 1fr; }
+    .card, .card:first-child, .card:last-child { padding: 22px 0; border-right: 0; border-bottom: 1px solid var(--rule-2); }
   }
-
-  .bio-aside {
-    font-size: 14px;
-    line-height: 1.65;
-    color: var(--muted);
-    margin: 16px 0 0;
-  }
-
-  .section-label {
-    font-size: 12px;
-    color: var(--muted);
-    margin: 0 0 18px;
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-weight: 500;
-  }
-
-  .link-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .link-row {
-    display: grid;
-    grid-template-columns: 90px 1fr;
-    gap: 12px;
-    align-items: baseline;
-    font-size: 15px;
-  }
-
-  .link-label {
-    color: var(--muted);
-  }
-
-  .post-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .post-row {
-    margin: 0;
-  }
-
-  .post-link {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 16px;
-    padding: 4px 0;
-    color: var(--ink);
-    font-size: 15px;
-  }
-
-  .post-link:hover .post-title {
-    border-bottom-color: var(--ink);
-  }
-
-  .post-title {
-    border-bottom: 1px solid transparent;
-    transition: border-color 80ms ease;
-    text-wrap: pretty;
-    flex: 1;
-    min-width: 0;
-    font-weight: 500;
-  }
-
-  .post-date {
-    color: var(--muted);
-    font-size: 13px;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-
-  .footer {
-    padding-top: 24px;
-    border-top: 1px solid var(--hair);
-    font-size: 12px;
-    color: var(--faint);
-    display: flex;
-    justify-content: space-between;
-    gap: 16px;
-  }
-
-  @media (max-width: 520px) {
-    .masthead {
-      flex-direction: column;
-      gap: 4px;
-    }
-    .link-row {
-      grid-template-columns: 80px 1fr;
-    }
+  @media (prefers-reduced-motion: reduce) {
+    .row:hover .glyph :global(.mv), .card:hover * { animation: none !important; }
   }
 </style>

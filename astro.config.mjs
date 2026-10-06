@@ -1,17 +1,16 @@
 // @ts-check
-import { defineConfig } from 'astro/config';
+import { defineConfig } from 'astro/config'
+import sitemap from '@astrojs/sitemap'
+import remarkMath from 'remark-math'
+import rehypeKatex from 'rehype-katex'
 
-import react from '@astrojs/react';
-import remarkMath from 'remark-math';
-import rehypeKatex from 'rehype-katex';
-
-// https://astro.build/config
 export default defineConfig({
   site: 'https://winlp4ever.github.io',
-  integrations: [react()],
+  integrations: [sitemap()],
   markdown: {
     shikiConfig: {
-      theme: 'github-light',
+      themes: { light: 'github-light', dark: 'github-dark' },
+      defaultColor: false,
     },
     remarkPlugins: [remarkMath],
     rehypePlugins: [rehypeKatex],

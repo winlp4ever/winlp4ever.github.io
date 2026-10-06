@@ -1,0 +1,46 @@
+---
+import { SITE } from '../lib/site'
+interface Props { home?: boolean }
+const { home = false } = Astro.props
+---
+<div class="strip">
+  {home ? <span class="now"><i class="dot"></i>now: {SITE.now}</span> : <a class="now home-link" href="/"><span class="nm">{SITE.author}</span><span class="cur" aria-hidden="true"></span><span class="sub">/ {SITE.name}</span></a>}
+  <span class="line"></span>
+  <nav aria-label="Site">
+    <a href="/#writing">writing</a><span class="sep">·</span>
+    <a href="/#built">built</a><span class="sep">·</span>
+    <a href="/#about">about</a><span class="sep">·</span>
+    <a href="/rss.xml">rss</a>
+    <button class="theme" id="theme" type="button" aria-label="Switch colour theme">◐ auto</button>
+  </nav>
+</div>
+<script>
+  const root = document.documentElement, btn = document.getElementById('theme')!, modes = ['auto', 'light', 'dark']
+  let m = 0
+  try { m = Math.max(0, modes.indexOf(localStorage.getItem('theme') || 'auto')) } catch {}
+  const apply = () => {
+    const v = modes[m]
+    v === 'auto' ? root.removeAttribute('data-theme') : (root.dataset.theme = v)
+    btn.textContent = (v === 'dark' ? '● ' : v === 'light' ? '○ ' : '◐ ') + v
+  }
+  btn.addEventListener('click', () => { m = (m + 1) % 3; try { localStorage.setItem('theme', modes[m]) } catch {}; apply() })
+  apply()
+</script>
+<style>
+  .strip { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 18px; padding: 18px 0 14px; font: 12px var(--mono); color: var(--ink-2); }
+  .line { height: 1px; background: var(--rule-2); }
+  nav { display: flex; gap: 4px; align-items: center; }
+  nav a { padding: 2px 6px; border-radius: 4px; }
+  nav a:hover { background: var(--panel); color: var(--ink); }
+  .sep { color: var(--ink-3); }
+  .theme { font: 12px var(--mono); color: var(--ink-2); background: none; border: 1px solid var(--rule-2); border-radius: 999px; padding: 3px 9px; cursor: pointer; margin-left: 8px; }
+  .home-link { color: var(--ink); font-weight: 600; }
+  .home-link .sub { color: var(--ink-3); font-weight: 400; margin-left: 8px; }
+  @media (max-width: 700px) {
+    .strip { grid-template-columns: 1fr auto; }
+    .line { display: none; }
+    .now:not(.home-link) { display: none; }
+    .home-link .sub { display: none; }
+    nav a[href='/#built'], nav a[href='/#built'] + .sep, nav a[href='/#about'], nav a[href='/#about'] + .sep { display: none; }
+  }
+</style>

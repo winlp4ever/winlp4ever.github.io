@@ -1,0 +1,29 @@
+---
+import { SITE } from '../lib/site'
+---
+<footer class="colo">
+  <div>
+    <p class="big">Every figure here is running code.</p>
+    <p class="sm">View source on any page. Nothing is a GIF, nothing is a screenshot of a chart, and nothing tracks you.</p>
+  </div>
+  <div>
+    <h6 class="label">Elsewhere</h6>
+    <ul>
+      <li><a class="u" href={SITE.github}>github.com/winlp4ever</a></li>
+      <li><a class="u" href={`mailto:${SITE.email}`}>{SITE.email}</a></li>
+      <li><a class="u" href="/rss.xml">rss</a> · <a class="u" href="/llms.txt">llms.txt</a></li>
+    </ul>
+  </div>
+  <div>
+    <h6 class="label">Colophon</h6>
+    <ul><li>set in Instrument Sans</li><li>&amp; JetBrains Mono</li><li>static html · astro</li><li>© {new Date().getFullYear()}</li></ul>
+  </div>
+</footer>
+<style>
+  .colo { border-top: 3px solid var(--heavy); display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 32px; padding: 26px 0 56px; margin-top: 96px; font-size: 15px; color: var(--ink-2); }
+  h6 { margin: 0 0 12px; }
+  ul { list-style: none; margin: 0; padding: 0; line-height: 1.9; font-family: var(--mono); font-size: 13px; }
+  .big { font: 650 30px/1.1 var(--sans); font-stretch: 80%; color: var(--ink); margin: 0 0 10px; }
+  .sm { margin: 0; max-width: 380px; }
+  @media (max-width: 800px) { .colo { grid-template-columns: 1fr; gap: 24px; } }
+</style>
