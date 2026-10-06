@@ -1,13 +1,15 @@
-# my-website
+# field notes
 
-Personal blog of [Ha-Quang Le](https://github.com/winlp4ever).
+Ha-Quang Le's blog: long-form writing on AI systems, infrastructure and algorithms, where every figure is running code. Live at https://winlp4ever.github.io.
 
-Built with Astro, written in TypeScript (no semicolons), set in Inconsolata.
+Static [Astro](https://astro.build) site, no UI framework. Instrument Sans and JetBrains Mono, self-hosted. Figures are small custom elements that load only when you scroll near them.
 
 ```sh
-npm install
+npm ci
 npm run dev      # localhost:4321
 npm run build    # static output to ./dist
 ```
 
-Posts live in `src/content/posts/`, one markdown file per article. Images go in `public/images/posts/<slug>/`.
+- Writing a post: [`docs/AUTHORING.md`](docs/AUTHORING.md)
+- Conventions for contributors and coding agents: [`AGENTS.md`](AGENTS.md)
+- Pushing to `main` deploys to GitHub Pages.
