@@ -24,9 +24,10 @@ const jsonld = {
   description: d.description,
   datePublished: isoDate(d.date),
   dateModified: isoDate(d.updated ?? d.date),
+  image: `${SITE.url}/og-default.png`,
   author: { '@type': 'Person', name: SITE.author, url: SITE.url },
   keywords: d.tags.join(', '),
-  url: `${SITE.url}/blog/${post.id}`,
+  url: `${SITE.url}/blog/${post.id}/`,
   inLanguage: 'en',
 }
 ---
@@ -55,8 +56,8 @@ const jsonld = {
       <Content />
     </div>
     <nav class="post-end measure" aria-label="More posts">
-      {older ? <a href={`/blog/${older.id}`}><span class="label">← older</span><b>{older.data.title}</b></a> : <span></span>}
-      {newer ? <a class="nx" href={`/blog/${newer.id}`}><span class="label">newer →</span><b>{newer.data.title}</b></a> : <a class="nx" href="/"><span class="label">all writing →</span><b>{SITE.name}</b></a>}
+      {older ? <a href={`/blog/${older.id}/`}><span class="label">← older</span><b>{older.data.title}</b></a> : <span></span>}
+      {newer ? <a class="nx" href={`/blog/${newer.id}/`}><span class="label">newer →</span><b>{newer.data.title}</b></a> : <a class="nx" href="/"><span class="label">all writing →</span><b>{SITE.name}</b></a>}
     </nav>
   </article>
 </BaseLayout>

@@ -17,7 +17,7 @@ const jsonld = {
   name: SITE.name,
   url: SITE.url,
   author: { '@type': 'Person', name: SITE.author, url: SITE.url, jobTitle: 'Lead AI Engineer' },
-  blogPost: posts.map((p) => ({ '@type': 'BlogPosting', headline: p.data.title, datePublished: isoDate(p.data.date), url: `${SITE.url}/blog/${p.id}` })),
+  blogPost: posts.map((p) => ({ '@type': 'BlogPosting', headline: p.data.title, datePublished: isoDate(p.data.date), url: `${SITE.url}/blog/${p.id}/` })),
 }
 ---
 <BaseLayout home jsonld={jsonld}>
@@ -50,16 +50,16 @@ const jsonld = {
           {featured.data.figures > 0 && <span class="label">{featured.data.figures} figures · all running code</span>}
         </div>
         <article class="feature">
-          <a class="stage" href={`/blog/${featured.id}`} aria-label={`Open: ${featured.data.title}`}>
+          <a class="stage" href={`/blog/${featured.id}/`} aria-label={`Open: ${featured.data.title}`}>
             <span class="x tl"></span><span class="x tr"></span><span class="x bl"></span><span class="x br"></span>
             <div class="stage-h"><span>{featured.data.glyph === 'attention' ? 'FIG 5 · ATTENTION' : 'PREVIEW'}</span><span><i class="dot"></i>running</span></div>
             {featured.data.glyph === 'attention' ? <AttentionTeaser /> : <div class="big-glyph"><Glyph name={featured.data.glyph} size={140} /></div>}
           </a>
           <div class="copy">
             <div class="kicker"><span><i class="dot ochre"></i>latest</span><span>{frDate(featured.data.date)}</span><span>{minutes(featured.body)} min</span>{featured.data.tags.slice(0, 2).map((t) => <span>#{t}</span>)}</div>
-            <h3><a href={`/blog/${featured.id}`}>{featured.data.title}</a></h3>
+            <h3><a href={`/blog/${featured.id}/`}>{featured.data.title}</a></h3>
             <p>{featured.data.description}</p>
-            <a class="read" href={`/blog/${featured.id}`}>read it <span>→</span></a>
+            <a class="read" href={`/blog/${featured.id}/`}>read it <span>→</span></a>
           </div>
         </article>
       </>
@@ -80,7 +80,7 @@ const jsonld = {
           <span class="n">{String(posts.length - i).padStart(2, '0')}</span>
           <span class="glyph"><Glyph name={p.data.glyph} /></span>
           <div>
-            <h4><a href={`/blog/${p.id}`}>{p.data.title}</a></h4>
+            <h3><a href={`/blog/${p.id}/`}>{p.data.title}</a></h3>
             <div class="tags">
               {p.data.figures > 0 && <span class="tag live"><i class="dot"></i>{p.data.figures} live figures</span>}
               {p.data.tags.slice(0, 3).map((t) => <span class="tag">{t}</span>)}
@@ -107,7 +107,7 @@ const jsonld = {
             <path d="M120 54 C150 54 160 46 186 46 M78 74 C78 110 100 124 128 124 M234 68 C240 92 236 110 232 118" class="wire" />
           </svg>
         </div>
-        <h5>dim0 <small>dim0.net ↗</small></h5>
+        <h3>dim0 <small>dim0.net ↗</small></h3>
         <p>A thinking canvas. Notes, mini-apps and agents on one infinite board, and the AI reads the board before it acts.</p>
       </a>
       <a class="card" href="https://minmux.dev">
@@ -123,7 +123,7 @@ const jsonld = {
             <path d="M86 146h234" class="ln" /><text x="100" y="161" class="s">● 2 running  ● 1 waiting   utf-8</text>
           </svg>
         </div>
-        <h5>minmux <small>minmux.dev ↗</small></h5>
+        <h3>minmux <small>minmux.dev ↗</small></h3>
         <p>A terminal for agentic coding. Tabs, splits and real shells, plus the panels that show what your agents actually did.</p>
       </a>
       <a class="card" href="https://github.com/vcmf/kiframe">
@@ -148,7 +148,7 @@ const jsonld = {
             <text x="236" y="98" class="s">scenario →</text><text x="236" y="112" class="s">demo video</text>
           </svg>
         </div>
-        <h5>kiframe <small><i class="dot ochre"></i>in dev ↗</small></h5>
+        <h3>kiframe <small><i class="dot ochre"></i>in dev ↗</small></h3>
         <p>An agent that turns a written scenario into a product demo video: it drives a real browser, moves like a person, and cuts the footage.</p>
       </a>
     </section>
@@ -161,14 +161,28 @@ const jsonld = {
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
   if (pet && !reduced) {
     const eyes = pet.querySelector<SVGGElement>('.eyes')!
-    let look = ''
-    setInterval(() => { eyes.style.transform = look + ' scaleY(.15)'; setTimeout(() => (eyes.style.transform = look), 140) }, 3800)
+    let look = '', visible = false, rect: DOMRect | null = null, raf = 0, px = 0, py = 0, blink = 0
+    const blinkOn = () => {
+      clearInterval(blink)
+      if (visible && document.visibilityState === 'visible')
+        blink = window.setInterval(() => { eyes.style.transform = look + ' scaleY(.15)'; setTimeout(() => (eyes.style.transform = look), 140) }, 3800)
+    }
+    new IntersectionObserver(([e]) => { visible = e.isIntersecting; rect = null; blinkOn() }).observe(pet)
+    document.addEventListener('visibilitychange', blinkOn)
+    addEventListener('scroll', () => (rect = null), { passive: true })
+    addEventListener('resize', () => (rect = null), { passive: true })
     addEventListener('pointermove', (ev) => {
-      const r = pet.getBoundingClientRect()
-      const dx = Math.max(-1, Math.min(1, Math.round((ev.clientX - r.left - r.width / 2) / 220)))
-      const dy = Math.max(-1, Math.min(1, Math.round((ev.clientY - r.top - r.height / 2) / 260)))
-      look = `translate(${dx * 0.5}px, ${dy * 0.5}px)`
-      eyes.style.transform = look
+      if (!visible) return
+      px = ev.clientX; py = ev.clientY
+      if (raf) return
+      raf = requestAnimationFrame(() => {
+        raf = 0
+        rect ??= pet.getBoundingClientRect()
+        const dx = Math.max(-1, Math.min(1, Math.round((px - rect.left - rect.width / 2) / 220)))
+        const dy = Math.max(-1, Math.min(1, Math.round((py - rect.top - rect.height / 2) / 260)))
+        look = `translate(${dx * 0.5}px, ${dy * 0.5}px)`
+        eyes.style.transform = look
+      })
     }, { passive: true })
   }
   // filter chips
@@ -223,12 +237,13 @@ const jsonld = {
 
   .index { list-style: none; margin: 0 0 72px; padding: 0; border-top: 1px solid var(--rule-2); }
   .row { display: grid; grid-template-columns: 40px 76px minmax(0, 1.15fr) minmax(0, 1fr) 112px; gap: 24px; align-items: center; padding: 22px 0; border-bottom: 1px solid var(--rule); position: relative; }
+  .row[hidden] { display: none; }
   .row:hover { background: linear-gradient(90deg, transparent, var(--panel) 10%, var(--panel) 90%, transparent); }
   .n { font: 12px var(--mono); color: var(--ink-3); }
   .glyph { width: 76px; height: 76px; border: 1px solid var(--rule); border-radius: 12px; background: var(--panel); display: grid; place-items: center; }
   .row:hover .glyph :global(.mv) { animation: nudge 0.9s ease-in-out infinite alternate; }
   @keyframes nudge { to { transform: translateY(-3px); } }
-  .row h4 { margin: 0; font: 650 23px/1.18 var(--display); font-stretch: 88%; letter-spacing: -0.01em; text-wrap: balance; }
+  .row h3 { margin: 0; font: 650 23px/1.18 var(--display); font-stretch: 88%; letter-spacing: -0.01em; text-wrap: balance; }
   .row h4 a::after { content: ''; position: absolute; inset: 0; }
   .dek { color: var(--ink-2); font-size: 15.5px; line-height: 1.5; margin: 0; }
   .tags { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
@@ -271,8 +286,8 @@ const jsonld = {
   @keyframes drag { 0%, 100% { transform: translate(-70px, -40px); } 45%, 70% { transform: translate(0, 0); } }
   @keyframes ripple { 0%, 44% { opacity: 0; transform: scale(0.3); transform-origin: 160px 94px; } 50% { opacity: 1; } 80% { opacity: 0; transform: scale(1.6); transform-origin: 160px 94px; } }
   @keyframes scrub { from { transform: translateX(-140px); } to { transform: translateX(130px); } }
-  .card h5 { margin: 6px 0 0; font: 650 26px/1 var(--display); font-stretch: 85%; display: flex; justify-content: space-between; align-items: baseline; }
-  .card h5 small { font: 12px var(--mono); color: var(--ink-3); }
+  .card h3 { margin: 6px 0 0; font: 650 26px/1 var(--display); font-stretch: 85%; display: flex; justify-content: space-between; align-items: baseline; }
+  .card h3 small { font: 12px var(--mono); color: var(--ink-3); }
   .card p { margin: 0; color: var(--ink-2); font-size: 15.5px; }
 
   @media (max-width: 900px) {
