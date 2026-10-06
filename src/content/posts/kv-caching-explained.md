@@ -1,337 +1,161 @@
 ---
-title: "Behind prompt caching: a friendly intro to KV-caching"
+title: "Behind prompt caching: a friendly intro to KV caching"
 date: 2026-04-30
-description: What's actually happening under the hood when providers offer prompt caching — a gentle walkthrough of KV-caching in transformers.
+updated: 2026-10-06
+description: What actually happens when a provider says your prompt is cached. The trick underneath is called KV caching, and it's a small idea with a big memory bill.
 tags: [ai, llm, transformers, caching]
+category: ai
+glyph: kv
+figures: 5
 ---
 
-![Concept map: KV-caching stores Keys and Values from prior steps so attention skips redundant work, trading memory for speed and throughput](/images/posts/kv-caching-explained/kv-caching-concept-map.png)
+Every provider's pricing page has a line for cached input tokens, and the price next to it looks almost too good. Anthropic charges a tenth of the normal input price when your prompt hits the cache. OpenAI's discount depends on the model, half price on the older ones and up to 90% off on the newer ones. I wanted to know what exactly they keep around, and why reusing it is that much cheaper.
 
-## What is KV-Caching?
+The thing they keep is called the **KV cache**. It's been sitting inside every LLM server for years, long before anyone sold it as a feature, and once you see how it works, prompt caching stops looking like a pricing trick. It's the same cache, kept alive between your requests.
 
-**KV-caching** is an optimization technique used when running transformer models (like GPT, Claude, or Llama) to generate text. It saves time by "remembering" computations from previous steps instead of recalculating them.
+## a thirty-second recap
 
-At its core, KV-caching stores two matrices — **Keys (K)** and **Values (V)** — so that when generating text token by token, the model only computes projections for the *new* token, not the entire sequence.
-
----
-
-## Part 1: How Attention Works (The Foundation)
-
-Before understanding KV-caching, you need to understand **attention**, the core mechanism inside transformers.
-
-### The Search Analogy
-
-Imagine you're in a library looking for information:
-
-- **Query (Q)**: Your question — "What books discuss neural networks?"
-- **Keys (K)**: The catalog/index cards describing each book's contents
-- **Values (V)**: The actual books themselves with all their information
-
-Attention works by:
-
-1. Comparing your **Query** to every **Key** (how relevant is each book to your question?)
-2. Getting a relevance score for each book
-3. Taking a weighted combination of the **Values** (reading the most relevant books)
-
-### The Math (Simplified)
-
-For each token in your input, the transformer creates three vectors:
+If you want the long version, I wrote [a whole post on how a transformer reads](/blog/how-a-transformer-reads). The part that matters here: at every layer, each token turns its vector into three smaller ones, a **query**, a **key** and a **value**. To update a token, the model compares its query with the keys of the tokens it's allowed to see, turns the scores into weights with a softmax, and takes the weighted sum of their values.
 
 ```
-Query  = W_q × hidden_state   (What am I looking for?)
-Key    = W_k × hidden_state   (What do I contain?)
-Value  = W_v × hidden_state   (What information do I have?)
+attention(Q, K, V) = softmax(Q·Kᵀ / √d) · V
 ```
 
-The attention score is calculated as:
+In a GPT-style model a token is only allowed to see itself and the tokens before it. Keep that rule in your pocket, it's the whole reason the cache works.
+
+## generation is a loop
+
+A language model writes one token at a time. You give it *the cat sat*, it answers *on*. You append *on* and ask again, it answers *the*. Then *mat*. Every new token means another full trip through the model.
+
+The lazy way to run that loop is to hand the model the entire text every time and let it recompute everything from scratch. That includes the keys and values of tokens it has already processed, sometimes hundreds of times over. A cache does the obvious thing instead: compute each token's keys and values once, keep them, and on every later step only process the newest token.
+
+<figure class="wide">
+<kv-loop data-fig data-label="fig 1 · the loop">
+<p class="fallback">Two lanes generate the same five tokens after the prompt "the cat sat". In the lane without a cache, every step recomputes the keys and values of every token in the context: 3, then 4, 5, 6 and 7, for 25 computations in total. In the lane with a KV cache, the prompt's keys and values are computed once and each later step only computes the newest token's, for 7 in total.</p>
+</kv-loop>
+<figcaption><b>fig 1</b>Same prompt, same five new tokens. Ochre is work thrown away after the step, green is work that goes into the cache. The counters are exact for this toy run.</figcaption>
+</figure>
+
+## why old keys never change
+
+You might reasonably worry that adding a token changes everything before it. In a model that reads both ways it would. In a GPT-style model it can't, because of the masking rule from the recap. Token 3's vector at layer 1 only depends on tokens 1 to 3, so its key and value at layer 1 only depend on them too, and the same holds at layer 2, layer 3, all the way up. Adding token 6 at the end can't reach back and change any of that.
+
+Queries are the opposite. A token's query is only used once, to compute that token's own row of attention, at the moment the token is processed. After that it never comes up again. So you keep the keys and values and throw the queries away.
+
+<figure class="wide">
+<kv-rows data-fig data-label="fig 2 · one new row per token">
+<p class="fallback">A triangular attention grid grows one row at a time as six tokens are processed. Each new row is the new token's query compared with every cached key. The rows above it never change, the new key and value are appended to the cache, and the query is dropped once its row is done.</p>
+</kv-rows>
+<figcaption><b>fig 2</b>Each step adds exactly one row to the attention grid: the new query against every cached key. The weights are random but the softmax is real, and each row sums to 1.</figcaption>
+</figure>
+
+My favourite way to hold this in my head is a library. The keys are the catalogue cards and the values are the books. Both stay on the shelves for every future visitor. A visitor's question (the query) only matters while they're standing at the desk.
+
+## what the cache saves, and what it doesn't
+
+When I first wrote this post I said the cache turns generation from O(n²) into O(n), 500 times faster for 1,000 tokens. Half of that is right, and the half that's wrong is worth looking at.
+
+The right half: without a cache, step *t* pushes all *t* tokens through every layer again, the projections and the MLP included. Over *n* steps that's 1 + 2 + … + *n* = *n*(*n*+1)/2 token-passes, about 500,000 for 1,000 tokens. With the cache it's *n*, so 1,000. That's the 500×.
+
+The wrong half: attention itself still grows. The new query still has to be compared with every cached key, so step *t* costs *t* dot products per head per layer, and the total is still quadratic. Without a cache the scores add up to roughly *n*³/6, with one it's *n*²/2. Much better, still quadratic. The cache doesn't make long contexts free, which is why long answers still slow down as they go.
+
+<figure class="wide">
+<kv-work data-fig data-label="fig 3 · counting the work">
+<p class="fallback">Bars on a log scale compare the work needed to generate n tokens. Tokens pushed through the model: n(n+1)/2 without a cache, n with one, which is about 500 times fewer at n = 1,000. Query-key scores: about n³/6 without a cache and n(n+1)/2 with one, fewer but still growing quadratically.</p>
+</kv-work>
+<figcaption><b>fig 3</b>Drag the slider. The formulas count a run that starts from a single token; a long prompt shifts the numbers but not the shape. Log scale, so every notch of bar is ten times more work.</figcaption>
+</figure>
+
+## the bill comes in memory
+
+The cache trades compute for memory, and the memory is not small. For every token you keep a key and a value, at every layer, for every key-value head:
 
 ```
-Attention(Q, K, V) = softmax(Q × K^T / √d) × V
+cache bytes = 2 (K and V) × layers × kv_heads × head_dim × bytes per number × tokens × batch
 ```
 
-This means every token "attends to" (looks at) every other token in the sequence.
+Plug in Llama-2-7B, 32 layers and 32 heads of 128 dimensions, stored in 16-bit: that's 512 KiB per token. One 8,192-token conversation needs 4 GiB of cache, on top of the 13.5 GB of weights. Serve 16 of those at once and weights plus cache come to about 82 GB, more than a whole 80 GB GPU.
 
----
+That's why newer models share keys and values between heads, a trick called grouped-query attention. Llama-3.1-8B still has 32 query heads but only 8 key-value heads, so the cache shrinks to 128 KiB per token, four times less, with little loss in quality.<span class="sn">The other big trick is on the serving side: vLLM's PagedAttention stores the cache in small fixed-size blocks, like virtual memory, so it doesn't waste space on reserved but unused context.</span>
 
-## Part 2: The Problem — Why Naive Generation is Slow
+<figure class="wide">
+<kv-mem data-fig data-label="fig 4 · memory calculator">
+<p class="fallback">A calculator for KV cache memory. Llama-3.1-8B uses 2 × 32 layers × 8 KV heads × 128 dimensions × 2 bytes, which is 128 KiB per token, so about 1 GB of cache for 8,192 tokens. Llama-2-7B needs four times as much per token. A bar shows weights plus cache against one 80 GB GPU.</p>
+</kv-mem>
+<figcaption><b>fig 4</b>Real model shapes, real formula. Weights are counted at 16-bit; the fp8 switch only changes the cache. GB here means 10⁹ bytes, KiB means 1,024.</figcaption>
+</figure>
 
-When a language model generates text, it works **autoregressively** — one token at a time:
+## prompt caching is this, kept around
 
-1. Input: "The cat sat"
-2. Output: "on"
-3. New input: "The cat sat on"
-4. Output: "the"
-5. New input: "The cat sat on the"
-6. Output: "mat"
+So what does a provider cache? Exactly this: the keys and values of your prompt, at every layer. Processing a long prompt (the prefill) is often the expensive part of a request, so if your next request starts with the same tokens, the server can load that part of the cache instead of recomputing it.
 
-### The Naive Approach (Without Caching)
+The catch is the word *starts*. The cache only works for a prefix that matches exactly, token for token, from the very first token, because each key depends on everything before it. Change one token early on and every key after it is different, so nothing past that point can be reused.
 
-At step 5, when processing "The cat sat on the", the naive approach would:
+<figure class="wide">
+<kv-prefix data-fig data-label="fig 5 · prefix match">
+<p class="fallback">Two requests are compared block by block: system prompt (2,000 tokens), tools (1,500), examples (1,200) and the user's question (30). With only a new question, 4,700 tokens are read from cache and the input costs about 11% of an uncached request. If the tools are reordered, only the system prompt is reused. If the system prompt starts with a timestamp, nothing is reused.</p>
+</kv-prefix>
+<figcaption><b>fig 5</b>The scan stops at the first token that differs. The cost line uses cache reads at 0.1× the base input price, Anthropic's rate, and ignores the one-off write.</figcaption>
+</figure>
 
-1. Project **every token** ("The", "cat", "sat", "on", "the") to get Q, K, V matrices
-2. Compute attention over all 5 tokens
-3. Generate the next token
+The two big providers expose it differently:
 
-At step 6, when processing "The cat sat on the mat":
+| | how you turn it on | minimum prefix | what a hit costs |
+| --- | --- | --- | --- |
+| OpenAI | automatic, on every request | 1,024 tokens | 50% to 90% off input, depends on the model |
+| Anthropic | explicit `cache_control` breakpoints | 1,024 tokens on most models, more on some smaller ones | 0.1× the input price to read, 1.25× to write |
 
-1. Project **all 6 tokens** again (even though 5 haven't changed!)
-2. Compute attention over all 6 tokens
-3. Generate the next token
+Both caches are short-lived. They expire after a few minutes without a hit (five by default on Anthropic, where each hit resets the timer), so they pay off for chat sessions, agents and batches of similar requests, and much less for one request a day.
 
-**The waste**: Tokens 1-5 haven't changed, but we recompute their K and V projections every single step!
+The practical rule falls straight out of fig 5. Put everything static at the front (system prompt, tool definitions, few-shot examples) and everything that changes at the back. The classic mistake is a timestamp or a user name in the first line of the system prompt, which quietly turns every request into a cache miss.
 
-### Complexity Analysis
+## the code
 
-- **Step 1**: Process 1 token
-- **Step 2**: Process 2 tokens
-- **Step 3**: Process 3 tokens
-- …
-- **Step n**: Process n tokens
-
-Total work: 1 + 2 + 3 + ... + n = **O(n²)**
-
-For generating 1000 tokens, you're doing ~500,000 token projections instead of 1,000!
-
----
-
-## Part 3: The Solution — KV-Caching
-
-![Three-step visual: attention needs Q/K/V, naive generation recomputes everything every step (O(n²)), KV-cache only computes the new token each step (O(n)) — trading memory for speed](/images/posts/kv-caching-explained/kv-caching-mechanism.png)
-
-### The Key Insight
-
-Once a token is processed, its **Key** and **Value** projections never change. Only the **Query** for the *new* token needs to be computed.
-
-### Why Only K and V? (The Active vs. Passive Distinction)
-
-You might wonder: *Q, K, and V are all computed from a token's hidden state — why cache only K and V?*
-
-The answer lies in **how attention uses each matrix**:
-
-| Matrix | Role | Why It's Cached (or not) |
-| --- | --- | --- |
-| **Query (Q)** | **Active** — asks "what should I look for?" | Only needed when token *i* is being generated. Once token *i* exists, it never needs to "ask questions" again. |
-| **Key (K)** | **Passive** — answers "what do I contain?" | Every future token needs to look up token *i*'s info. K_i must stay in cache so future queries can find it. |
-| **Value (V)** | **Passive** — provides "here's my information" | Same as K — future tokens need to retrieve token *i*'s actual content. |
-
-**The asymmetry**: When generating token *N+1*, we compute a **fresh** $Q_{N+1}$ to "ask questions" about all previous tokens. But we only need to look up **cached** $K_1$...$K_N$ and $V_1$...$V_N$ — we never need old Q's again.
-
-**The math makes this concrete:**
-
-When generating token *N+1*, the attention computation is:
-
-$$
-\text{Attention} = \text{softmax}\left( \frac{Q_{N+1} \times [K_1, K_2, ..., K_N, K_{N+1}]^T}{\sqrt{d}} \right) \times [V_1, V_2, ..., V_N, V_{N+1}]
-$$
-
-Notice:
-- **$Q_{N+1}$** appears once (the new token's query)
-- **$K_1$...$K_N$** are retrieved from cache (previously computed)
-- **$V_1$...$V_N$** are retrieved from cache (previously computed)
-- The old queries $Q_1$...$Q_N$ **do not appear** — they're irrelevant for generating token *N+1*
-
-**Why?** Because attention computes how the *current* token relates to *all* previous tokens. Once token *i* was generated, we used $Q_i$ to determine what it should attend to. That decision was made and finalized — we don't revisit it.
-
-Think of it like a library:
-
-- **Q** = A patron's question (only relevant while they're asking)
-- **K** = Catalog cards (permanent reference for all future patrons)
-- **V** = The books themselves (permanent content for all future patrons)
-
-You keep the catalog and books (K, V) but discard the old questions (Q).
-
-### How KV-Caching Works
-
-**Step 1**: Process the initial prompt
-
-- Compute Q, K, V for all prompt tokens
-- **Store K and V in the cache**
-
-**Step 2**: Generate first new token
-
-- Compute Q, K, V for just the *new* token
-- **Append new K, V to cache**
-- Use cached K, V + new K, V for attention
-- Generate next token
-
-**Step 3**: Generate second new token
-
-- Compute Q, K, V for just the *new* token
-- **Append new K, V to cache**
-- Use all cached K, V for attention
-- Generate next token
-
-![Flowchart of the KV-caching loop: compute attention on the prompt, store K and V, then for each new token compute only its Q, look up the cache, reuse cached K and V, and emit the next token](/images/posts/kv-caching-explained/kv-caching-flowchart.png)
-
-### Visual Example
-
-Without caching (Step 3 of generation):
-
-```
-Recompute: [K₁,V₁] [K₂,V₂] [K₃,V₃] [K₄,V₄] [K₅,V₅] + [K₆,V₆]
-           ↑ redundant!          ↑ redundant!
-```
-
-With caching (Step 3 of generation):
-
-```
-Cache:     [K₁,V₁] [K₂,V₂] [K₃,V₃] [K₄,V₄] [K₅,V₅]
-Compute:                                    [K₆,V₆]
-                                           ↑ only this!
-```
-
-### Complexity Analysis (With Caching)
-
-- **Step 1**: Process 1 new token
-- **Step 2**: Process 1 new token
-- **Step 3**: Process 1 new token
-- ...
-- **Step n**: Process 1 new token
-
-Total work: 1 + 1 + 1 + ... + 1 = **O(n)**
-
-**Speedup**: From O(n²) to O(n) — for 1000 tokens, that's ~500× faster!
-
----
-
-## Part 4: The Trade-Off
-
-KV-caching isn't free. It trades **memory** for **speed**:
-
-| Aspect | Without Cache | With Cache |
-| --- | --- | --- |
-| Compute per step | O(n) | O(1) |
-| Memory usage | O(1) | O(n) |
-| Total generation time | O(n²) | O(n) |
-
-The cache grows with sequence length. For a model with:
-
-- Hidden dimension: 4,096
-- 32 attention heads
-- 8,192 context length
-
-The KV-cache requires storing:
-
-- 2 matrices (K and V)
-- × batch size
-- × number of layers
-- × sequence length
-- × hidden dimension
-
-This can be **gigabytes** of GPU memory for long sequences!
-
----
-
-## Part 5: Real-World Context — Provider Caching
-
-The KV-caching concept extends to API-level "prompt caching" offered by OpenAI, Anthropic, and others:
-
-### How It Works
-
-1. **First request**: Your prompt is processed, KV-cache computed and stored server-side
-2. **Second request** (same prefix): The provider reuses the cached KV matrices
-3. **Result**: Faster responses and lower costs (50-90% discount on cached tokens)
-
-![Provider-level prompt caching: OpenAI's automatic prefix matching and Anthropic's explicit cache_control both reuse the same KV-cache technique server-side, letting you pay storage instead of recomputation](/images/posts/kv-caching-explained/provider-prompt-caching.png)
-
-### Provider Differences
-
-| Provider | Approach | Minimum Tokens |
-| --- | --- | --- |
-| OpenAI | Automatic prefix matching | 1,024 |
-| Anthropic | Explicit `cache_control` markers | 1,024 |
-
-This is why reusing prompts with long system instructions or few-shot examples is so cost-effective — you're not paying for the KV computation twice.
-
----
-
-## Part 6: Pseudocode Implementation
-
-Here's simplified Python pseudocode showing how KV-caching works in practice:
+Here's the core of it in PyTorch-flavoured pseudocode. The attention layer takes only the new tokens, plus whatever is in the cache, and hands back an updated cache:
 
 ```python
 class AttentionWithKVCache:
-    """Self-attention with KV-cache for efficient generation."""
-
     def forward(self, x, past_kv=None):
-        """
-        Args:
-            x: Input for NEW tokens only [batch, new_seq, d_model]
-            past_kv: Cached (K, V) from previous steps, or None
+        # x holds only the NEW tokens: [batch, new_tokens, d_model]
+        q = self.W_q(x)
+        k_new, v_new = self.W_k(x), self.W_v(x)
 
-        Returns:
-            output: Attention output
-            present_kv: Updated cache including current step's K, V
-        """
-        # 1. Project NEW tokens to Q, K, V
-        q = self.W_q(x)      # Query for new token
-        k_new = self.W_k(x)  # Key for new token
-        v_new = self.W_v(x)  # Value for new token
-
-        # 2. KV-CACHE LOGIC: Concatenate with past K, V
         if past_kv is not None:
             past_k, past_v = past_kv
-            k = torch.cat([past_k, k_new], dim=1)  # Append to cache
+            k = torch.cat([past_k, k_new], dim=1)  # append to the cache
             v = torch.cat([past_v, v_new], dim=1)
         else:
-            # First step: no cache yet
-            k, v = k_new, v_new
+            k, v = k_new, v_new  # first call: the whole prompt
 
-        # 3. Compute attention with FULL keys/values (cached + new)
-        scores = (q @ k.T) / sqrt(d)  # Q @ K^T / √d
-        attn_weights = softmax(scores)
-        output = attn_weights @ v
-
-        # 4. Return updated cache for next step
+        scores = q @ k.transpose(-2, -1) / sqrt(d)
+        scores = apply_causal_mask(scores)  # needed when x has more than one token
+        output = softmax(scores) @ v
         return output, (k, v)
+```
 
+And the two generation loops side by side. The only real difference is what goes in as `input_ids`:
 
+```python
 def generate_with_cache(model, prompt_ids, max_new_tokens=10):
-    """Autoregressive generation using KV-cache."""
-    kv_cache = None  # Start with empty cache
-    generated = prompt_ids.clone()
-
+    kv_cache, generated = None, prompt_ids.clone()
     for _ in range(max_new_tokens):
-        # Only process the LAST token (or full prompt on first step)
-        input_ids = generated[:, -1:] if kv_cache is not None else generated
-
+        # whole prompt on the first step, then just the last token
+        input_ids = generated if kv_cache is None else generated[:, -1:]
         logits, kv_cache = model(input_ids, past_kv=kv_cache)
-
-        next_token = logits.argmax(dim=-1)
+        next_token = logits[:, -1:].argmax(dim=-1)
         generated = torch.cat([generated, next_token], dim=1)
-
     return generated
 
 
 def generate_naive(model, prompt_ids, max_new_tokens=10):
-    """Naive generation WITHOUT cache — reprocesses entire sequence each step."""
     generated = prompt_ids.clone()
-
     for _ in range(max_new_tokens):
-        # Re-process ENTIRE sequence every time! O(n²) complexity
-        logits, _ = model(generated, past_kv=None)
+        logits, _ = model(generated, past_kv=None)  # the whole sequence, every time
         next_token = logits[:, -1:].argmax(dim=-1)
         generated = torch.cat([generated, next_token], dim=1)
-
     return generated
 ```
 
-**Key insight in the code:**
-- `generate_with_cache`: Each step processes only 1 token → O(n) total
-- `generate_naive`: Each step reprocesses the entire sequence → O(n²) total
+That `logits[:, -1:]` matters in the cached version too: on the first call the model returns logits for every prompt position, and you only want the last one. My first version of this code forgot that.
 
----
-
-## Summary
-
-**KV-caching** is the technique of storing Key and Value matrices from previously processed tokens, allowing transformers to generate text in **O(n)** time instead of **O(n²)**.
-
-- **Without caching**: Recompute K,V for all tokens at every step
-- **With caching**: Only compute K,V for the new token, reuse the rest
-- **Trade-off**: Higher memory usage for dramatically faster generation
-
----
-
-*If you'd rather see the visuals from this post interactively — zoom in, pan around, look at them side by side — they all live on this [dim0 board](https://app.dim0.net/boards/1993fd21654f4333b65a42e0d046fec0).*
-
-This optimization is essential for making large language models practical for real-time applications, and it's the same principle behind the cost savings you get from provider prompt caching APIs.
+The hand-drawn diagrams from the first version of this post still live on a [dim0 board](https://app.dim0.net/boards/1993fd21654f4333b65a42e0d046fec0), if you'd rather pan around them than scroll.
