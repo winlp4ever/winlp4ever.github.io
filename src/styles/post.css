@@ -105,6 +105,8 @@
 .prose figure > [data-fig] > svg { display: block; width: 100%; height: auto; margin: 6px 0 4px; overflow: visible; user-select: none; -webkit-user-select: none; }
 .prose figcaption { font: 13.5px/1.6 var(--mono); color: var(--ink-2); margin: 12px 4px 0; max-width: var(--measure); }
 .prose figcaption b { color: var(--ink); font-weight: 600; margin-right: 6px; }
+/* method / source line under a finding, Economic Index style */
+.prose figcaption .m { display: block; margin-top: 6px; color: var(--ink-3); font-size: 12.5px; }
 .prose figure > img { border-radius: 14px; }
 /* phones: wide figures scroll sideways instead of shrinking their text to nothing */
 .fsv { position: relative; }
