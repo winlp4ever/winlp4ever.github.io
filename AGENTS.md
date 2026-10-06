@@ -71,4 +71,4 @@ Check light and dark (`--blink-settings=preferredColorScheme=1|0`) and phone wid
 
 ## Design references
 
-The visual language (palette, type, critter, status bar) is documented outside this repo in `~/workspace/blog/my-blog/STYLE.md` and `DESIGN.md`. In short: warm paper, ink, one handmade mark on a precise grid. Instrument Sans for reading, JetBrains Mono for labels and code (ligatures off in code).
+The visual language (palette, type, critter, status bar) is documented outside this repo in `~/workspace/blog/my-blog/STYLE.md` and `DESIGN.md`. In short: warm paper, ink, one handmade mark on a precise grid. Hanken Grotesk for reading (`--sans`), a narrowed Instrument Sans for headlines (`--display`), JetBrains Mono for labels and code (ligatures off in code).

@@ -1,5 +1,6 @@
 @import '@fontsource-variable/instrument-sans/standard.css';
-@import '@fontsource-variable/instrument-sans/standard-italic.css';
+@import '@fontsource-variable/hanken-grotesk/wght.css';
+@import '@fontsource-variable/hanken-grotesk/wght-italic.css';
 @import '@fontsource-variable/jetbrains-mono/wght.css';
 
 /* ── tokens ──────────────────────────────────────────────────────────── */
@@ -19,7 +20,8 @@
   --ochre-t: #8f6424;
   --red: #c3474c;
   --blush: #e4a594;
-  --sans: 'Instrument Sans Variable', system-ui, sans-serif;
+  --sans: 'Hanken Grotesk Variable', system-ui, sans-serif; /* reading text */
+  --display: 'Instrument Sans Variable', system-ui, sans-serif; /* condensed headlines */
   --mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, Menlo, monospace;
   --hand: 'Architects Daughter', cursive;
   --measure: 680px;
