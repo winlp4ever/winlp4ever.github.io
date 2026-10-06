@@ -1,15 +1,35 @@
 ---
-title: Elasticsearch best practices + unknown twists
+title: Elasticsearch best practices, and a few twists nobody mentions
 date: 2025-07-15
-description: Notes from running Elasticsearch in production — sharding, segments, refreshes, and a profiling trick that saved us.
+updated: 2026-10-06
+description: What I check first when an Elasticsearch cluster gets slow. Shards, segments, refreshes, and the profiling result that changed how we fetch ids.
 tags: [elasticsearch, infra, performance]
+category: infra
+glyph: search
+figures: 6
 ---
 
-> "Performance isn't a problem — until it suddenly is."
+This started as an internal doc for my AI team, after a few weeks of chasing a slow Elasticsearch cluster. Searches were snappy in dev and miserable in prod, and the first few things we "fixed" were not the problem. What survived is a checklist of things I verify now, roughly in the order I'd check them, plus a couple of twists I really didn't see coming.
 
-This started as an internal doc for my AI team after a few weeks of debugging a slow Elasticsearch cluster. It's a checklist of things to verify, plus a few twists I didn't see coming.
+The snippets use the Python client. Everything here also exists as a plain REST call if that's more your thing.
 
-## Check the number of shards in a specific index
+## the shape of your data
+
+Before tuning anything, I want to know what the cluster is actually holding. An **index** is split into **shards**, and each shard is a complete, self-contained Lucene index (Lucene is the search library under Elasticsearch). Shards come in two flavours:
+
+- primary shards, where documents are written first
+- replica shards, copies of a primary that live on a different node
+
+Replicas buy you two things. If a node dies, a replica of each primary it held gets promoted, so nothing is lost and writes keep working. And searches can be served by any copy, so replicas spread the read load across more machines.
+
+<figure class="wide">
+<es-anatomy data-fig data-label="fig 1 · shards on nodes">
+<p class="fallback">Three nodes hold the shards of one index. With 3 primaries and 1 replica there are 6 shards, two per node, and no replica sits on the same node as its primary. Sliders change the index size, the number of primaries and the number of replicas; each shard tile shows its size against the 10 to 50 GB sweet spot.</p>
+</es-anatomy>
+<figcaption><b>fig 1</b>Play with the sliders. The allocation follows the one hard rule (a replica never shares a node with its primary), and the size verdict uses the shard table further down.</figcaption>
+</figure>
+
+Here's how I check shard settings for one index:
 
 ```python
 from elasticsearch import Elasticsearch
@@ -26,7 +46,7 @@ for index, config in settings.items():
     print(f"  Replicas per shard: {num_replicas}")
 ```
 
-Or, for any index:
+And for every shard in the cluster at once:
 
 ```python
 shards = es_client.cat.shards(format="json")
@@ -35,21 +55,11 @@ for shard in shards:
     print(f"Index: {shard['index']} | Shard: {shard['shard']} | State: {shard['state']} | Node: {shard['node']}")
 ```
 
-Notes:
+## how many shards is too many
 
-- *Primary shards*: where the original data lives
-- *Replica shards*: where the original data is copied
+Each index has its own shards, and replicas count too. With *n* indices, *k* primaries each and *r* replicas, the cluster carries *n × k × (1 + r)* shards. That number creeps up faster than you'd think, because every new index brings its own set.
 
-Two benefits to having replicas:
-
-- **High availability**: Elasticsearch auto-routes requests to replicas if primary shards fail
-- **Auto-balancing**: reduces load on primaries by sharing read requests with replicas
-
-Each index has its own shards. So if there are *n* indexes and each has *k* shards, the total is *n × k*. That leads to the first rule of thumb:
-
-> 👉 In a single node, there should only be **50–100 shards in total**.
-
-So if each index has 1 shard, that's 50–100 indexes per node max. You can estimate the cap from the shards you reserve per index.
+My rule of thumb: keep it to **50–100 shards per node**. If each index has one primary and one replica, that's only 25 to 50 indices per node.<span class="sn">This is deliberately conservative. Elasticsearch's hard default cap is 1,000 shards per node (<code>cluster.max_shards_per_node</code>), and older docs suggested at most 20 shards per GB of heap. The cap tells you when it refuses to work, not when it starts to hurt.</span>
 
 ```python
 from collections import Counter
@@ -60,23 +70,23 @@ for node, count in shard_counts.items():
     print(f"  {node}: {count} shards")
 ```
 
-Second rule of thumb — shard sizing:
+The second rule is about size:
 
-| Shard size    | Status     | Use when…                              |
-| ------------- | ---------- | -------------------------------------- |
-| **10–50 GB**  | Ideal      | Most general-purpose use cases         |
-| **<10 GB**    | Too small  | May cause segment bloat, inefficiency  |
-| **50–100 GB** | Acceptable | Only if node RAM/heap is large         |
-| **>100 GB**   | Risky      | Prone to GC issues, long recoveries    |
+| Shard size | Status | Use when… |
+| --- | --- | --- |
+| 10–50 GB | ideal | most general-purpose use cases |
+| < 10 GB | too small | lots of overhead for very little data |
+| 50–100 GB | acceptable | only if the nodes have plenty of heap |
+| > 100 GB | risky | GC trouble, very slow recovery and rebalancing |
 
-Let's calculate the average shard size:
+Average shard size, from the same `cat.shards` output:
 
 ```python
 total_size_mb = 0
 shard_count = 0
 
 for shard in shards:
-    store_size = shard.get("store", "0mb").lower()
+    store_size = (shard.get("store") or "0mb").lower()
     if store_size.endswith("gb"):
         size = float(store_size[:-2]) * 1024
     elif store_size.endswith("mb"):
@@ -90,29 +100,15 @@ avg_size = total_size_mb / shard_count if shard_count else 0
 print(f"\nAverage shard size: {avg_size:.2f} MB")
 ```
 
-**Why too-small shards hurt:**
+Tiny shards hurt because each one is a full Lucene index with its own files, caches, merges and bookkeeping in the JVM. A search also has to visit every shard of the index and then combine the answers, so a hundred little shards means a hundred little searches to coordinate.
 
-- More shards = more file handles, caches, merges
-- Higher JVM overhead
-- Search coordination slows down
-- Memory fragmentation
+## segments pile up
 
-## Check the number of segments in your index
+One level down, each shard is made of **segments**. A segment is a small, read-only index of some documents. Elasticsearch never edits a segment in place: new documents go into new segments, and a delete only marks a document as gone until its segment gets rewritten.
 
-![Hierarchy: a Node contains an Index, which contains Shards, which contain Segments](/images/posts/elasticsearch-best-practices/shard-segment-index.png)
+So segments get added over time, every time documents are indexed and refreshed. (The first time I printed this number I said a bad word.) In the background, Lucene keeps merging small segments into bigger ones, which is where deleted documents finally disappear.
 
-Think of it like this:
-
-- An **index** has many **shards**
-  - A **shard** is a self-contained Lucene index (Lucene is the search tech under Elasticsearch)
-- Each **shard** contains multiple **segments**
-- A **segment** is a small snapshot of documents — a mini read-only index
-
-> 🧩 Segments are added over time as documents are **indexed** and **refreshed**.
-
-(Holy sh\*t 🥲)
-
-Let's check how many segments we have in some random index:
+Here's how many segments each shard of an index has:
 
 ```python
 segments = es_client.indices.segments(index=es_index.name)
@@ -124,7 +120,7 @@ for shard_id, shard_info in segments['indices'][es_index.name]['shards'].items()
         print(f"Shard {shard_id} on node {node} → {segment_count} segments")
 ```
 
-If there are too many segments, we have to merge them — heads up, this takes time:
+If an index has far too many, you can force a merge. It's heavy on I/O and it can take a while:
 
 ```python
 response = es_client.indices.forcemerge(
@@ -139,28 +135,29 @@ response = es_client.indices.forcemerge(
 print("Force merge triggered:", response)
 ```
 
-This leads to the next lesson I learned.
+Only do this on an index you're done writing to. Force-merging a live index can leave you with huge segments that the normal merge policy then avoids touching, and the deleted documents inside them stick around.<span class="sn">The Elasticsearch docs say the same thing: force merge is meant for read-only indices, for example yesterday's logs.</span>
 
-## Refresh is expensive
+## refresh is expensive
 
-A **refresh** is the process by which Elasticsearch makes newly indexed documents searchable. By default, it happens every second (or based on `index.refresh_interval`).
+A **refresh** is what makes newly indexed documents visible to search. Until the next refresh, a document is indexed but not searchable: it sits in an in-memory buffer (and in the translog, so it isn't lost). A refresh turns that buffer into a brand new segment and opens it for search.
 
-- **Pro**: new data is quickly available for search
-- **Con**: frequent refreshes are expensive — they flush memory to disk and create new segments
+By default this happens every second, set by `index.refresh_interval`.<span class="sn">One twist: if you never set <code>refresh_interval</code> yourself, a shard that hasn't seen a search for 30 seconds goes "search idle" and stops refreshing until the next search arrives.</span> Note that a refresh doesn't fsync anything to disk. That's a flush, a separate and much rarer operation.
 
-When you're indexing a large volume of documents, auto-refreshing every second:
+<figure class="wide">
+<es-refresh data-fig data-label="fig 2 · refresh">
+<p class="fallback">Documents arrive at a steady rate for 18 seconds. With a 1 second refresh interval, each refresh turns the buffer into a tiny new segment, and small segments keep getting merged. With 5 seconds there are fewer, bigger segments. With refresh disabled and one manual refresh at the end, nothing is searchable until the end, and then everything lands in a single segment with no merging. A chart below compares indexed and searchable documents over time.</p>
+</es-refresh>
+<figcaption><b>fig 2</b>The same 72 documents under three settings. The merge policy here is a toy version of Lucene's tiered one, but the shape is right: frequent refreshes mean many tiny segments, and tiny segments mean merge work.</figcaption>
+</figure>
 
-- Slows down indexing (constant flushing and segment merging)
-- Burns I/O, CPU, and memory
+Refreshing every second is great when you need fresh results. During a big load it's pure overhead: each refresh produces a tiny segment, the tiny segments then have to be merged, and all of it burns CPU and I/O that your indexing could have used.
 
-**Best practice during bulk indexing:**
+So during bulk indexing:
 
-1. Temporarily disable refresh
-2. Perform your bulk indexing
-3. Manually refresh once at the end
-4. Restore the refresh interval (optional)
-
-In code:
+1. turn refresh off
+2. do the bulk load
+3. refresh once at the end
+4. put the interval back
 
 ```python
 from elasticsearch import Elasticsearch, helpers
@@ -195,18 +192,23 @@ es.indices.put_settings(
 print("Bulk indexing completed with optimized refresh settings.")
 ```
 
-## Profile your query (most important)
+## profile your query (the important one)
 
-Profiling a request is an important feature in pretty much any database. The point is to dissect a query into phases and see how long each phase takes — the ultimate indicator of performance, and the easiest way to identify the actual bottleneck.
+If you take one thing from this post, take this section. Profiling splits a query into its phases and tells you how long each one took. It's the only honest way I know to find the bottleneck, because my guesses about where the time goes have been wrong more often than right.
 
-In Elasticsearch, a normal query has two parts:
+A normal search runs in two phases:
 
-- **Searching**: each shard runs the search and retrieves scores and "references" of hits
-- **Fetching**: Elasticsearch combines and fetches the actual data (from memory + disk) to assemble the response
+- **query phase**: the request goes to every shard, each shard scores its documents and sends back only ids and scores for its best hits
+- **fetch phase**: the node that coordinates the search merges those lists, keeps the overall top hits, and asks just the shards holding them for the actual documents
 
-![Query enters Search phase which produces score + pointer, then Fetch phase loads the actual document data](/images/posts/elasticsearch-best-practices/query-search-fetch-phases.png)
+<figure class="wide">
+<es-phases data-fig data-label="fig 3 · query then fetch">
+<p class="fallback">A search arrives at the coordinating node. In the query phase it scatters to three shards; each scores its own documents and returns ids and scores. The coordinating node merges the nine candidates and keeps the top three: #12 from shard 0, and #3 and #28 from shard 1. In the fetch phase it asks only shards 0 and 1 for those three documents; shard 2 has nothing to fetch.</p>
+</es-phases>
+<figcaption><b>fig 3</b>Query then fetch, for a top-3 search over three shards. The query phase moves tiny packets. The fetch phase moves documents, and only for the winners.</figcaption>
+</figure>
 
-Let's try:
+Here's how our code originally looked. The comments are what we believed at the time:
 
 ```python
 # this is how we did it in our code originally
@@ -231,16 +233,14 @@ for shard in profile["profile"]["shards"]:
     print("Shard fetch time:", shard["fetch"]["time_in_nanos"] / 1e6, "ms")
 ```
 
-**Wrong**. It's very slow.
-
-To see more details, you can print the whole profile data:
+Wrong. It was very slow. To see everything, print the whole profile:
 
 ```python
 print(json.dumps(dict(profile)['profile'], indent=2))
 ```
 
 <details>
-<summary>Profile result example</summary>
+<summary>a profile result, trimmed</summary>
 
 ```json
 {
@@ -287,62 +287,61 @@ print(json.dumps(dict(profile)['profile'], indent=2))
 
 </details>
 
-Some terminology:
+Read the numbers in nanoseconds and the story jumps out. Finding the 10,000 matching documents took a couple of milliseconds. Fetching them took almost three seconds, and nearly all of that was one step, `load_stored_fields`.
 
-| Parameter         | Pulls from                 | Best use case                           |
-| ----------------- | -------------------------- | --------------------------------------- |
-| `_source`         | Original JSON              | Return full or partial documents        |
-| `stored_fields`   | Stored fields (if enabled) | Retrieve specific fields quickly        |
-| `fields`          | Doc values or stored       | Show fields in search results, flexible |
-| `docvalue_fields` | Doc values                 | Retrieve formatted numbers/dates        |
+<figure class="wide">
+<es-profile data-fig data-label="fig 4 · where the time went">
+<p class="fallback">Bars from the profile above. Rewrite took 0.008 ms, the query 2.607 ms, the collector 7.682 ms, the rest of the fetch phase 20 ms, and load_stored_fields 2,891 ms. On a linear scale only the last bar is visible. Fetch is 99.6% of the measured time, about 0.29 ms per hit.</p>
+</es-profile>
+<figcaption><b>fig 4</b>The real numbers from the profile above, on a linear scale and a log scale. On the linear one, everything we had been tuning is a sliver.</figcaption>
+</figure>
+
+## why fetching ids was slow
+
+We had turned `_source` off, so why was the fetch loading anything? Because of where `_id` lives. It isn't in memory at all. `_id` is a **stored field**, which means it lives on disk next to the other stored fields, and `_source` is stored right there with it.
+
+Lucene keeps a document's stored fields together and compresses many documents at a time into chunks. To read one value for one document, it has to decompress that document's chunk. So with `source=False`, every one of our 10,000 hits still unpacked a chunk full of `_source` just to pull out a short id.
+
+<figure class="wide">
+<es-stored data-fig data-label="fig 5 · stored fields vs doc values">
+<p class="fallback">Eight hits are read one by one. With source set to False, each hit opens the compressed chunk that holds its document, decoding all six documents in it, _source included, to read one id: eight chunks and 48 documents decoded. With stored_fields set to "_none_" and the id read from doc values, each hit reads a single value from a column and no chunk is opened.</p>
+</es-stored>
+<figcaption><b>fig 5</b>Same eight hits, two ways to read their ids. Real chunks hold many more documents than six; the drawing keeps it small.</figcaption>
+</figure>
+
+It helps to know the four ways a search can return field values:
+
+| Parameter | Pulls from | Best for |
+| --- | --- | --- |
+| `_source` | the original JSON | returning whole or partial documents |
+| `stored_fields` | fields mapped with `store: true` | a few specific stored fields |
+| `fields` | the mapping (via `_source` or doc values) | values formatted the way the mapping says |
+| `docvalue_fields` | doc values (a column per field) | numbers, dates, keywords, sorting and aggregations |
 
 <details>
-<summary>More details on each parameter</summary>
+<summary>more on each one</summary>
 
-**`_source`**
-
-- The **original JSON document** as it was indexed
-- A search or get request returns it (entirely or partially) by default
-- Stored by default, very flexible
+`_source` is the original JSON document as it was indexed. Searches and gets return it by default, and you can ask for just part of it:
 
 ```json
 "_source": ["title", "author"]
 ```
 
-Returns only those fields from the original document.
+Use it when you want the actual document content.
 
-✅ **Use when**: you want the actual document content.
-
-**`stored_fields`**
-
-- Refers to fields that have `store: true` in the mapping
-- By default, fields are *not* separately stored (because `_source` already keeps the full doc)
-- Only useful if you've explicitly enabled `store: true` for a field
+`stored_fields` only returns fields mapped with `store: true`. Fields aren't stored separately by default, because `_source` already keeps the whole document. Ask for a field that isn't stored and you get nothing back:
 
 ```json
 "stored_fields": ["title"]
 ```
 
-If `store: true` wasn't set for `title`, this returns nothing.
-
-✅ **Use when**: you need fast access to specific fields and don't want to load the full `_source`.
-
-**`fields`**
-
-- Retrieves field values using **field data**, **doc values**, or **stored fields**
-- Unlike `stored_fields`, this works even if `store: true` isn't set
-- Can return multi-valued fields, nested data, and fields processed for sorting or aggregations
+`fields` asks for values the way the mapping sees them. It works without `store: true`, handles multi-valued fields and runtime fields, and formats values (dates, for example) consistently:
 
 ```json
 "fields": ["publish_date", "category"]
 ```
 
-✅ **Use when**: you want **runtime fields**, **scripted fields**, or **fields formatted for presentation**.
-
-**`docvalue_fields`**
-
-- Specific to **doc values** — a columnar data structure optimized for sorting, aggregations, and scripting
-- Commonly used for **dates and numbers** when you want them formatted
+`docvalue_fields` reads from doc values, a columnar on-disk structure built for sorting, aggregations and scripts. Keyword, numeric and date fields have doc values by default; `text` fields don't. Handy when you want a formatted date or number without touching `_source`:
 
 ```json
 "docvalue_fields": [
@@ -350,52 +349,50 @@ If `store: true` wasn't set for `title`, this returns nothing.
 ]
 ```
 
-✅ **Use when**: you want **formatted** field values, or data optimized for sorting/aggregations.
-
 </details>
 
-More: [Elasticsearch docs on retrieving selected fields](https://www.elastic.co/docs/reference/elasticsearch/rest-apis/retrieve-selected-fields).
+More in the [Elasticsearch docs on retrieving selected fields](https://www.elastic.co/docs/reference/elasticsearch/rest-apis/retrieve-selected-fields).
 
-Note:
+The fix is to read the id from doc values and switch stored fields off completely. `_id` has no doc values, so you have two options.
 
-- Unlike what we thought, `_id` is **not** stored in memory but on disk by default.
+The old way is to let `_id` load into the field data cache, on the heap:
 
-The right way to only return score + id from memory:
+```python
+es.cluster.put_settings(body={
+    "persistent": {
+        "indices.id_field_data.enabled": True
+    }
+})
 
-1. Enable `_id` in docvalues (without this, the next step won't work):
+print("✅ _id fielddata enabled.")
+```
 
-   ```python
-   es.cluster.put_settings(body={
-       "persistent": {
-           "indices.id_field_data.enabled": True
-       }
-   })
+It's deprecated though, and heap is exactly what you don't want to spend. What we ended up doing instead was keeping our own `id` keyword field in every document (keyword fields have doc values for free) and reading that.
 
-   print("✅ _id fielddata enabled.")
-   ```
+Then the query changes in two small, very significant ways:
 
-   This is deprecated, though. The recommended way is to artificially have an `id` attribute (like we did) and register it as a `docvalue`.
+```python
+profile = es_client.search(
+    index="search_185_dev_v1",
+    profile=True,
+    size=1000,
+    source=False,
+    query={
+        "match": {
+            "block.text.text": "AI"
+        }
+    },
+    docvalue_fields=["id"],   # or "_id" if you enabled the fielddata setting above
+    stored_fields="_none_",   # not None (the default), not [], it has to be
+                              # the string "_none_" to skip stored fields (wth)
+)
+```
 
-2. Minor changes to the query, but very significant:
+`stored_fields="_none_"` is the part that kills `load_stored_fields`: it tells Elasticsearch not to load any stored field, `_id` and `_source` included. On its own, `docvalue_fields` doesn't help, because the fetch would still open every chunk to get `_id`.
 
-   ```python
-   profile = es_client.search(
-       index="search_185_dev_v1",
-       profile=True,
-       size=1000,
-       source=False,
-       query={
-           "match": {
-               "block.text.text": "AI"
-           }
-       },
-       docvalue_fields=['_id'],
-       stored_fields="_none_",  # not None (default), not [], must be
-                                # _none_ to disable this entirely (wth)
-   )
-   ```
+## is the cluster ok?
 
-## Check the current status of all nodes
+Two boring checks that would have saved me a few evenings. First, the search thread pool on each node:
 
 ```python
 thread_pool_stats = es_client.nodes.stats(metric="thread_pool")
@@ -409,9 +406,9 @@ for node_id, stats in thread_pool_stats["nodes"].items():
     print(f"  Rejected: {search_pool.get('rejected')}")
 ```
 
-It's not good if too many requests are getting rejected.
+`rejected` is a running total of searches that found the queue full and got bounced (clients see HTTP 429). If it keeps climbing, the nodes can't keep up.
 
-## Check heap, CPU, disk
+Then heap, CPU and disk:
 
 ```python
 node_stats = es.nodes.stats(metric=["jvm", "fs", "os", "thread_pool"])
@@ -428,21 +425,20 @@ for node_id, node in node_stats["nodes"].items():
     print(f"  Disk free: {fs['free_in_bytes'] / fs['total_in_bytes']:.1%}")
 ```
 
-Ideally on each node:
+What I want to see on every node: heap under 60%, a CPU that's mostly bored, and disk under 80%. The disk number isn't arbitrary. Elasticsearch starts changing its behaviour at 85%, and it gets less polite from there.
 
-- Heap used < 60%
-- CPU load minor
-- Disk used < 80%
+<figure class="wide">
+<es-disk data-fig data-label="fig 6 · disk watermarks">
+<p class="fallback">A disk usage slider for one node against the default watermarks. Below 85% nothing happens. At the low watermark, 85%, no new shards are allocated to the node. At the high watermark, 90%, shards are moved to other nodes. At the flood stage, 95%, indices with a shard on the node become read-only until usage drops below the high watermark. My own alert sits at 80%.</p>
+</es-disk>
+<figcaption><b>fig 6</b>Drag the disk. The thresholds are Elasticsearch's defaults (<code>cluster.routing.allocation.disk.watermark.*</code>); 80% is just where I like to get paged.</figcaption>
+</figure>
 
-## Take-home
+## take-home
 
-If you remember nothing else from this post, remember these:
-
-- **Shard sizing first.** Aim for 10–50 GB per shard and 50–100 shards per node. Too many tiny shards is the silent killer — file handles, merges, and JVM overhead pile up before you notice.
-- **Segments compound.** They grow with every refresh. Force-merge when they get out of hand, but know it's expensive — schedule it.
-- **Refresh is not free.** During bulk indexing, set `refresh_interval: -1`, load, then refresh once. This single change often cuts indexing time dramatically.
-- **Profile before you optimize.** `profile=True` is your friend. The bottleneck is rarely where you assume — in our case, fetch dominated even when we thought we were memory-only.
-- **`_id` lives on disk by default.** If you need score-plus-id-only queries to be fast, you need `docvalue_fields=['_id']` *and* `stored_fields="_none_"`. Either alone is not enough.
-- **Watch the boring metrics.** Rejected thread-pool requests, heap > 60%, disk > 80% — these are your early-warning signs. By the time queries slow down, you're already late.
-
-Performance work in Elasticsearch is mostly about not creating problems for yourself: right-sized shards, controlled refresh, and profiled queries. Get those three right and most of the rest takes care of itself.
+- 10–50 GB per shard, and far fewer shards per node than the cap allows
+- force merge only indices you've finished writing to
+- for bulk loads, set `refresh_interval` to `-1`, load, refresh once, then restore it
+- run `profile=True` before changing anything; ours was 99.6% fetch
+- if you only need ids, read them from doc values and set `stored_fields="_none_"`
+- alert on rejected searches, heap and disk before you hit 85%
