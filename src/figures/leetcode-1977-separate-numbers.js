@@ -48,6 +48,8 @@ function solve(num) {
 
 const SUP = '⁰¹²³⁴⁵⁶⁷⁸⁹', pow10 = e => '10' + [...String(e)].map(d => SUP[d]).join('');
 const digitsOnly = s => s.replace(/\D/g, '').slice(0, 12);
+// number of decimal digits of a value whose log10 is l: floor(l) + 1
+const digits = l => Math.floor(l) + 1;
 
 // ── fig 1 · cut explorer ───────────────────────────────────────────────────
 class LcCuts extends Figure {
@@ -100,12 +102,12 @@ class LcCuts extends Figure {
     // gaps: click to cut
     for (let k = 0; k < n - 1; k++) {
       const x = X(k) + tw + gap / 2, on = this.mask >> k & 1;
-      const hit = S('g', { class: 'click', role: 'button', tabindex: 0, 'aria-label': `${on ? 'Remove' : 'Add'} cut after digit ${k + 1}` }, g);
+      const hit = S('g', { class: 'click', role: 'button', tabindex: 0, 'data-gap': k, 'aria-label': `${on ? 'Remove' : 'Add'} cut after digit ${k + 1}` }, g);
       S('rect', { x: x - gap / 2 - 2, y: y0 - 10, width: gap + 4, height: 66, class: 'f-none', 'pointer-events': 'all' }, hit);
       S('line', { x1: x, x2: x, y1: y0 - 6, y2: y0 + 52, class: on ? 's-green' : 's-rule', 'stroke-width': on ? 3 : 1.2, 'stroke-dasharray': on ? null : '3 3', 'stroke-linecap': 'round' }, hit);
-      const flip = () => { this.stop(); this.mask ^= 1 << k; this.draw(); };
-      hit.onclick = flip;
-      hit.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } };
+      const flip = refocus => { this.stop(); this.mask ^= 1 << k; this.draw(); if (refocus) g.querySelector(`[data-gap="${k}"]`)?.focus(); };
+      hit.onclick = () => flip(false);
+      hit.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(true); } };
     }
     // chunks with their verdicts
     const yb = y0 + 72;
@@ -127,11 +129,12 @@ class LcCuts extends Figure {
     // every cut pattern as a dot, valid ones green
     const total = 1 << (n - 1), yd = yb + 82;
     if (total <= 128) {
+      const dots = S('g', { 'aria-hidden': 'true' }, g);
       const cols = Math.min(32, total), r = 5, step = 16, xs = 300 - (cols - 1) * step / 2;
       for (let m = 0; m < total; m++) {
         const cx = xs + (m % cols) * step, cy = yd + Math.floor(m / cols) * step, ok = !verdict(num, m);
-        const c = S('circle', { cx, cy, r, class: ok ? 'f-green click' : 'f-rule2 click' }, g);
-        if (m === this.mask) S('circle', { cx, cy, r: r + 3, class: 'f-none s-ink', 'stroke-width': 1.5 }, g);
+        const c = S('circle', { cx, cy, r, class: ok ? 'f-green click' : 'f-rule2 click' }, dots);
+        if (m === this.mask) S('circle', { cx, cy, r: r + 3, class: 'f-none s-ink', 'stroke-width': 1.5 }, dots);
         c.onclick = () => { this.stop(); this.mask = m; this.draw(); };
       }
     }
@@ -159,9 +162,9 @@ class LcExplode extends Figure {
     for (const n of [1, 1000, 2000, 3000, 3500]) S('text', { x: this.X(n), y: y0 + 20, class: 't3', 'font-size': 12, 'text-anchor': 'middle', text: n === 1 ? 'n = 1' : n }, svg);
     const curve = f => { let d = ''; for (let k = 0; k <= 120; k++) { const n = 1 + k / 120 * (N - 1); d += (k ? 'L' : 'M') + this.X(n).toFixed(1) + ' ' + this.Y(f(n)).toFixed(1); } return d; };
     this.lines = [
-      S('path', { d: curve(n => (n - 1) * Math.LOG10E * Math.LN2), class: 'f-none s-ochre', 'stroke-width': 2.2 }, svg),
-      S('path', { d: curve(n => 3 * Math.log10(n)), class: 'f-none s-ink2', 'stroke-width': 1.6 }, svg),
-      S('path', { d: curve(n => 2 * Math.log10(n)), class: 'f-none s-green', 'stroke-width': 2.2 }, svg),
+      S('path', { d: curve(n => digits((n - 1) * Math.log10(2))), class: 'f-none s-ochre', 'stroke-width': 2.2 }, svg),
+      S('path', { d: curve(n => digits(3 * Math.log10(n))), class: 'f-none s-ink2', 'stroke-width': 1.6 }, svg),
+      S('path', { d: curve(n => digits(2 * Math.log10(n))), class: 'f-none s-green', 'stroke-width': 2.2 }, svg),
     ];
     this.tags = [
       S('text', { x: nar ? 190 : 230, y: this.Y(800), class: 't', 'font-size': 14, text: '2ⁿ⁻¹', style: 'fill:var(--ochre-t)' }, svg),
@@ -187,7 +190,7 @@ class LcExplode extends Figure {
     this.lines.forEach((p, i) => { const a = seg(t, .2 + i * .5, 2.2 + i * .5); drawOn(p, a); op(p, a > 0 ? 1 : 0); });
     this.tags.forEach((e, i) => op(e, seg(t, 1.6 + i * .5, 2.2 + i * .5)));
     const n = this.n(t), x = this.X(n), d2 = (n - 1) * Math.log10(2);
-    attr(this.mark, { x1: x, x2: x }); attr(this.dot, { cx: x, cy: this.Y(d2) });
+    attr(this.mark, { x1: x, x2: x }); attr(this.dot, { cx: x, cy: this.Y(digits(d2)) });
     this.nT.textContent = 'n = ' + n.toLocaleString('en');
     const sci = l10 => l10 < 6 ? Math.round(10 ** l10).toLocaleString('en') : pow10(Math.floor(l10));
     const dur = l10 => {
@@ -405,11 +408,12 @@ class LcLcp extends Figure {
     for (let i = n - 1; i >= 0; i--) for (let j = n - 1; j >= 0; j--) this.order.push([i, j]);
     this.cells = {};
     this.order.forEach(([i, j]) => {
-      const v = this.lcp[i][j], g = S('g', { class: 'click' }, svg);
+      const v = this.lcp[i][j], g = S('g', { class: 'click', tabindex: 0, role: 'button', 'aria-label': `compare num[${i}:] and num[${j}:], common prefix ${v}` }, svg);
       const r = S('rect', { x: gx + j * c + 1, y: gy + i * c + 1, width: c - 2, height: c - 2, rx: 4, class: 'f-ink' }, g);
       r.style.fillOpacity = v ? (.1 + .085 * Math.min(v, 4)).toFixed(3) : '.04';
       S('text', { x: gx + j * c + c / 2, y: gy + i * c + c / 2 + 5, class: v ? 't' : 't3', 'font-size': 14, 'text-anchor': 'middle', text: v, 'font-weight': v ? 700 : 400 }, g);
       g.onclick = () => { this.held = true; this.pause(); this.seek(this.duration); this.pick = [i, j]; this.render(this.duration); };
+      g.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); g.onclick(); } };
       this.cells[i + ',' + j] = g;
     });
     this.diag = S('path', { class: 'f-none s-green', 'stroke-width': 1.6 }, svg);
