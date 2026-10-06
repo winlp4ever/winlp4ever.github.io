@@ -1,7 +1,7 @@
 ---
 title: How a transformer reads
 date: 2026-10-03
-description: Every chatbot you've talked to runs one small question in a loop, what comes next? This is the machine that answers it, taken apart one moving piece at a time.
+description: A walk through the parts of a transformer, from tokens to sampling, with a working figure for each step.
 tags: [ai, llm, transformers]
 category: ai
 glyph: attention
@@ -9,88 +9,88 @@ figures: 9
 featured: true
 ---
 
-Give a language model some text and it gives you back exactly one thing: a guess for the next token, written as a list of probabilities. That's the whole interface. Chat, code completion, translation, all of it is this guess, made over and over, with each answer fed back in as input.
+A language model takes text and returns a list of probabilities for the next token. A chatbot reply is that guess repeated, with each chosen token appended to the text before the next guess.
 
 <figure class="wide">
 <tf-next data-fig data-label="fig 1 · next token">
 <p class="fallback">Three prompts are typed one after another: "the cat sat on the", "to be or not to", "the capital of france is". After each, a bar chart shows the model's top five guesses. "mat" gets 41%, "be" gets 93%, "paris" gets 88%, and the winner drops into the blank.</p>
 </tf-next>
-<figcaption><b>fig 1</b>The only question a language model answers. The numbers are made up, but the shape is the usual one: one or two likely answers, then a long tail.</figcaption>
+<figcaption><b>fig 1</b>Three prompts and their top five next tokens. I made the numbers up, but real outputs usually look like this, with one or two likely tokens and a long tail.</figcaption>
 </figure>
 
-The machine that makes the guess is a **transformer**, from the 2017 paper [Attention Is All You Need](https://arxiv.org/abs/1706.03762). It does four things in order. It turns text into numbers, lets those numbers look at each other, lets each one think about what it saw, and turns the result back into a guess. We'll follow one sentence all the way through.
+The model that produces the guess is a **transformer**, described in the 2017 paper [Attention Is All You Need](https://arxiv.org/abs/1706.03762). This post goes through its parts in the order the text passes through them, using a few short sentences as examples.
 
 ## text becomes tokens
 
-Models don't see letters, and they don't quite see words either. They see **tokens**: chunks from a fixed vocabulary, picked before training because they show up a lot. A common word gets a single token. A rare one gets chopped into pieces. GPT-2's vocabulary has 50,257 of them, and a token is just a position in that list.
+A model reads **tokens**, chunks of text from a fixed vocabulary that is chosen before training based on how often each chunk appears. Common words usually get one token each and rare words get split into several. GPT-2's vocabulary has 50,257 tokens, and the model only ever sees a token's position in that list.
 
 <figure class="wide">
 <tf-tokens data-fig data-label="fig 2 · tokenizer">
 <p class="fallback">The sentence "Transformers don't read words." splits into seven tokens: "Transform", "ers", " don", "'t", " read", " words", ".". Each gets a numeric id, and each becomes a small pixel critter.</p>
 </tf-tokens>
-<figcaption><b>fig 2</b>One sentence, seven tokens. The dots are spaces, and they belong to the token after them. The ids are illustrative.</figcaption>
+<figcaption><b>fig 2</b>The sentence splits into seven tokens. The dots stand for spaces, which attach to the token after them. The ids are illustrative.</figcaption>
 </figure>
 
-From here on, a token is one of those critters. Each one carries a list of numbers up through the model, and at the very top, the last critter's numbers turn into the guess.
+In the rest of the figures each critter is a token. It carries a list of numbers up through the model, and at the top the last token's numbers become the guess.
 
 ## tokens become places
 
-An id is only a row number. The first layer of the model is a big table with one row per token in the vocabulary, and each row is a list of numbers, 768 of them in GPT-2 small. That list is the token's **embedding**.
+The first layer of the model is a table with one row per vocabulary token. The token id picks a row, and that row, a list of 768 numbers in GPT-2 small, is the token's **embedding**.
 
-Nobody writes these numbers by hand. They start random and get nudged during training, billions of times, until tokens that get used the same way end up with similar numbers. Squash the 768 dimensions down to two and you can see what happened: a map where distance means difference in meaning.
+The numbers start random and training adjusts them billions of times, until tokens used in similar contexts have similar rows. Projected down to two dimensions, related words land near each other.
 
 <figure class="wide">
 <tf-embed data-fig data-label="fig 3 · embeddings">
 <p class="fallback">The row for "cat" is looked up in an embedding table and becomes a vector. On a 2D map, animals cluster together, as do verbs and numbers. The arrow from "man" to "woman" runs parallel to the arrow from "king" to "queen".</p>
 </tf-embed>
-<figcaption><b>fig 3</b>Looking up <code>cat</code>, then placing it on a map. The layout is my sketch of what real embeddings do; the real ones live in hundreds of dimensions.</figcaption>
+<figcaption><b>fig 3</b>Looking up <code>cat</code> and placing it on a 2D map. I drew the layout by hand to show the kind of structure real embeddings have in hundreds of dimensions.</figcaption>
 </figure>
 
-The famous party trick: the step from *man* to *woman* points roughly the same way as the step from *king* to *queen*. Directions in this space carry meaning. It's never exact, but it's a good way to hold everything that comes next in your head, because from here on the model is doing geometry on meanings.
+The example everyone quotes is that the step from *man* to *woman* points roughly the same way as the step from *king* to *queen*. In real models it only holds approximately, but some directions in this space do line up with differences in meaning.
 
-## where am I?
+## word order
 
-There's a catch. The next part of the model, attention, treats its input like a bag of tokens. Shuffle them and each one gets exactly the same result, so *dog bites man* and *man bites dog* would look identical.
+Attention, the next step, doesn't know the order of its inputs. If you shuffle the tokens, each one gets the same result, so *dog bites man* and *man bites dog* would look identical to it.
 
-The original paper fixes this by adding a position signal to every embedding: a stack of sine and cosine waves at different speeds, read off at the token's position. Fast waves tell neighbours apart. Slow waves tell the start of a long text from its end. Together they give every position its own fingerprint.<span class="sn">Most recent models use RoPE instead, which rotates the query and key vectors by an angle that depends on position. Same idea, position turns into geometry.</span>
+The original paper adds a position signal to every embedding. The signal is a set of sine and cosine waves at different frequencies, each sampled at the token's position. The fast waves change between neighbouring tokens and the slow ones change over the length of the text, so every position gets a different combination of values.<span class="sn">Most recent models use RoPE instead. It rotates the query and key vectors by an angle that depends on the token's position.</span>
 
 <figure class="wide">
 <tf-position data-fig data-label="fig 4 · position">
 <p class="fallback">Eight waves are stacked vertically across 64 positions: four frequencies, each as a sine and a cosine, from fast to slow. A marker sweeps across the positions; at each one, the eight wave values are read off into a column that forms that position's vector.</p>
 </tf-position>
-<figcaption><b>fig 4</b>A position's vector is a vertical slice through the waves. This is the real formula, with base 100 instead of 10,000 so the slow waves actually move on screen.</figcaption>
+<figcaption><b>fig 4</b>A position's vector is a vertical slice through the waves. This is the real formula, with base 100 instead of 10,000 so the slow waves visibly change across 64 positions.</figcaption>
 </figure>
 
-## looking around
+## attention
 
-Now for the good part. Each token has its own vector, but a word on its own doesn't say much. *it* could be anything. To work out what *it* means, the token has to look at the rest of the sentence and decide which other tokens matter.
+So far each token's vector was built without looking at its neighbours. For a word like *it* that isn't enough, because its meaning depends on what it refers to.
 
-That's **attention**. Every token gets a budget of 100% to spend across the tokens it can see, and where it spends that budget decides what it learns from them.<span class="sn">This example looks both ways, like the encoder in the original paper. GPT-style models only look backwards. More on that in "many ways of looking".</span>
+**Attention** lets each token take information from the other tokens it can see. Every token splits a budget of 100% across them and receives a mix of their information in those proportions.<span class="sn">This example looks in both directions, like the encoder in the original paper. GPT-style models only look backwards, which comes up again in the section on heads.</span>
 
 <figure class="wide">
 <tf-attention data-fig data-label="fig 5 · attention">
 <p class="fallback">The sentence "the animal didn't cross the street because it was too tired" with arcs from "it" to every other word. Most of the weight goes to "animal". Change the last word to "wide" and most of the weight moves to "street".</p>
 </tf-attention>
-<figcaption><b>fig 5</b>Click any word to see where it looks. Flip the last word and watch <code>it</code> change its mind. I tuned these weights by hand to show the effect; real heads learn theirs.</figcaption>
+<figcaption><b>fig 5</b>Click any word to see its weights. Changing the last word to <code>wide</code> moves most of the weight on <code>it</code> from <code>animal</code> to <code>street</code>. I set these weights by hand, and real heads learn theirs.</figcaption>
 </figure>
 
-## the math, slowly
+## computing the weights
 
-So how does a token decide where to look? It turns its vector into three smaller ones:
+To get those weights, each token makes three smaller vectors from its embedding:
 
 <dl>
-<dt>query</dt><dd>what am I looking for?</dd>
-<dt>key</dt><dd>what do I have to offer?</dd>
-<dt>value</dt><dd>what do I hand over if you pick me?</dd>
+<dt>query</dt><dd>describes what the token is looking for</dd>
+<dt>key</dt><dd>describes what the token contains, for other tokens' queries to match against</dd>
+<dt>value</dt><dd>the information the token passes on when another token attends to it</dd>
 </dl>
 
-Each is the embedding multiplied by a learned matrix: `W_Q`, `W_K` and `W_V`. Then, for one token:
+Each one is the embedding multiplied by a learned matrix, `W_Q`, `W_K` or `W_V`. For one token, attention then goes like this:
 
 1. Dot its query with every key. The result is big when the two point the same way.
-2. Divide by `√d` to keep the numbers tame, then softmax so they add up to 1.
+2. Divide by `√d` to keep the numbers small, then apply softmax so they add up to 1.
 3. Take the weighted sum of the values.
 
-That sum is the token's new vector. It's all multiplication and addition, which is why a GPU can do it for every token at once.
+That sum becomes the token's new vector. The whole computation is matrix multiplication, so a GPU can do it for all tokens in parallel.
 
 <figure class="wide">
 <tf-qkv data-fig data-label="fig 6 · one query">
@@ -103,49 +103,49 @@ That sum is the token's new vector. It's all multiplication and addition, which 
 attention(Q, K, V) = softmax(Q·Kᵀ / √d) · V
 ```
 
-## many ways of looking
+## heads
 
-One attention pattern can only ask one question at a time, so each layer runs several in parallel. They're called **heads**, and each has its own `W_Q`, `W_K` and `W_V`. GPT-3 has 96 per layer. Nobody tells them what to look for, yet some end up with patterns you can put a name on.
+One set of attention weights can follow only one kind of relationship, so each layer runs several attention computations side by side. These are the **heads**, each with its own `W_Q`, `W_K` and `W_V`, and GPT-3 has 96 of them per layer. Their roles aren't assigned in advance. Researchers looking inside trained models have found heads with recognisable jobs, like attending to the previous token or to an earlier copy of the current word.
 
-These grids also show the rule GPT-style models follow: a token can only attend to itself and to what came before it. The hatched triangle is the future, masked out. That rule is what lets the model learn from every position of a text at once during training, and then write it one token at a time.
+The grids below also show the mask that GPT-style models use. A token can attend to itself and to earlier tokens, and the hatched triangle of later tokens is blocked. With the mask, training can score the prediction at every position of a text in one pass, and generation still works one token at a time.
 
 <figure class="wide">
 <tf-heads data-fig data-label="fig 7 · heads">
 <p class="fallback">Four 8 by 8 attention grids for "the cat sat on the mat and slept", each with its upper triangle masked. One head looks at the previous token, one finds an earlier copy of the same word, one rests on the first token, and one links verbs back to "cat".</p>
 </tf-heads>
-<figcaption><b>fig 7</b>Four heads, one sentence. Each row is one token spending its budget, and darker means more attention. These are tidied-up versions of patterns people have found in real models.</figcaption>
+<figcaption><b>fig 7</b>Four heads on the same sentence. Each row is one token's budget, and darker cells mean more attention. These are cleaned-up versions of patterns found in real models.</figcaption>
 </figure>
 
-## the stream
+## the residual stream
 
-Attention is where tokens talk to each other. Right after it, each token goes through a small two-layer network on its own, the **MLP**. Most of the parameters live there, and it's where each token chews on what it just heard.
+After attention, each token goes through a small two-layer network called the **MLP**, which processes every token separately. Most of a transformer's parameters are in these MLPs.
 
-Neither block replaces the token's vector. Each one reads from it, computes a change, and adds the change back. That running vector is called the **residual stream**, and if I had to keep a single picture of a transformer it would be this one: one lane per token, flowing upward, with blocks along the way that read from it and write to it.<span class="sn">Each block also normalises its input first (layer norm), which keeps the numbers in range. The figure leaves it out.</span>
+Attention and the MLP don't replace the token's vector. Each computes a change and adds it to the vector, and the vector that collects all these changes is called the **residual stream**. It's the picture of the model I find most useful: one lane per token running upward, with attention and MLP blocks that read from the lanes and add to them.<span class="sn">Each block also normalises its input first (layer norm) to keep the numbers in range. The figure leaves it out.</span>
 
 <figure class="wide">
 <tf-block data-fig data-label="fig 8 · residual stream">
 <p class="fallback">One token's vector travels up a vertical lane through three layers. At each layer a copy branches left into attention, which reads from the other tokens' lanes, and the result is added back. Then a copy branches right into the MLP, and that result is added back too.</p>
 </tf-block>
-<figcaption><b>fig 8</b>One token's trip up the residual stream. The faint lanes on the left are the other tokens, and attention is the only place the lanes touch. GPT-3 stacks 96 of these layers.</figcaption>
+<figcaption><b>fig 8</b>One token's vector going up the residual stream. The faint lanes on the left are the other tokens, and attention is the only step that reads across lanes. GPT-3 stacks 96 of these layers.</figcaption>
 </figure>
 
-## picking a word
+## sampling
 
-At the top, the last token's vector gets multiplied by one more matrix, with a row for every token in the vocabulary. Out come raw scores called logits. Softmax turns them into probabilities, and we're back at figure 1.
+At the top, the last token's vector is multiplied by one more matrix, which has a row for every vocabulary token. That gives one raw score per token, called a logit, and softmax turns the logits into the probabilities from figure 1.
 
-The model never picks the next word itself. Something outside it does, by **sampling** from those probabilities, and temperature decides how. Low temperature sharpens the distribution toward the top choice. High temperature flattens it until the cat explodes.
+Code outside the model then picks a token from those probabilities. This is **sampling**, and temperature controls it. A temperature below 1 sharpens the distribution toward the top token. Above 1 it flattens the distribution, so unlikely tokens get picked more often and the text drifts off topic.
 
 <figure class="wide">
 <tf-sample data-fig data-label="fig 9 · sampling">
 <p class="fallback">A sentence starting "the cat" grows one token at a time. For each step, a bar chart shows the candidate next tokens and a dart lands on a strip divided by probability, choosing the next word. A temperature slider reshapes the probabilities.</p>
 </tf-sample>
-<figcaption><b>fig 9</b>Sampling, for real. The candidates come from a small hand-written table rather than a model, but the softmax, the temperature and the random draw are the real thing.</figcaption>
+<figcaption><b>fig 9</b>Sampling with a small hand-written table of candidates in place of a model. The softmax, temperature and random draw work the same way they do in a real model.</figcaption>
 </figure>
 
-Then the chosen token gets appended and the whole thing runs again from the bottom. That's generation: one full pass through the model per token. It's also why long answers are slow, and why tricks like [KV caching](/blog/kv-caching-explained/) exist.
+The chosen token is appended to the text, and the text goes through the whole model again. Each new token costs a full pass, which is why long answers take a while and why [KV caching](/blog/kv-caching-explained/) keeps work from earlier passes to reuse.
 
 ## what I left out
 
-Training, mostly. Every matrix above starts random, and predicting the next token over a very large pile of text is what shapes them. I also skipped the fiddly parts (layer norm, the exact MLP shape, how the heads get recombined) and everything that makes it fast in production, like KV caching, batching and fused attention kernels.
+I skipped training. Every matrix in this post starts random and gets its values from predicting the next token over a large amount of text.
 
-The shape stays the one you've seen though. Tokens become vectors, the vectors look at each other, think for a bit, and vote on the next token. Then it all happens again.
+I also left out the details of layer norm, the exact MLP shape and how the outputs of the heads are combined. The production speedups are missing too, including KV caching, batching and fused attention kernels.
