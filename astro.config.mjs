@@ -6,10 +6,12 @@ import rehypeKatex from 'rehype-katex'
 
 export default defineConfig({
   site: 'https://winlp4ever.github.io',
+  // every page is served as /path/ on GitHub Pages; links and canonicals use the same form
+  trailingSlash: 'always',
   integrations: [sitemap()],
   // the GLM-5.3 vs V4 Flash post was replaced by the family comparison
   redirects: {
-    '/blog/glm-5-3-vs-deepseek-v4-flash': '/blog/deepseek-v4-1-vs-glm-5-3/',
+    '/blog/glm-5-3-vs-deepseek-v4-flash/': '/blog/deepseek-v4-1-vs-glm-5-3/',
   },
   markdown: {
     shikiConfig: {

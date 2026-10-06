@@ -142,7 +142,7 @@ The model never picks the next word itself. Something outside it does, by **samp
 <figcaption><b>fig 9</b>Sampling, for real. The candidates come from a small hand-written table rather than a model, but the softmax, the temperature and the random draw are the real thing.</figcaption>
 </figure>
 
-Then the chosen token gets appended and the whole thing runs again from the bottom. That's generation: one full pass through the model per token. It's also why long answers are slow, and why tricks like [KV caching](/blog/kv-caching-explained) exist.
+Then the chosen token gets appended and the whole thing runs again from the bottom. That's generation: one full pass through the model per token. It's also why long answers are slow, and why tricks like [KV caching](/blog/kv-caching-explained/) exist.
 
 ## what I left out
 

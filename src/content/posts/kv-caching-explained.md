@@ -15,7 +15,7 @@ The thing they keep is called the **KV cache**. It's been sitting inside every L
 
 ## a thirty-second recap
 
-If you want the long version, I wrote [a whole post on how a transformer reads](/blog/how-a-transformer-reads). The part that matters here: at every layer, each token turns its vector into three smaller ones, a **query**, a **key** and a **value**. To update a token, the model compares its query with the keys of the tokens it's allowed to see, turns the scores into weights with a softmax, and takes the weighted sum of their values.
+If you want the long version, I wrote [a whole post on how a transformer reads](/blog/how-a-transformer-reads/). The part that matters here: at every layer, each token turns its vector into three smaller ones, a **query**, a **key** and a **value**. To update a token, the model compares its query with the keys of the tokens it's allowed to see, turns the scores into weights with a softmax, and takes the weighted sum of their values.
 
 ```
 attention(Q, K, V) = softmax(Q·Kᵀ / √d) · V
