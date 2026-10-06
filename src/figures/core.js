@@ -5,8 +5,8 @@
 
 export const NS = 'http://www.w3.org/2000/svg';
 export const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
-export const SEEK = (location.hash.match(/t=([\d.]+)/) || [])[1];
-export const STILL = /still/.test(location.hash) || SEEK != null; // #still = poster frames, #t=3.2 = that exact frame
+export const SEEK = (location.hash.match(/^#t=([\d.]+)$/) || [])[1];
+export const STILL = location.hash === '#still' || SEEK != null; // #still = poster frames, #t=3.2 = that exact frame
 
 // ── helpers ────────────────────────────────────────────────────────────────
 export const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
@@ -131,7 +131,7 @@ export class Figure extends HTMLElement {
     cancelAnimationFrame(this.raf); // never more than one loop per figure
     let last = performance.now();
     const tick = now => {
-      this.t += Math.min(.1, (now - last) / 1000); last = now;
+      this.t += clamp((now - last) / 1000, 0, .1); last = now;
       if (this.t >= this.duration) {
         if (this.loop) this.t %= this.duration;
         else { this.t = this.duration; this.playing = false; }
@@ -161,7 +161,7 @@ export class Figure extends HTMLElement {
   }
   svgRoot(w, h, label) {
     // on phones the svg keeps a readable minimum width and scrolls sideways inside this wrapper
-    const wrap = H('div', { class: 'fsv' }, this);
+    const wrap = H('div', { class: 'fsv', tabindex: 0, role: 'region', 'aria-label': (label || 'figure') + ' (scrolls sideways on small screens)' }, this);
     wrap.addEventListener('scroll', () => wrap.classList.toggle('end', wrap.scrollLeft + wrap.clientWidth >= wrap.scrollWidth - 4), { passive: true });
     return this.svg = S('svg', { viewBox: `0 0 ${w} ${h}`, role: 'img', 'aria-label': label }, wrap);
   }
