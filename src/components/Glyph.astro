@@ -42,6 +42,14 @@ const { name, size = 52 } = Astro.props
       <g class="mv"><rect class="f3" x="32" y="7" width="12" height="8" rx="1.5" /><rect class="fa" x="32" y="20" width="12" height="8" rx="1.5" /><rect class="f3" x="32" y="33" width="12" height="8" rx="1.5" /></g>
     </g>
   )}
+  {name === 'versus' && (
+    <g>
+      <rect class="fa" x="7" y="10" width="15" height="32" rx="2" />
+      <rect class="fo mv" x="30" y="28" width="15" height="14" rx="2" />
+      <path class="k3" d="M5 46h42" />
+      <circle class="f3" cx="26" cy="20" r="1.6" /><circle class="f3" cx="26" cy="26" r="1.6" />
+    </g>
+  )}
   {name === 'cursor' && (
     <g><path class="k" d="M15 15 L6 26 L15 37 M37 15 L46 26 L37 37" /><rect class="fa mv" x="21" y="17" width="10" height="18" /></g>
   )}
