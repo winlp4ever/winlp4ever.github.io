@@ -6,7 +6,7 @@ export const SITE = {
   city: 'paris',
   description:
     'Interactive, long-form writing on AI systems, infrastructure and algorithms by Ha-Quang Le, lead AI engineer in Paris.',
-  now: 'rewriting every post on this site',
+  now: 'writing about AI and formal math',
   email: 'quang@dim0.net',
   github: 'https://github.com/winlp4ever',
   firstYear: 2025,
