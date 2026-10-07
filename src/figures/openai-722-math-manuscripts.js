@@ -243,7 +243,7 @@ class OmErdos extends Figure {
 const PROOF = 25_900_000, STMT = 89_411, PER = 10_000;
 class OmRead extends Figure {
   build() {
-    const svg = this.svgRoot(600, 345, 'Lines of Lean proof compared with lines of Lean statements, one square per ten thousand lines');
+    const svg = this.svgRoot(600, 365, 'Lines of Lean proof compared with lines of Lean statements, one square per ten thousand lines');
     const cols = 74, cell = 7, g0 = Math.round(STMT / PER), n = g0 + Math.round(PROOF / PER), x0 = 40, y0 = 40;
     let d = '';
     for (let i = g0; i < n; i++) d += `M${x0 + (i % cols) * cell} ${y0 + Math.floor(i / cols) * cell}h5.6v5.6h-5.6z`;
@@ -254,15 +254,16 @@ class OmRead extends Figure {
     let g = '';
     for (let i = 0; i < g0; i++) g += `M${x0 + i * cell} ${y0}h5.6v5.6h-5.6z`;
     this.st = S('path', { d: g, class: 'f-green' }, svg);
-    S('text', { x: x0, y: 26, class: 'sl', 'font-size': 11, text: 'ONE SQUARE = 10,000 LINES OF LEAN' }, svg);
+    this.note = S('text', { x: x0 + 160, y: 24, class: 'hand', 'font-size': 16, text: 'the part a person reads' }, svg);
     const ly = y0 + rows * cell + 22;
     S('rect', { x: x0, y: ly - 9, width: 10, height: 10, rx: 1.5, class: 'f-green' }, svg);
     S('text', { x: x0 + 16, y: ly, class: 't', 'font-size': 12, text: '89,411 lines of challenge statements: what a reviewer reads' }, svg);
     S('rect', { x: x0, y: ly + 11, width: 10, height: 10, rx: 1.5, class: 'f-rule2' }, svg);
     S('text', { x: x0 + 16, y: ly + 20, class: 't', 'font-size': 12, text: '25.9 million lines of proof: what the kernel reads' }, svg);
-    this.arrow = S('path', { d: handArrow(x0 + 330, 20, x0 + 60, y0 - 2, 0.12), class: 'f-none s-green', 'stroke-width': 1.6 }, svg);
+    S('text', { x: x0, y: ly + 42, class: 'sl', 'font-size': 11, text: 'ONE SQUARE = 10,000 LINES OF LEAN' }, svg);
+    this.arrow = S('path', { d: handArrow(x0 + 152, 19, x0 + 66, y0 - 3, 0.25), class: 'f-none s-green', 'stroke-width': 1.6 }, svg);
     this.rows = rows; this.y0 = y0;
-    entrance(this, (k) => { attr(this.cr, { height: this.y0 + this.rows * 7 * k }); op(this.arrow, seg(k, 0.7, 1)); }, 1600);
+    entrance(this, (k) => { attr(this.cr, { height: this.y0 + this.rows * 7 * k }); op(this.arrow, seg(k, 0.7, 1)); op(this.note, seg(k, 0.7, 1)); }, 1600);
   }
 }
 
