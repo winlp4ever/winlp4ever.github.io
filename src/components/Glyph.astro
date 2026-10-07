@@ -50,6 +50,23 @@ const { name, size = 52 } = Astro.props
       <circle class="f3" cx="26" cy="20" r="1.6" /><circle class="f3" cx="26" cy="26" r="1.6" />
     </g>
   )}
+  {name === 'graph' && (
+    <g>
+      <path class="k3" d="M10 40 L22 40 L16 30 Z M22 40 L28 30 L16 30 M10 40 L18 18 L30 22 Z M30 22 L22 40" />
+      <path class="ka mv" d="M28 30 L30 22" />
+      <circle class="f3" cx="10" cy="40" r="2.4" /><circle class="f3" cx="22" cy="40" r="2.4" /><circle class="f3" cx="16" cy="30" r="2.4" />
+      <circle class="f3" cx="28" cy="30" r="2.4" /><circle class="f3" cx="18" cy="18" r="2.4" /><circle class="fa" cx="30" cy="22" r="2.8" />
+      <path class="k3" d="M36 44h10" />
+    </g>
+  )}
+  {name === 'proof' && (
+    <g>
+      <rect class="f3" x="14" y="7" width="24" height="9" rx="2" />
+      <path class="k3" d="M26 16 V22 M26 22 H15 V27 M26 22 H37 V27" />
+      <rect class="f3" x="7" y="27" width="16" height="9" rx="2" /><rect class="fa mv" x="29" y="27" width="16" height="9" rx="2" />
+      <path class="ka" d="M10 43 l3 3 l6 -7 M33 43 l3 3 l6 -7" />
+    </g>
+  )}
   {name === 'cursor' && (
     <g><path class="k" d="M15 15 L6 26 L15 37 M37 15 L46 26 L37 37" /><rect class="fa mv" x="21" y="17" width="10" height="18" /></g>
   )}
