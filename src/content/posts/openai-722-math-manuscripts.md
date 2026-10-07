@@ -21,7 +21,7 @@ It's one commit, made by "Anonymous" at 14:58 Pacific time, with no earlier hist
 - `preprints/`: 722 folders, each with a PDF, its LaTeX source and a BibTeX entry
 - `overview.pdf` and `CONTENTS.md`: a summary of each family
 - `reasoning_traces/`: abridged summaries of the model's reasoning for 10 families
-- `lean/`: 121,734 Lean files, about 25.9 million lines, on Lean 4.34.1 and a pinned Mathlib
+- `lean/`: a Lean 4.34.1 project on a pinned Mathlib, whose `OAI` folder alone has 121,734 files and about 25.9 million lines
 
 The manuscripts are dated between 23 September and 6 October, and 370 of them carry the dates 23 or 24 September. Family numbers run from 001 to 377 with five gaps, which the repo doesn't explain.
 
@@ -31,7 +31,7 @@ The families cover 17 fields. Theoretical computer science has the most with 40,
 <om-fields data-fig data-label="fig 1 · families per field">
 <p class="fallback">A bar chart of the 372 result families across 17 fields, each bar split into families with a Lean statement and families without one. Theoretical computer science: 32 of 40 have one. Combinatorics: 33 of 37. Algebraic and complex geometry: 7 of 36. Number theory: 16 of 31. Probability: 19 of 29. Differential geometry: 15 of 29. Mathematical physics: 17 of 25. Operator algebras: 14 of 19. Algebra: 9 of 18. Topology: 3 of 18. Analysis: 9 of 16. PDE: 11 of 16. Convex geometry: 13 of 15. Group theory: 12 of 14. Dynamical systems: 9 of 12. Functional analysis: 10 of 11. Logic: 6 of 6. In total 235 of 372 families have one.</p>
 </om-fields>
-<figcaption><b>fig 1</b>Combinatorics and theoretical CS are almost fully covered by Lean statements. Algebraic geometry (7 of 36) and topology (3 of 18) mostly aren't. <span class="m">Counted from the Lean links in CONTENTS.md, which match the 235 scope notes in lean/docs/.</span></figcaption>
+<figcaption><b>fig 1</b>Logic, functional analysis and combinatorics are almost fully covered by Lean statements. Algebraic geometry (7 of 36) and topology (3 of 18) mostly aren't. <span class="m">Counted from the Lean links in CONTENTS.md, which match the 235 scope notes in lean/docs/.</span></figcaption>
 </figure>
 
 My guess for the gap is Mathlib, the shared library of formal math that these proofs build on. It has far more combinatorics than algebraic geometry, and a proof can only use definitions that exist. The free group factor challenge, for example, builds its own definitions inside the challenge file.
@@ -46,7 +46,7 @@ These are some of the best-known names in the catalogue. The "claim" column is O
 | 158 | chromatic number of the plane | at least 6, so 6 or 7 | yes |
 | 165 | Turán's brick factory, Harary–Hill | both formulas exact for every size | yes |
 | 159 | Erdős #3, $5,000 prize | proved | reciprocal-sum version |
-| 156 | Borsuk's conjecture | fails in dimension 9 (previous record 63) | yes |
+| 156 | Borsuk's conjecture | fails in dimension 9 (64 in the literature, 63 in a 2026 note) | yes |
 | 155 | periodic tiling conjecture | fails in dimension 3 | yes |
 | 180 | Barnette's conjecture | proved | yes |
 | 017 | irrationality exponent of π | exactly 2 | without the Flint Hills part |
@@ -68,7 +68,7 @@ The lower bound is the hard side. For it you need a finite set of points that no
 
 <figure class="wide">
 <om-plane data-fig data-label="fig 2 · colouring the plane">
-<p class="fallback">On the left, a tiling of hexagons in seven shades, numbered 1 to 7. A stick of length 1 moves and turns across it; the hexagons under its two ends are outlined, and a readout shows that the two ends are always on different colours. On the right, the Moser spindle appears: 7 points and 11 unit sticks. The figure counts its colourings: 0 of the 2,187 colourings with three colours work, and 384 colourings with four colours do. Below it, a number line from 1 to 7 shows the known range for the chromatic number of the plane narrowing: 1 to 7 before 1950, 4 to 7 from 1950, 5 to 7 from 2018, and 6 to 7 under OpenAI's 2026 claim.</p>
+<p class="fallback">On the left, a tiling of hexagons in seven shades, numbered 1 to 7. A stick of length 1 moves and turns across it; the hexagons under its two ends are outlined, and a readout shows that the two ends are always on different colours. On the right, the Moser spindle appears: 7 points and 11 unit sticks. The figure counts its colourings: 0 of the 2,187 colourings with three colours work, and 384 colourings with four colours do. Below it, a number line from 1 to 7 shows the known range for the chromatic number of the plane narrowing: 4 to 7 from 1950, 5 to 7 from 2018, and 6 to 7 under OpenAI's 2026 claim.</p>
 </om-plane>
 <figcaption><b>fig 2</b>Seven colours are enough, and the spindle shows three aren't. <span class="m">The figure checks the stick's two ends against the tiling every frame (hexagon size 0.45 of the stick) and counts the spindle's colourings by brute force.</span></figcaption>
 </figure>
@@ -131,7 +131,7 @@ The index file, `formalization.yaml`, lists only 162 papers and marks itself `Pa
 
 <figure class="wide">
 <om-read data-fig data-label="fig 5 · what a person reads">
-<p class="fallback">A grid of 2,590 grey squares, each standing for 10,000 lines of Lean, shows the 25.9 million lines of proof in the repo. Nine green squares in the corner show the 89,411 lines of challenge statements. The proofs are checked by the Lean kernel; the statements are what a human reviewer has to read to know what was proved.</p>
+<p class="fallback">A grid of 2,590 grey squares, each standing for 10,000 lines of Lean, shows the 25.9 million lines of proof in the repo. Nine green squares at the start of the grid show the 89,411 lines of challenge statements. The proofs are checked by the Lean kernel; the statements are what a human reviewer has to read to know what was proved.</p>
 </om-read>
 <figcaption><b>fig 5</b>Only the green squares need a human reader, and the kernel checks the rest. <span class="m">Line counts from lean/OAI and the 405 files in lean/ComparatorChallenges.</span></figcaption>
 </figure>
@@ -148,4 +148,4 @@ Kevin Buzzard had asked for exactly this kind of release five days earlier, [on 
 
 The [Hacker News thread](https://news.ycombinator.com/item?id=49984923) had 952 points and about 900 comments by the next morning. Comments ranged from awe to triage, and a few came from researchers whose work had just been done for them. One wrote that ["literally every optimistic goal proposed to be worked on during this multi-year window has been solved in this one post."](https://news.ycombinator.com/item?id=49990565) Another asked OpenAI to ["put human names on the papers as someone who has reviewed the result."](https://news.ycombinator.com/item?id=49985212)
 
-A year ago the complaint was different. In October 2025 an OpenAI VP posted that GPT-5 had solved ten open Erdős problems, and Bloom pointed out that the solutions were already in the literature. This time I found nobody, a day in, saying a specific result is wrong or already known. The arguments are about credit, the pace, and what a field does with 722 papers it didn't write.
+A year ago the complaint was different. In October 2025 an OpenAI VP posted that GPT-5 had solved ten open Erdős problems, and Bloom pointed out that the solutions were already in the literature. This time I found nobody, a day in, saying a specific result is wrong or already known. The complaints so far are about credit and pace, and the advisory group's guidance asks for results to go to repositories with "a persistent citable identifier", which a GitHub repo pushed by "Anonymous" doesn't have.

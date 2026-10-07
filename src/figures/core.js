@@ -84,6 +84,29 @@ export const keyframes = (t, kf) => {
   return kf[kf.length - 1][1];
 };
 
+// static charts: draw at k = 0..1 once, the first time they're on screen
+export function entrance(fig, paint, ms = 900) {
+  fig.idleText = 'static';
+  paint(STILL || REDUCED ? 1 : 0);
+  fig.onVisible = (v) => {
+    if (!v || fig._shown) return; fig._shown = true;
+    if (STILL || REDUCED) return paint(1);
+    const t0 = performance.now();
+    const f = (now) => { const k = clamp((now - t0) / ms); paint(ease(k)); if (k < 1) requestAnimationFrame(f); };
+    requestAnimationFrame(f);
+  };
+}
+// a row of toggle pills in the figure's control bar (created on first use)
+export function pills(fig, items, value, on) {
+  const bar = fig.querySelector('.fc') || H('div', { class: 'fc' }, fig);
+  const btns = items.map(([v, label]) => {
+    const b = H('button', { class: 'pill', type: 'button', text: label, 'aria-pressed': String(v === value) }, bar);
+    b.onclick = () => { btns.forEach((x) => x.setAttribute('aria-pressed', String(x === b))); on(v); };
+    return b;
+  });
+  return bar;
+}
+
 export const ICON = {
   play: '<svg viewBox="0 0 12 12"><path d="M3 1.5v9l7.5-4.5z"/></svg>',
   pause: '<svg viewBox="0 0 12 12"><path d="M2.5 1.5h2.6v9H2.5zM6.9 1.5h2.6v9H6.9z"/></svg>',

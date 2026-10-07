@@ -2,7 +2,7 @@
 // Encoding used everywhere: GLM = green, DeepSeek = ochre, Claude / GPT = ink.
 // Filled dot = big tier (GLM-5.3, V4-Pro), ring = small tier (GLM-5.3-Flash, V4.1-Flash).
 // Data fetched 2026-10-06; sources are in each figure's caption.
-import { S, H, attr, op, seg, ease, inout, lerp, clamp, handArrow, REDUCED, STILL, Figure, define } from './core.js';
+import { S, H, attr, op, seg, ease, inout, lerp, clamp, handArrow, REDUCED, STILL, Figure, define, entrance, pills } from './core.js';
 
 const M = {
   glm: { name: 'GLM-5.3', c: 'green', big: true },
@@ -19,27 +19,6 @@ function mdot(parent, key, r = 6) {
 }
 const tcol = (key) => (M[key].c === 'green' ? 'var(--green-t)' : M[key].c === 'ochre' ? 'var(--ochre-t)' : 'var(--ink-2)');
 
-// static charts: draw at k = 0..1 once, the first time they're on screen
-function entrance(fig, paint, ms = 900) {
-  fig.idleText = 'static';
-  paint(STILL || REDUCED ? 1 : 0);
-  fig.onVisible = (v) => {
-    if (!v || fig._shown) return; fig._shown = true;
-    if (STILL || REDUCED) return paint(1);
-    const t0 = performance.now();
-    const f = (now) => { const k = clamp((now - t0) / ms); paint(ease(k)); if (k < 1) requestAnimationFrame(f); };
-    requestAnimationFrame(f);
-  };
-}
-function pills(fig, items, value, on) {
-  const bar = fig.querySelector('.fc') || H('div', { class: 'fc' }, fig);
-  const btns = items.map(([v, label]) => {
-    const b = H('button', { class: 'pill', type: 'button', text: label, 'aria-pressed': String(v === value) }, bar);
-    b.onclick = () => { btns.forEach((x) => x.setAttribute('aria-pressed', String(x === b))); on(v); };
-    return b;
-  });
-  return bar;
-}
 
 // ── fig 1 · the two weight classes ─────────────────────────────────────────
 // Artificial Analysis, max effort, first-party APIs (2026-10-06).

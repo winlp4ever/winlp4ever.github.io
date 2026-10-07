@@ -1,26 +1,7 @@
 // Figures for "OpenAI's 722 math manuscripts".
 // Repo counts come from github.com/openai/math at commit adc7f1241 (cloned 2026-10-07).
-import { S, H, attr, op, seg, ease, inout, lerp, clamp, rng, handArrow, REDUCED, STILL, Figure, define } from './core.js';
+import { S, H, attr, op, seg, inout, lerp, clamp, rng, handArrow, REDUCED, STILL, Figure, define, entrance, pills } from './core.js';
 
-// static charts: draw at k = 0..1 once, the first time they're on screen
-function entrance(fig, paint, ms = 900) {
-  fig.idleText = 'static';
-  paint(STILL || REDUCED ? 1 : 0);
-  fig.onVisible = (v) => {
-    if (!v || fig._shown) return; fig._shown = true;
-    if (STILL || REDUCED) return paint(1);
-    const t0 = performance.now();
-    const f = (now) => { const k = clamp((now - t0) / ms); paint(ease(k)); if (k < 1) requestAnimationFrame(f); };
-    requestAnimationFrame(f);
-  };
-}
-function pills(bar, items, value, on) {
-  const btns = items.map(([v, label]) => {
-    const b = H('button', { class: 'pill', type: 'button', text: label, 'aria-pressed': String(v === value) }, bar);
-    b.onclick = () => { btns.forEach((x) => x.setAttribute('aria-pressed', String(x === b))); on(v); };
-    return b;
-  });
-}
 
 // ── fig 1 · families per field, with and without a Lean statement ──────────
 // [field, families, families with a lean/docs scope note]
@@ -81,17 +62,16 @@ function moser() {
   const count = (k) => { let ok = 0; for (let m = 0; m < k ** 7; m++) { const c = []; let x = m; for (let i = 0; i < 7; i++) { c.push(x % k); x = Math.floor(x / k); } if (E.every(([i, j]) => c[i] !== c[j])) ok++; } return ok; };
   return { P, E, c3: count(3), c4: count(4) };
 }
-const BOUNDS = [[0, 1, 7, 'before 1950'], [1, 4, 7, '1950'], [2, 5, 7, '2018, de Grey'], [3, 6, 7, '2026, OpenAI claim']];
+const BOUNDS = [[0, 4, 7, '1950'], [1, 5, 7, '2018, de Grey'], [2, 6, 7, '2026, OpenAI claim']];
 class OmPlane extends Figure {
-  constructor() { super(); this.duration = 20; this.poster = 20; }
+  constructor() { super(); this.duration = 20; }
   build() {
     const svg = this.svgRoot(600, 340, 'A seven-colour hexagon tiling with a unit stick, the Moser spindle, and the known bounds on the chromatic number of the plane');
     const clip = S('clipPath', { id: 'om-hexclip' }, S('defs', {}, svg));
     S('rect', { x: 10, y: 30, width: 290, height: 290, rx: 10 }, clip);
     const hx = S('g', { 'clip-path': 'url(#om-hexclip)' }, svg);
     for (let r = -1; r < 12; r++) for (let q = -7; q < 12; q++) {
-      const p = S('path', { d: hexPath(q, r), class: 's-bg', 'stroke-width': 1.2 }, hx);
-      p.style.fill = 'var(--ink)'; p.style.fillOpacity = (0.04 + hcol(q, r) * 0.045).toFixed(3);
+      S('path', { d: hexPath(q, r), class: 'f-ink s-bg', 'fill-opacity': (0.04 + hcol(q, r) * 0.045).toFixed(3), 'stroke-width': 1.2 }, hx);
       const cx = HS * (R3 * q + R3 / 2 * r) * PX, cy = HS * 1.5 * r * PX;
       S('text', { x: cx, y: cy + 4, class: 't2', 'font-size': 10, 'text-anchor': 'middle', text: hcol(q, r) + 1 }, hx);
     }
@@ -136,8 +116,8 @@ class OmPlane extends Figure {
     this.spT.forEach((e, i) => op(e, seg(t, 12 + i * 0.5, 12.5 + i * 0.5)));
     // the bounds step forward
     op(this.nl, seg(t, 14.2, 14.8));
-    const step = Math.min(3, Math.floor(seg(t, 14.8, 19.6) * 4));
-    const lo = lerp(BOUNDS[Math.max(0, step - 1)][1], BOUNDS[step][1], inout(seg(t - 14.8 - step * 1.2, 0, 0.5)));
+    const step = Math.min(2, Math.floor(seg(t, 14.8, 19.6) * 3));
+    const lo = lerp(BOUNDS[Math.max(0, step - 1)][1], BOUNDS[step][1], inout(seg(t - 14.8 - step * 1.6, 0, 0.5)));
     attr(this.band, { x: 340 + (lo - 1) * 40 - 7, width: (7 - lo) * 40 + 14 });
     this.year.textContent = `${BOUNDS[step][3]}: ${BOUNDS[step][1]} to 7 colours`;
   }
@@ -168,10 +148,9 @@ class OmBrick extends Figure {
     this.svgRoot(600, 350, 'Kilns and storage yards joined by straight tracks, with the crossings counted');
     this.g = S('g', {}, this.svg);
     this.out = S('text', { x: 20, y: 336, class: 't', 'font-size': 12 }, this.svg);
-    const bar = H('div', { class: 'fc' }, this);
-    pills(bar, [['3,3', '3 × 3'], ['4,4', '4 × 4'], ['5,5', '5 × 5'], ['6,6', '6 × 6'], ['5,7', '5 × 7']], '5,5', (v) => this.size(...v.split(',').map(Number)));
+    const bar = pills(this, [['3,3', '3 × 3'], ['4,4', '4 × 4'], ['5,5', '5 × 5'], ['6,6', '6 × 6'], ['5,7', '5 × 7']], '5,5', (v) => this.size(...v.split(',').map(Number)));
     H('span', { class: 'grow' }, bar);
-    pills(bar, [[0, 'scrambled'], [1, "Zarankiewicz's drawing"]], 1, (v) => this.go(v));
+    pills(this, [[0, 'scrambled'], [1, "Zarankiewicz's drawing"]], 1, (v) => this.go(v));
     this.k = 1; this.size(5, 5);
   }
   size(m, n) {
@@ -202,9 +181,9 @@ class OmBrick extends Figure {
     let e = 0; K.forEach((a) => Y.forEach((b) => attr(this.tracks[e++], { x1: a[0], y1: a[1], x2: b[0], y2: b[1] })));
     K.forEach((p, i) => attr(this.kilns[i], { x: p[0] - 7, y: p[1] - 7 }));
     Y.forEach((p, i) => attr(this.yards[i], { cx: p[0], cy: p[1] }));
-    const X = crossings(K, Y);
-    this.xg.textContent = '';
-    X.forEach(([x, y]) => S('circle', { cx: x, cy: y, r: 3.2, class: 'f-green' }, this.xg));
+    const X = crossings(K, Y), pool = this.xg.children;
+    while (pool.length < X.length) S('circle', { r: 3.2, class: 'f-green' }, this.xg);
+    [...pool].forEach((c, i) => { if (i < X.length) attr(c, { cx: X[i][0], cy: X[i][1], visibility: 'visible' }); else c.setAttribute('visibility', 'hidden'); });
     this.out.textContent = `${this.m} kilns, ${this.n} yards · crossings in this drawing: ${X.length} · formula: ${Z(this.m, this.n)}`;
   }
 }
@@ -225,7 +204,7 @@ function firstAP(k) { // the progression of k primes ≤ N that ends earliest
 }
 const APS = [3, 4, 5, 6].map(firstAP);
 class OmErdos extends Figure {
-  constructor() { super(); this.duration = 16; this.poster = 16; }
+  constructor() { super(); this.duration = 16; }
   build() {
     const svg = this.svgRoot(600, 270, 'The numbers 1 to 210 with the primes marked and arithmetic progressions of primes highlighted');
     const pos = (v) => [30 + ((v - 1) % COLS) * 18.3, 40 + Math.floor((v - 1) / COLS) * 26];
@@ -265,15 +244,15 @@ const PROOF = 25_900_000, STMT = 89_411, PER = 10_000;
 class OmRead extends Figure {
   build() {
     const svg = this.svgRoot(600, 345, 'Lines of Lean proof compared with lines of Lean statements, one square per ten thousand lines');
-    const cols = 74, cell = 7, n = Math.round(PROOF / PER), x0 = 40, y0 = 40;
+    const cols = 74, cell = 7, g0 = Math.round(STMT / PER), n = g0 + Math.round(PROOF / PER), x0 = 40, y0 = 40;
     let d = '';
-    for (let i = 0; i < n; i++) d += `M${x0 + (i % cols) * cell} ${y0 + Math.floor(i / cols) * cell}h5.6v5.6h-5.6z`;
+    for (let i = g0; i < n; i++) d += `M${x0 + (i % cols) * cell} ${y0 + Math.floor(i / cols) * cell}h5.6v5.6h-5.6z`;
     const rows = Math.ceil(n / cols);
     const clip = S('clipPath', { id: 'om-readclip' }, S('defs', {}, svg));
     this.cr = S('rect', { x: 0, y: 0, width: 600, height: 0 }, clip);
     S('path', { d, class: 'f-rule2', 'clip-path': 'url(#om-readclip)' }, svg);
     let g = '';
-    for (let i = 0; i < Math.round(STMT / PER); i++) g += `M${x0 + i * cell} ${y0}h5.6v5.6h-5.6z`;
+    for (let i = 0; i < g0; i++) g += `M${x0 + i * cell} ${y0}h5.6v5.6h-5.6z`;
     this.st = S('path', { d: g, class: 'f-green' }, svg);
     S('text', { x: x0, y: 26, class: 'sl', 'font-size': 11, text: 'ONE SQUARE = 10,000 LINES OF LEAN' }, svg);
     const ly = y0 + rows * cell + 22;
@@ -281,7 +260,7 @@ class OmRead extends Figure {
     S('text', { x: x0 + 16, y: ly, class: 't', 'font-size': 12, text: '89,411 lines of challenge statements: what a reviewer reads' }, svg);
     S('rect', { x: x0, y: ly + 11, width: 10, height: 10, rx: 1.5, class: 'f-rule2' }, svg);
     S('text', { x: x0 + 16, y: ly + 20, class: 't', 'font-size': 12, text: '25.9 million lines of proof: what the kernel reads' }, svg);
-    this.arrow = S('path', { d: handArrow(x0 + 160, 22, x0 + 66, y0 + 2, -0.25), class: 'f-none s-green', 'stroke-width': 1.6 }, svg);
+    this.arrow = S('path', { d: handArrow(x0 + 330, 20, x0 + 60, y0 - 2, 0.12), class: 'f-none s-green', 'stroke-width': 1.6 }, svg);
     this.rows = rows; this.y0 = y0;
     entrance(this, (k) => { attr(this.cr, { height: this.y0 + this.rows * 7 * k }); op(this.arrow, seg(k, 0.7, 1)); }, 1600);
   }

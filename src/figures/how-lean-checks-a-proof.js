@@ -1,13 +1,6 @@
 // Figures for "How Lean checks a proof".
-import { S, H, attr, op, seg, inout, lerp, rng, Figure, define } from './core.js';
+import { S, H, attr, op, seg, inout, lerp, rng, Figure, define, pills } from './core.js';
 
-function pills(bar, items, value, on) {
-  const btns = items.map(([v, label]) => {
-    const b = H('button', { class: 'pill', type: 'button', text: label, 'aria-pressed': String(v === value) }, bar);
-    b.onclick = () => { btns.forEach((x) => x.setAttribute('aria-pressed', String(x === b))); on(v); };
-    return b;
-  });
-}
 // keep leading spaces, and no ligatures: `=>` must stay two characters
 const mono = (parent, x, y, text, cls = 't', size = 13) => S('text', { x, y, class: cls, 'font-size': size, text, style: 'white-space:pre;font-variant-ligatures:none' }, parent);
 
@@ -20,17 +13,17 @@ const CODE = [
   '  | zero => rfl',
   '  | succ k ih => rw [← Nat.add_assoc, ih]',
 ];
-// each stage: [cursor line, cursor column hint, goals]; a goal is [case, hypotheses, target]
+// each stage: [cursor line, goals]; a goal is [case, hypotheses, target]
 const STAGES = [
-  [0, 'after by', [['', ['n : Nat'], '0 + n = n']]],
-  [1, 'induction', [['zero', [], '0 + 0 = 0'], ['succ', ['k : Nat', 'ih : 0 + k = k'], '0 + (k + 1) = k + 1']]],
-  [2, 'rfl', [['succ', ['k : Nat', 'ih : 0 + k = k'], '0 + (k + 1) = k + 1']]],
-  [3, '← Nat.add_assoc', [['succ', ['k : Nat', 'ih : 0 + k = k'], '0 + k + 1 = k + 1']]],
-  [3, 'ih', []],
+  [0, [['', ['n : Nat'], '0 + n = n']]],
+  [1, [['zero', [], '0 + 0 = 0'], ['succ', ['k : Nat', 'ih : 0 + k = k'], '0 + (k + 1) = k + 1']]],
+  [2, [['succ', ['k : Nat', 'ih : 0 + k = k'], '0 + (k + 1) = k + 1']]],
+  [3, [['succ', ['k : Nat', 'ih : 0 + k = k'], '0 + k + 1 = k + 1']]],
+  [3, []],
 ];
 const STEP = 3.2;
 class LnGoals extends Figure {
-  constructor() { super(); this.duration = STAGES.length * STEP + 1; this.poster = this.duration; }
+  constructor() { super(); this.duration = STAGES.length * STEP + 1; }
   build() {
     const svg = this.svgRoot(600, 330, 'A Lean proof by induction with the goal state after each line');
     S('rect', { x: 10, y: 10, width: 580, height: 104, rx: 10, class: 'f-panel s-rule', 'stroke-width': 1 }, svg);
@@ -51,16 +44,15 @@ class LnGoals extends Figure {
   label(t) { return `step ${Math.min(STAGES.length, Math.floor(t / STEP) + 1)}/${STAGES.length}`; }
   render(t) {
     const i = Math.min(STAGES.length - 1, Math.floor(t / STEP)), k = seg(t - i * STEP, 0, 0.6);
-    const [line, what, goals] = STAGES[i], prev = STAGES[Math.max(0, i - 1)][0];
+    const [line, goals] = STAGES[i], prev = STAGES[Math.max(0, i - 1)][0];
     attr(this.hl, { y: 34 + lerp(prev, line, inout(k)) * 22 - 16 });
     this.cards.forEach((c, j) => {
       const goal = goals[j];
-      op(c.g, goal ? (i > 0 && !STAGES[i - 1][2][j] ? k : 1) : 0);
+      op(c.g, goal ? (i > 0 && !STAGES[i - 1][1][j] ? k : 1) : 0);
       if (!goal) return;
       const [cs, hyps, tgt] = goal;
       const rows = [cs ? 'case ' + cs : '', ...hyps, '⊢ ' + tgt];
       c.lines.forEach((l, n) => { l.textContent = rows[n] || ''; });
-      c.lines[0].setAttribute('class', 'sl');
     });
     op(this.none, goals.length ? 0 : k); op(this.tick, goals.length ? 0 : k);
     this.note.textContent = [
@@ -92,23 +84,23 @@ function verdict(c) {
 }
 const CYCLE = 2.4;
 class LnKernel extends Figure {
-  constructor() { super(); this.duration = CANDS.length * CYCLE + 0.6; this.poster = this.duration; }
+  constructor() { super(); this.duration = CANDS.length * CYCLE + 0.6; }
   build() {
     const svg = this.svgRoot(600, 300, 'Candidate proofs from several sources arrive at a small kernel that accepts or rejects each one');
     S('text', { x: 20, y: 24, class: 'sl', 'font-size': 11, text: 'ANYONE CAN PROPOSE' }, svg);
     S('text', { x: 440, y: 24, class: 'sl', 'font-size': 11, text: 'ACCEPTED' }, svg);
     S('rect', { x: 300, y: 50, width: 52, height: 190, rx: 8, class: 'f-ink' }, svg);
-    S('text', { x: 326, y: 150, class: 't', style: 'fill:var(--panel)', 'font-size': 12, 'text-anchor': 'middle', transform: 'rotate(-90 326 150)', text: 'KERNEL' }, svg);
+    S('text', { x: 326, y: 150, class: 't f-panel', 'font-size': 12, 'text-anchor': 'middle', transform: 'rotate(-90 326 150)', text: 'KERNEL' }, svg);
     this.acc = S('g', {}, svg);
     this.cards = CANDS.map((c) => {
       const g = S('g', {}, svg), [ok, why] = verdict(c);
       S('rect', { x: -92, y: -24, width: 184, height: 48, rx: 8, class: 'f-panel s-ink3', 'stroke-width': 1.2 }, g);
       mono(g, -82, -5, c.claim, 't', 12.5);
       mono(g, -82, 14, 'by ' + c.by, 't3', 11.5);
-      const mark = mono(g, 84, -5, ok ? '✓' : '✗', ok ? 't' : 't3', 14);
-      mark.setAttribute('text-anchor', 'end'); if (ok) mark.style.fill = 'var(--green)';
+      const mark = mono(g, 84, -5, ok ? '✓' : '✗', ok ? 't f-green' : 't3', 14);
+      mark.setAttribute('text-anchor', 'end');
       const w = mono(g, 84, 14, why, 't3', 10.5); w.setAttribute('text-anchor', 'end');
-      const who = mono(svg, 20, 0, c.who, 't2', 12);
+      const who = mono(svg, 20, 44, c.who, 't2', 12);
       const slot = CANDS.slice(0, CANDS.indexOf(c)).filter((d) => !verdict(d)[0]).length;
       const line = !ok && mono(svg, 20, 236 + slot * 20, `✗ ${c.claim}  (${why})`, 't3', 12);
       return { g, ok, mark, w, who, line };
@@ -128,7 +120,7 @@ class LnKernel extends Figure {
       if (c.line) op(c.line, seg(u, 1.7, 2.2));
       attr(c.g, { transform: `translate(${x} ${y})` });
       op(c.g, o); op(c.mark, done ? 1 : 0); op(c.w, done ? 1 : 0);
-      attr(c.who, { y: 44 }); op(c.who, u >= 0 && u < CYCLE ? 1 : 0);
+      op(c.who, u >= 0 && u < CYCLE ? 1 : 0);
       if (done) c.ok ? accepted++ : rejected++;
     });
     this.count.textContent = `accepted ${accepted} · rejected ${rejected}`;
@@ -162,7 +154,7 @@ class LnJunk extends Figure {
     this.rowA = S('text', { x: 20, y: 76, class: 't3', 'font-size': 12 }, svg);
     this.rowB = S('text', { x: 20, y: 108, class: 't3', 'font-size': 12 }, svg);
     this.why = S('text', { x: 20, y: 192, class: 't2', 'font-size': 13 }, svg);
-    pills(H('div', { class: 'fc' }, this), [['sub', 'n - 1 + 1 = n'], ['div', 'x / x = 1'], ['inv', '(n : ℝ)⁻¹ ≤ 1']], 'sub', (k) => this.show(k));
+    pills(this, [['sub', 'n - 1 + 1 = n'], ['div', 'x / x = 1'], ['inv', '(n : ℝ)⁻¹ ≤ 1']], 'sub', (k) => this.show(k));
     this.show('sub');
   }
   show(key) {
@@ -172,7 +164,7 @@ class LnJunk extends Figure {
     s.xs.forEach((x, i) => {
       const c = this.cols[i], l = s.lhs(x), ok = s.le ? l <= s.rhs(x) : l === s.rhs(x);
       c.a.textContent = s.v + '=' + fmtn(x); c.b.textContent = fmtn(l);
-      c.c.textContent = ok ? '✓' : '✗'; c.c.style.fill = ok ? 'var(--green)' : 'var(--ochre)';
+      c.c.textContent = ok ? '✓' : '✗'; c.c.setAttribute('class', ok ? 't f-green' : 't f-ochre');
       op(c.hl, x === 0 ? 1 : 0); // the input where a junk value decides the answer
     });
     this.why.textContent = s.why;

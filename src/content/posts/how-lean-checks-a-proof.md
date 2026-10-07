@@ -82,7 +82,7 @@ One common way in is junk values. Every function in Lean has to return something
 
 The Erdős challenge in OpenAI's repo uses this on purpose. It defines the term for n as `(n : ℝ)⁻¹` when n is in the set and 0 otherwise, and since `0⁻¹ = 0`, putting 0 in the set changes nothing. That one is harmless. The more serious cases in the repo are about scope and definitions. The challenge for Hilbert's sixteenth problem covers quintic Liénard systems, while the paper claims a bound for polynomial systems of every degree. The free group factor challenge defines the factors from scratch inside the challenge file, because Mathlib doesn't have them yet, so the proof only means something once an expert has checked those definitions.
 
-When Anthropic [announced](https://www.anthropic.com/news/formalizing-fermats-last-theorem) a Lean proof of Fermat's Last Theorem in September, Kevin Buzzard checked it this way. He compiled it himself, confirmed there was no `sorry`, confirmed it used only the three standard axioms, and compared its statement with the one already in Mathlib. Comparator automates the first three steps. The last one still needs a person.
+When Anthropic [announced](https://www.anthropic.com/news/formalizing-fermats-last-theorem) a Lean proof of Fermat's Last Theorem in September, Kevin Buzzard checked it this way. He compiled it himself, confirmed there was no `sorry`, confirmed it used only the three standard axioms, and compared its statement with the one already in Mathlib. Comparator automates the first three steps, and the comparison of statements is still done by a person.
 
 ## from liquid tensors to fermat
 
