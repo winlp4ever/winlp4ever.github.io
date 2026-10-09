@@ -1,7 +1,7 @@
 ---
 title: 🇦🇷🐐 Messi in numbers
 date: 2026-10-09
-description: Lionel Messi made football look like art, and no spreadsheet can hold that. The spreadsheet still says it plainly. The best forward who ever played and the best playmaker who ever played are the same person.
+description: Lionel Messi made football look like art, and no spreadsheet can hold that. But the spreadsheet still says it, plainly. The best forward who ever played and the best playmaker who ever played are the same person.
 tags: [football, data]
 category: notes
 glyph: outlier
