@@ -194,10 +194,12 @@ class MsDribbles extends Figure {
 // Successful dribbles, top-20 player-seasons since 2009 (GiveMeSport, Jul 2022, crediting
 // @ThePopFoot; probably league plus Champions League). A season whose leader is not in the
 // top 20 had nobody above 160, so those values are drawn as "under 160".
-// [season, leader, leader's total, Messi's total (0 = under 160, not listed), Messi's rank]
+// [season, leader (null = not published), leader's total, Messi's total, Messi's place (null = unknown)].
+// Messi's totals where he isn't in the top 20 come from MessiVsRonaldo.app, which counts the
+// same league plus Champions League games (its 266, 265, 239 and 188 match the list).
 const SEASONS = [
-  ['09-10', 'Messi', 202, 202, 1], ['10-11', 'Messi', 265, 265, 1], ['11-12', 'Messi', 220, 220, 1], ['12-13', null, null, null, null],
-  ['13-14', 'Hazard', 174, 167, 2], ['14-15', 'Messi', 266, 266, 1], ['15-16', 'Neymar', 189, 0, null], ['16-17', 'Neymar', 218, 0, null],
+  ['09-10', 'Messi', 202, 202, 1], ['10-11', 'Messi', 265, 265, 1], ['11-12', 'Messi', 220, 220, 1], ['12-13', null, null, 143, null],
+  ['13-14', 'Hazard', 174, 167, 2], ['14-15', 'Messi', 266, 266, 1], ['15-16', 'Neymar', 189, 151, null], ['16-17', 'Neymar', 218, 154, null],
   ['17-18', 'Messi', 222, 222, 1], ['18-19', 'Hazard', 170, 169, 2], ['19-20', 'Messi', 239, 239, 1], ['20-21', 'Messi', 188, 188, 1],
 ];
 const STEP = 1.1;
@@ -226,35 +228,35 @@ class MsLeaders extends Figure {
       const name = S('text', { x: x + w / 2, class: 't', 'font-size': 10.5, 'text-anchor': 'middle', text: who || '?' }, g);
       const val = S('text', { x: x + w / 2, class: 't2', 'font-size': 10.5, 'text-anchor': 'middle', text: lead || '' }, g);
       // Messi's own total when someone else led and it is known (not for the seasons he was under 160)
-      const mine = who && who !== 'Messi' && me > 0 && S('line', { x1: x - 2, x2: x + w + 2, class: 's-green', 'stroke-width': 3 }, g);
-      // where someone else led: Messi's place, or "?" when no source gives it
-      const place = who && who !== 'Messi' && S('text', { x: x + w / 2, y: me ? Y(me) + 15 : Y(130), class: 't', 'font-size': 10, 'text-anchor': 'middle', text: rank ? `M #${rank}` : 'M ?' }, g);
+      const mine = who !== 'Messi' && S('line', { x1: x - 2, x2: x + w + 2, class: 's-green', 'stroke-width': 3 }, g);
+      // where Messi wasn't first: his place, or "?" when no source gives it
+      const place = who !== 'Messi' && S('text', { x: x + w / 2, y: Y(me) + 15, class: 't', 'font-size': 10, 'text-anchor': 'middle', text: rank ? `M #${rank}` : 'M ?' }, g);
       return { g, r, name, val, mine, place, x, w, who, lead, me };
     });
     this.foot = S('text', { x: x0, y: 306, class: 't2', 'font-size': 12 }, svg);
     S('line', { x1: x0, x2: x0 + 16, y1: 322, y2: 322, class: 's-green', 'stroke-width': 3 }, svg);
-    S('text', { x: x0 + 22, y: 326, class: 't3', 'font-size': 11, text: 'Messi’s total and place (M #2) when someone else led' }, svg);
+    S('text', { x: x0 + 22, y: 326, class: 't3', 'font-size': 11, text: 'Messi’s total when he wasn’t first, with his place (M #2, or M ? if unknown)' }, svg);
     S('line', { x1: x0, x2: x0 + 16, y1: 340, y2: 340, class: 's-ink3', 'stroke-width': 1, 'stroke-dasharray': '3 3' }, svg);
-    S('text', { x: x0 + 22, y: 344, class: 't3', 'font-size': 11, text: 'under 160, not in the list; M ? means his place is unknown' }, svg);
+    S('text', { x: x0 + 22, y: 344, class: 't3', 'font-size': 11, text: '2012-13: the season’s leader isn’t in the list, so nobody passed 160' }, svg);
   }
   label(t) { const i = Math.min(SEASONS.length - 1, Math.floor(t / STEP)); return '20' + SEASONS[i][0]; }
   render(t) {
-    let led = 0, known = 0;
+    let led = 0, shown = 0;
     this.cols.forEach((c, i) => {
       const k = inout(seg(t, i * STEP, i * STEP + 0.8));
       op(c.g, k > 0 ? 1 : 0);
-      if (k >= 1 && c.who) known++;
+      if (k >= 1) shown++;
       if (c.who) {
         const v = c.lead * k;
         attr(c.r, { x: c.x, width: c.w, y: this.Y(v), height: this.Y(0) - this.Y(v) });
         attr(c.name, { y: this.Y(v) - 18 }); attr(c.val, { y: this.Y(v) - 5 }); c.val.textContent = Math.round(v);
         if (c.who === 'Messi' && k >= 1) led++;
-        if (c.mine) attr(c.mine, { y1: this.Y(c.me * k), y2: this.Y(c.me * k) });
-        if (c.place) op(c.place, k >= 1 ? 1 : 0);
-      } else { attr(c.name, { y: this.Y(160) - 6 }); }
+      } else attr(c.name, { y: this.Y(160) - 6 });
+      if (c.mine) attr(c.mine, { y1: this.Y(c.me * k), y2: this.Y(c.me * k) });
+      if (c.place) op(c.place, k >= 1 ? 1 : 0);
     });
     op(this.msn, seg(t, 7 * STEP, 7 * STEP + 0.6));
-    this.foot.textContent = known ? `Messi led ${led} of ${known} seasons with a known leader` : '';
+    this.foot.textContent = shown ? `Messi first in ${led} of ${shown} seasons` : '';
   }
 }
 
