@@ -1,7 +1,7 @@
 ---
 title: 🇦🇷🐐 Messi in numbers
 date: 2026-10-09
-description: Lionel Messi played football the way other people make art, and no table of numbers holds that. The numbers still put him somewhere nobody else has been, among the great scorers and the great playmakers at once, in his best seasons, his dribbles, his free kicks, at 39 in Miami and at six World Cups.
+description: Lionel Messi made football look like art, and no spreadsheet can hold that. The spreadsheet still says it plainly. The best forward who ever played and the best playmaker who ever played are the same person.
 tags: [football, data]
 category: notes
 glyph: outlier
