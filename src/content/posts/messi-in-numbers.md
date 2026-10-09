@@ -5,7 +5,7 @@ description: A tribute to Lionel Messi in statistics, three days after his last 
 tags: [football, data]
 category: notes
 glyph: outlier
-figures: 8
+figures: 9
 ---
 
 I watched a tribute video about Lionel Messi this week and wanted the numbers next to the pictures. On 6 October he played his last game for Argentina, a 3-0 friendly against Benin at the Monumental, where he set up two goals and scored a penalty.
@@ -56,26 +56,41 @@ From 2010-11 to 2019-20 he averaged 1.42 non-penalty goals and assists per 90 in
 <figcaption><b>fig 4</b>Six players had one season at the level Messi averaged for ten years. <span class="m">Ryan O'Hanlon, ESPN, November 2020, from FBref data. Single source.</span></figcaption>
 </figure>
 
-His worst season in that decade was 1.16, in 2013-14, when he was injured for part of the year. Every other season was 1.27 or higher.
+His lowest season in that decade was 1.16, in 2013-14. Every other season was 1.27 or higher.
+
+## the best seasons
+
+The career averages hide how high his best seasons went. In 2011-12 he scored 73 goals and made 32 assists in 60 games, by Transfermarkt's count (other providers have 29 or 30 assists). The best season by any of the other 33 greats in the same data is Cristiano Ronaldo's 84 in 2014-15. Messi's second-best season, 89 in 2014-15, is higher than that too.
+
+<figure class="wide">
+<ms-seasons data-fig data-label="fig 5 · the best seasons">
+<p class="fallback">Goals plus assists in every club season with at least 20, for 16 great players. Messi's best seasons are 105 (2011-12), 89 (2014-15), 80 (2010-11), 77, 74 and 73. The best season by anyone else is Cristiano Ronaldo's 84 (2014-15), then Suárez 83 (2015-16), Gerd Müller 75 (1972-73), Ibrahimović and Cruyff 70, Kane 68, and Lewandowski, Neymar and Mbappé 65. Messi has six seasons of 70 or more; Ronaldo has three, Suárez and Gerd Müller two.</p>
+</ms-seasons>
+<figcaption><b>fig 5</b>Two of Messi's seasons are higher than anyone else's best, and he has six seasons above 70, twice as many as Ronaldo. <span class="m">Transfermarkt club seasons, all competitions, via a public API mirror, read 9 October 2026; finished seasons only. Players marked * played mostly before 1999, when assists were thinly recorded.</span></figcaption>
+</figure>
+
+Counted per 90 minutes, which takes out the extra games of a long cup run, the gap is smaller but still there. In archived FBref data for league games in Europe's top five leagues since 2009-10, Messi's best season is 2012-13, at 1.80 non-penalty goals and assists per 90. The next best by anyone is Ibrahimović's 1.62 in 2015-16, then Ronaldo's 1.57 in 2014-15. Messi has five of the ten best seasons on that measure.
+
+The calendar year 2012 is the other peak: 91 goals, 79 for Barcelona and 12 for Argentina, the Guinness record. Gerd Müller's 85 in 1972 had stood for forty years.
 
 ## the dribbler
 
 Opta's count of completed dribbles in the top five leagues, from 2006-07 to October 2023, has Messi at 2,358. Eden Hazard is second with 1,285.
 
 <figure class="wide">
-<ms-dribbles data-fig data-label="fig 5 · completed dribbles">
+<ms-dribbles data-fig data-label="fig 6 · completed dribbles">
 <p class="fallback">Most completed dribbles in Europe's top five leagues from 2006-07 to October 2023: Lionel Messi 2,358, Eden Hazard 1,285, Franck Ribéry 1,061, Neymar 984, Wilfried Zaha 972, Cristiano Ronaldo 937. Messi's total is 1,073 above second place.</p>
 </ms-dribbles>
-<figcaption><b>fig 5</b>The gap between first and second is bigger than Ronaldo's whole total. <span class="m">OptaJoe, 23 October 2023.</span></figcaption>
+<figcaption><b>fig 6</b>The gap between first and second is bigger than Ronaldo's whole total. <span class="m">OptaJoe, 23 October 2023.</span></figcaption>
 </figure>
 
 Season by season, he was the top dribbler in Europe in most years.
 
 <figure class="wide">
-<ms-leaders data-fig data-label="fig 6 · who led europe">
+<ms-leaders data-fig data-label="fig 7 · who led europe">
 <p class="fallback">The player with the most successful dribbles in Europe's top five leagues each season from 2009-10 to 2020-21. Messi led in 2009-10 (202), 2010-11 (265), 2011-12 (220), 2014-15 (266), 2017-18 (222), 2019-20 (239) and 2020-21 (188). In 2012-13 Messi had 143 and nobody passed 160, but the season's leader isn't published. Hazard led in 2013-14 (174, Messi second with 167) and 2018-19 (170, Messi second with 169). Neymar led in 2015-16 (189) and 2016-17 (218), when Messi had 151 and 154 and his place is unknown. Messi led again in 2017-18, the season after Neymar left for PSG.</p>
 </ms-leaders>
-<figcaption><b>fig 6</b>Messi was first in seven of these twelve seasons and second in two more. The two Neymar led were Neymar's last two seasons at Barcelona. <span class="m">Leaders from the top 20 successful-dribble seasons since 2009, published by GiveMeSport in July 2022 from @ThePopFoot; a season missing from that list had nobody above 160. Messi's totals for 2012-13, 2015-16 and 2016-17 from MessiVsRonaldo.app, which counts the same league and Champions League games.</span></figcaption>
+<figcaption><b>fig 7</b>Messi was first in seven of these twelve seasons and second in two more. The two Neymar led were Neymar's last two seasons at Barcelona. <span class="m">Leaders from the top 20 successful-dribble seasons since 2009, published by GiveMeSport in July 2022 from @ThePopFoot; a season missing from that list had nobody above 160. Messi's totals for 2012-13, 2015-16 and 2016-17 from MessiVsRonaldo.app, which counts the same league and Champions League games.</span></figcaption>
 </figure>
 
 From 2009-10 to 2014-15 he was first in four of the six seasons and second in 2013-14, and his 266 in 2014-15 is the highest season on the list. 2012-13 is the odd one: he had 143, his lowest total between 2009 and 2021. Then, after his best dribbling season in 2014-15, he drops out of the top 20 for two years, with 151 and 154. Those were Neymar's last two years at Barcelona, in the Messi, Suárez and Neymar attack, when Neymar took on more of the dribbling and Messi moved deeper and became more of a playmaker. In 2017-18, the first season after Neymar left, Messi was first again.
@@ -99,10 +114,10 @@ Most players his age have retired. Of those who haven't, Cristiano Ronaldo score
 American Soccer Analysis publishes a model called goals added, which values every pass, dribble, shot and tackle by how much it changes the chance of a goal. I pulled every MLS player-season since 2013 from its open API and kept those with at least 1,500 minutes, 3,649 of them.
 
 <figure class="wide">
-<ms-mls data-fig data-label="fig 7 · goals added in mls">
+<ms-mls data-fig data-label="fig 8 · goals added in mls">
 <p class="fallback">A histogram of goals added per 96 minutes for 3,649 MLS player-seasons from 2013 to 2026 with at least 1,500 minutes. Most seasons sit between -0.1 and 0.1, with 0 being league average. The best seasons by anyone else are Carlos Vela 2019 at 0.338 and Zlatan Ibrahimović 2019 at 0.327. Messi's three seasons sit further out: 0.377 in 2024, 0.443 in 2026 so far and 0.501 in 2025.</p>
 </ms-mls>
-<figcaption><b>fig 7</b>Messi's three MLS seasons are the three highest in the league's goals-added history, and 2025 is far beyond the next player's best. <span class="m">American Soccer Analysis API, pulled 9 October 2026. ASA's 2025 row appears to include the playoffs, and 2026 is still in progress.</span></figcaption>
+<figcaption><b>fig 8</b>Messi's three MLS seasons are the three highest in the league's goals-added history, and 2025 is far beyond the next player's best. <span class="m">American Soccer Analysis API, pulled 9 October 2026. ASA's 2025 row appears to include the playoffs, and 2026 is still in progress.</span></figcaption>
 </figure>
 
 His 2025 total of 17.35 goals added is the highest single season in the data, ahead of Carlos Vela's 11.21 in 2019. Most of it came from passing (7.35) and dribbling (5.09). Shooting was third. MLS is a weaker league than La Liga, so this measures the distance from an MLS pack, but the distance is large: in 2025 he was about five standard deviations above the league's attacking players.
@@ -118,10 +133,10 @@ Spain won the final 1-0 in extra time, with Argentina failing to put a shot on t
 Cristiano Ronaldo has more goals, 979 to 932, more Champions League goals and more international goals. Messi leads on non-penalty goals, goals per game, assists, Ballon d'Ors and the World Cup.
 
 <figure class="wide">
-<ms-vs data-fig data-label="fig 8 · messi and ronaldo">
+<ms-vs data-fig data-label="fig 9 · messi and ronaldo">
 <p class="fallback">Messi against Cristiano Ronaldo on nine measures: goals 932 to 979, non-penalty goals 817 to 795, assists 426 to 261, goals per game 0.79 to 0.73, Ballon d'Or 8 to 5, Champions League goals 129 to 140, international goals 126 to 146, World Cup goals 21 to 10, direct free-kick goals 76 to 65.</p>
 </ms-vs>
-<figcaption><b>fig 8</b>Ronaldo leads on totals in the competitions he played longest, and Messi leads on rate and creation. <span class="m">MessiVsRonaldo.app, 7 October 2026, official senior matches; records checked against Wikipedia. Free-kick counts are fan-site figures.</span></figcaption>
+<figcaption><b>fig 9</b>Ronaldo leads on totals in the competitions he played longest, and Messi leads on rate and creation. <span class="m">MessiVsRonaldo.app, 7 October 2026, official senior matches; records checked against Wikipedia. Free-kick counts are fan-site figures.</span></figcaption>
 </figure>
 
 At the same age, 39, Messi had 916 goals and 414 assists to Ronaldo's 873 and 249, and was involved in a goal every 71.5 minutes against Ronaldo's 87.4. Ronaldo's case rests on things the chart doesn't show well: league titles in four countries, five Champions League wins, and still scoring in a top flight at 41.

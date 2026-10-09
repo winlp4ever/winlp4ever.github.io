@@ -171,6 +171,55 @@ class MsDecade extends Figure {
   }
 }
 
+// ── best seasons · every season of 16 greats ──────────────────────────────
+// Goals + assists per club season, all competitions, seasons with 20 or more. Transfermarkt
+// via a public API mirror, read 9 Oct 2026; finished seasons only. Rows marked * played mostly
+// before 1999, when assists were thinly recorded, so their totals are a floor.
+const SEASONS_GA = [
+  ['Messi', 0, [105, 89, 80, 77, 74, 73, 69, 65, 65, 59, 58, 57, 55, 52, 41, 36, 32, 26, 20]],
+  ['Cristiano Ronaldo', 0, [84, 75, 71, 68, 68, 66, 57, 54, 52, 51, 46, 44, 43, 42, 41, 39, 38, 35, 27, 21, 20]],
+  ['Suárez', 0, [83, 73, 56, 51, 48, 47, 46, 46, 38, 37, 37, 36, 34, 33, 30, 25, 24, 23]],
+  ['Gerd Müller', 1, [75, 70, 52, 52, 52, 51, 48, 44, 42, 41, 39, 39, 36]],
+  ['Ibrahimović', 0, [70, 58, 52, 46, 40, 39, 38, 38, 35, 34, 32, 31, 29, 24, 24, 23, 20]],
+  ['Cruyff', 1, [70, 67, 59, 57, 57, 44, 42, 39, 33, 33, 22]],
+  ['Kane', 0, [68, 56, 55, 50, 46, 42, 38, 37, 37, 30, 30, 26]],
+  ['Lewandowski', 0, [65, 57, 57, 53, 52, 49, 49, 46, 45, 42, 41, 41, 38, 35, 31, 29, 23, 22]],
+  ['Neymar', 0, [65, 60, 56, 49, 46, 45, 36, 35, 34, 32, 30, 29, 23, 21, 21]],
+  ['Mbappé', 0, [65, 57, 54, 53, 51, 49, 49, 48, 40, 38]],
+  ['Haaland', 0, [61, 54, 53, 47, 45, 39, 37]],
+  ['Ronaldo Nazário', 1, [60, 43, 38, 38, 36, 35, 29, 25, 24]],
+  ['Salah', 0, [60, 57, 46, 46, 39, 37, 37, 36, 33, 22, 22, 20]],
+  ['Benzema', 0, [59, 48, 41, 40, 40, 40, 39, 38, 37, 37, 36, 34, 33, 30, 28, 27, 22, 21]],
+  ['Henry', 0, [57, 56, 49, 41, 41, 38, 38, 33, 31, 27, 25]],
+  ['Van Basten', 1, [54, 47, 46, 43, 39, 37, 29, 25, 20]],
+];
+class MsSeasons extends Figure {
+  build() {
+    const rows = SEASONS_GA, rh = 22, top = 52;
+    const svg = this.svgRoot(600, top + rows.length * rh + 40, 'Goals plus assists in every club season of 16 great players, with Messi’s seasons in green');
+    const x0 = 150, x1 = 560, lo = 20, hi = 110, X = (v) => x0 + ((v - lo) / (hi - lo)) * (x1 - x0);
+    const yb = top + rows.length * rh;
+    S('text', { x: 20, y: 22, class: 'sl', 'font-size': 11, text: 'GOALS + ASSISTS IN EACH CLUB SEASON' }, svg);
+    [20, 40, 60, 80, 100].forEach((v) => {
+      S('line', { x1: X(v), x2: X(v), y1: top - 10, y2: yb, class: 's-rule', 'stroke-width': v === 80 ? 1 : 0.5 }, svg);
+      S('text', { x: X(v), y: yb + 16, class: 't3', 'font-size': 10.5, 'text-anchor': 'middle', text: v }, svg);
+    });
+    // the best season anyone else had
+    const other = Math.max(...rows.slice(1).map((r) => r[2][0]));
+    S('line', { x1: X(other), x2: X(other), y1: top - 14, y2: yb, class: 's-ink2', 'stroke-width': 1, 'stroke-dasharray': '4 3' }, svg);
+    S('text', { x: X(other) - 6, y: top - 16, class: 't2', 'font-size': 10.5, 'text-anchor': 'end', text: `best season by anyone else: ${other}` }, svg);
+    this.dots = [];
+    rows.forEach(([n, floor, vals], i) => {
+      const y = top + i * rh + rh / 2, me = i === 0;
+      S('text', { x: x0 - 12, y: y + 4, class: me ? 't' : 't2', 'font-size': 11.5, 'text-anchor': 'end', text: n + (floor ? ' *' : '') }, svg);
+      vals.forEach((v) => this.dots.push({ c: S('circle', { cy: y, r: me ? 5 : 3.6, class: me ? 'f-green' : floor ? 'f-panel s-ink3' : 'f-ink3', 'stroke-width': 1.3, opacity: me ? 1 : 0.8 }, svg), v }));
+      S('text', { x: X(vals[0]) + 9, y: y + 4, class: me ? 't' : 't3', 'font-size': 10.5, text: vals[0] }, svg);
+    });
+    S('text', { x: 20, y: yb + 34, class: 't3', 'font-size': 10.5, text: '* mostly before 1999, assists incomplete' }, svg);
+    entrance(this, (k) => this.dots.forEach((d) => attr(d.c, { cx: X(lo + (d.v - lo) * k) })), 1300);
+  }
+}
+
 // ── fig 3 · completed dribbles, 2006-07 to Oct 2023 ────────────────────────
 // Europe's top five leagues (OptaJoe, 23 Oct 2023)
 const DRIB = [['Lionel Messi', 2358], ['Eden Hazard', 1285], ['Franck Ribéry', 1061], ['Neymar', 984], ['Wilfried Zaha', 972], ['Cristiano Ronaldo', 937]];
@@ -319,4 +368,4 @@ class MsVs extends Figure {
   }
 }
 
-define({ 'ms-cluster': MsCluster, 'ms-career': MsCareer, 'ms-age': MsAge, 'ms-decade': MsDecade, 'ms-dribbles': MsDribbles, 'ms-leaders': MsLeaders, 'ms-mls': MsMls, 'ms-vs': MsVs });
+define({ 'ms-seasons': MsSeasons, 'ms-cluster': MsCluster, 'ms-career': MsCareer, 'ms-age': MsAge, 'ms-decade': MsDecade, 'ms-dribbles': MsDribbles, 'ms-leaders': MsLeaders, 'ms-mls': MsMls, 'ms-vs': MsVs });
