@@ -1,7 +1,7 @@
 ---
 title: 🇦🇷🐐 Messi in numbers
 date: 2026-10-09
-description: Lionel Messi is the greatest footballer of all time, and the numbers make the case on their own. Where he sits among the great scorers and playmakers, his best seasons, the dribbling, the chances he created, Miami at 39, the World Cup, and the records.
+description: Lionel Messi played football the way other people make art, and no table of numbers holds that. The numbers still put him somewhere nobody else has been, among the great scorers and the great playmakers at once, in his best seasons, his dribbles, his free kicks, at 39 in Miami and at six World Cups.
 tags: [football, data]
 category: notes
 glyph: outlier
