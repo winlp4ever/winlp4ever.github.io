@@ -1,8 +1,17 @@
 // Figures for "Messi in numbers".
 // Sources are in each figure's caption; the research notes are in ~/workspace/blog/my-blog/reports.
-import { S, H, attr, op, seg, inout, lerp, clamp, handArrow, Figure, define, entrance } from './core.js';
+import { S, attr, op, seg, inout, clamp, handArrow, Figure, define, entrance } from './core.js';
 
-const bar = (parent, cls) => S('rect', { rx: 2, class: cls }, parent);
+const bar = (parent, cls, a = {}) => S('rect', { rx: 2, class: cls, ...a }, parent);
+// labelled horizontal bars that grow in; rows are [label, value, highlight]
+function hbars(svg, rows, x0, X, fmt, top = 42) {
+  const out = rows.map(([n, v, me], i) => {
+    const y = top + i * 30;
+    S('text', { x: x0 - 10, y: y + 13, class: 't', 'font-size': 12.5, 'text-anchor': 'end', text: n }, svg);
+    return { r: bar(svg, me ? 'f-green' : 'f-rule2', { x: x0, y, height: 18 }), t: S('text', { y: y + 13, class: 't2', 'font-size': 12 }, svg), v };
+  });
+  return (k) => out.forEach((r) => { attr(r.r, { width: X(r.v * k) }); attr(r.t, { x: x0 + X(r.v * k) + 8 }); r.t.textContent = fmt(r.v * k); });
+}
 
 // ── fig 1 · every age ──────────────────────────────────────────────────────
 // [age, G+A per 90, non-penalty G+A per 90 or null], all official club and country
@@ -35,7 +44,7 @@ class MsAge extends Figure {
     });
     S('line', { x1: x0, x2: x0 + W, y1: Y(MEDIAN_PEAK), y2: Y(MEDIAN_PEAK), class: 's-ochre', 'stroke-width': 2, 'stroke-dasharray': '5 4' }, svg);
     S('line', { x1: 330, x2: 344, y1: 37, y2: 37, class: 's-ochre', 'stroke-width': 2, 'stroke-dasharray': '5 4' }, svg);
-    S('text', { x: 350, y: 41, class: 't2', 'font-size': 11, text: 'median forward at his best age: 0.43' }, svg);
+    S('text', { x: 350, y: 41, class: 't2', 'font-size': 11, text: `median forward at his best age: ${MEDIAN_PEAK}` }, svg);
     S('text', { x: x0, y: 22, class: 'sl', 'font-size': 11, text: 'GOALS + ASSISTS PER 90, BY AGE' }, svg);
     S('rect', { x: 330, y: 13, width: 10, height: 10, rx: 2, class: 'f-green' }, svg);
     S('text', { x: 346, y: 22, class: 't2', 'font-size': 11, text: 'all' }, svg);
@@ -58,16 +67,12 @@ class MsDecade extends Figure {
     const svg = this.svgRoot(600, 300, 'Messi’s ten-year average of non-penalty goals plus assists per 90 against the best of his era');
     const x0 = 190, W = 330, X = (v) => (v / 1.5) * W;
     S('text', { x: 20, y: 22, class: 'sl', 'font-size': 11, text: 'NON-PENALTY GOALS + ASSISTS PER 90' }, svg);
-    this.rows = DECADE.map(([n, v, me], i) => {
-      const y = 44 + i * 30;
-      S('text', { x: x0 - 10, y: y + 13, class: 't', 'font-size': 12.5, 'text-anchor': 'end', text: n }, svg);
-      return { r: S('rect', { x: x0, y, height: 18, rx: 2, class: me ? 'f-green' : 'f-rule2' }, svg), t: S('text', { y: y + 13, class: 't2', 'font-size': 12 }, svg), v };
-    });
-    S('text', { x: 20, y: 214, class: 'sl', 'font-size': 11, text: 'THE ONLY SINGLE SEASONS SINCE 2010 THAT MATCHED HIS AVERAGE' }, svg);
+    const grow = hbars(svg, DECADE, x0, X, (v) => v.toFixed(2), 44);
+    S('text', { x: 20, y: 214, class: 'sl', 'font-size': 11, text: 'THE ONLY SEASONS BY ANYONE ELSE SINCE 2010 THAT MATCHED IT' }, svg);
     this.six = SIX.map((s, i) => S('text', { x: 20 + (i % 3) * 190, y: 240 + Math.floor(i / 3) * 22, class: 't', 'font-size': 12.5, text: s }, svg));
     S('text', { x: 20, y: 292, class: 't3', 'font-size': 11, text: 'six seasons by six players; none of them did it twice' }, svg);
     entrance(this, (k) => {
-      this.rows.forEach((r) => { attr(r.r, { width: X(r.v * k) }); attr(r.t, { x: x0 + X(r.v * k) + 8 }); r.t.textContent = (r.v * k).toFixed(2); });
+      grow(k);
       this.six.forEach((t, i) => op(t, seg(k, 0.4 + i * 0.08, 0.55 + i * 0.08)));
     }, 1300);
   }
@@ -79,17 +84,14 @@ const DRIB = [['Lionel Messi', 2358], ['Eden Hazard', 1285], ['Franck Ribéry', 
 class MsDribbles extends Figure {
   build() {
     const svg = this.svgRoot(600, 236, 'Most completed dribbles in Europe’s top five leagues since 2006-07');
-    const x0 = 150, W = 380, X = (v) => (v / 2400) * W;
+    const x0 = 150, W = 380, X = (v) => (v / DRIB[0][1]) * W * 0.98, gap = DRIB[0][1] - DRIB[1][1];
     S('text', { x: 20, y: 22, class: 'sl', 'font-size': 11, text: 'COMPLETED DRIBBLES, TOP FIVE LEAGUES, 2006-07 TO 2023' }, svg);
-    this.rows = DRIB.map(([n, v], i) => {
-      const y = 42 + i * 30;
-      S('text', { x: x0 - 10, y: y + 13, class: 't', 'font-size': 12.5, 'text-anchor': 'end', text: n }, svg);
-      return { r: S('rect', { x: x0, y, height: 18, rx: 2, class: i ? 'f-rule2' : 'f-green' }, svg), t: S('text', { y: y + 13, class: 't2', 'font-size': 12 }, svg), v };
-    });
-    this.gap = S('text', { x: x0 + X(1285) + 60, y: 230, class: 'hand', 'font-size': 16, text: '+1,073 on second place' }, svg);
-    this.arrow = S('path', { d: handArrow(x0 + X(1285) + 56, 222, x0 + X(1700), 60, -0.15), class: 'f-none s-green', 'stroke-width': 1.6 }, svg);
+    const grow = hbars(svg, DRIB.map(([n, v], i) => [n, v, !i]), x0, X, (v) => Math.round(v).toLocaleString('en'));
+    const second = x0 + X(DRIB[1][1]);
+    this.gap = S('text', { x: second + 60, y: 230, class: 'hand', 'font-size': 16, text: `+${gap.toLocaleString('en')} on second place` }, svg);
+    this.arrow = S('path', { d: handArrow(second + 56, 222, second + (x0 + X(DRIB[0][1]) - second) / 2, 60, -0.15), class: 'f-none s-green', 'stroke-width': 1.6 }, svg);
     entrance(this, (k) => {
-      this.rows.forEach((r) => { attr(r.r, { width: X(r.v * k) }); attr(r.t, { x: x0 + X(r.v * k) + 8 }); r.t.textContent = Math.round(r.v * k).toLocaleString('en'); });
+      grow(k);
       op(this.gap, seg(k, 0.8, 1)); op(this.arrow, seg(k, 0.8, 1));
     }, 1300);
   }
@@ -126,11 +128,11 @@ class MsLeaders extends Figure {
       S('text', { x: x + w / 2, y: y0 + 16, class: 't3', 'font-size': 10.5, 'text-anchor': 'middle', text: s }, svg);
       const g = S('g', {}, svg);
       const cls = who === 'Messi' ? 'f-green' : who === 'Neymar' ? 'f-ochre' : 'f-ink3';
-      const r = who ? bar(g, cls) : S('rect', { x, y: Y(160), width: w, height: y0 - Y(160), rx: 2, class: 'f-none s-ink3', 'stroke-dasharray': '3 3' }, g);
-      const name = S('text', { x: x + w / 2, class: 't', 'font-size': 10.5, 'text-anchor': 'middle', text: who ? `${who === 'Messi' ? 'Messi' : who}` : '?' }, g);
+      const r = who ? bar(g, cls) : bar(g, 'f-none s-ink3', { x, y: Y(160), width: w, height: y0 - Y(160), 'stroke-dasharray': '3 3' });
+      const name = S('text', { x: x + w / 2, class: 't', 'font-size': 10.5, 'text-anchor': 'middle', text: who || '?' }, g);
       const val = S('text', { x: x + w / 2, class: 't2', 'font-size': 10.5, 'text-anchor': 'middle', text: lead || '' }, g);
-      // Messi's own total when someone else led
-      const mine = who && who !== 'Messi' && S('line', { x1: x - 2, x2: x + w + 2, class: 's-green', 'stroke-width': 3 }, g);
+      // Messi's own total when someone else led and it is known (not for the seasons he was under 160)
+      const mine = who && who !== 'Messi' && me > 0 && S('line', { x1: x - 2, x2: x + w + 2, class: 's-green', 'stroke-width': 3 }, g);
       return { g, r, name, val, mine, x, w, who, lead, me };
     });
     this.foot = S('text', { x: x0, y: 306, class: 't2', 'font-size': 12 }, svg);
@@ -151,11 +153,7 @@ class MsLeaders extends Figure {
         attr(c.r, { x: c.x, width: c.w, y: this.Y(v), height: this.Y(0) - this.Y(v) });
         attr(c.name, { y: this.Y(v) - 18 }); attr(c.val, { y: this.Y(v) - 5 }); c.val.textContent = Math.round(v);
         if (c.who === 'Messi' && k >= 1) led++;
-        if (c.mine) {
-          // under 160 means not in the list: draw at the 160 line, dashed
-          const m = c.me || 160;
-          attr(c.mine, { y1: this.Y(m * k), y2: this.Y(m * k), 'stroke-dasharray': c.me ? 'none' : '4 3' });
-        }
+        if (c.mine) attr(c.mine, { y1: this.Y(c.me * k), y2: this.Y(c.me * k) });
       } else { attr(c.name, { y: this.Y(160) - 6 }); }
     });
     op(this.msn, seg(t, 7 * STEP, 7 * STEP + 0.6));
@@ -172,11 +170,12 @@ const MARKS = [[0.501, 'Messi 2025', 1], [0.443, 'Messi 2026, so far', 1], [0.37
 class MsMls extends Figure {
   build() {
     const svg = this.svgRoot(600, 300, 'Distribution of goals added per 96 minutes for every MLS player-season since 2013, with Messi’s three seasons marked');
-    const x0 = 30, W = 550, lo = -0.2, hi = 0.52, X = (v) => x0 + ((v - lo) / (hi - lo)) * W, y0 = 240, Y = (n) => y0 - Math.sqrt(n / 537) * 170;
+    const BIN = 0.02, lo = -0.2, hi = lo + HIST.length * BIN, top = Math.max(...HIST);
+    const x0 = 30, W = 550, X = (v) => x0 + ((v - lo) / (hi - lo)) * W, y0 = 240, Y = (n) => y0 - Math.sqrt(n / top) * 170;
     S('text', { x: x0, y: 22, class: 'sl', 'font-size': 11, text: 'MLS PLAYER-SEASONS, GOALS ADDED PER 96 MINUTES' }, svg);
     S('line', { x1: x0, x2: x0 + W, y1: y0, y2: y0, class: 's-rule', 'stroke-width': 1 }, svg);
     [-0.2, 0, 0.2, 0.4].forEach((v) => S('text', { x: X(v), y: y0 + 16, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: v.toFixed(1) }, svg));
-    this.bins = HIST.map((n, i) => ({ r: bar(svg, 'f-ink3'), x: X(lo + i * 0.02) + 0.5, w: (W / 36) - 1, n }));
+    this.bins = HIST.map((n, i) => ({ r: bar(svg, 'f-ink3'), x: X(lo + i * BIN) + 0.5, w: W / HIST.length - 1, n }));
     this.marks = MARKS.map(([v, n, me], i) => {
       const g = S('g', {}, svg), x = X(v), top = 70 + i * 26;
       S('line', { x1: x, x2: x, y1: top + 4, y2: y0, class: me ? 's-green' : 's-ink3', 'stroke-width': me ? 2.4 : 1.2 }, g);

@@ -40,7 +40,7 @@ Markup inside the Markdown (raw HTML block, blank lines around it):
 </figure>
 ```
 
-- Element names need a hyphen and must be unique across the site: prefix them with a short post code (`tf-`, `kv-`, `cost-`, `es-`, `lc-`, `site-`).
+- Element names need a hyphen and must be unique across the site: prefix them with a short post code (`tf-`, `kv-`, `cost-`, `es-`, `lc-`, `site-`, `om-`, `ln-`, `ms-`).
 - Number figures in order; the label and the caption number must match.
 - Sidenotes: `<span class="sn">…</span>` inside a paragraph (margin note on wide screens, inline on phones).
 - A callout: `<div class="note"><span class="label">rule of thumb</span>…</div>` (use rarely).

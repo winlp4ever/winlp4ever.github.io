@@ -55,7 +55,7 @@ Semantic versioning, driven by commit types through `commit-and-tag-version` (co
 3. **Figures are working systems**, not pictures: they compute what they show (softmax, dp tables, cost math). Say in the caption what is illustrative.
 4. **`render(t)` is a pure function of time** for timeline figures. Play, scrub, reduced motion and the `#t=` / `#still` URL hashes all go through it.
 5. **Colour through classes only** (`t t2 t3 sl hand`, `f-*`, `s-*`, `paint()`), so light and dark both work. One accent (green) per figure, ochre as a second at most, and at most one hand-drawn touch per figure, where it explains something.
-6. **Element names are prefixed per post** (`tf-`, `kv-`, `cost-`, `es-`, `lc-`, `site-`) and must be unique site-wide.
+6. **Element names are prefixed per post** (`tf-`, `kv-`, `cost-`, `es-`, `lc-`, `site-`, `om-`, `ln-`, `ms-`) and must be unique site-wide.
 7. **Voice**: lowercase `##` headings, first person, concrete numbers, almost no em-dashes, no tidy section closers, no recap blocks. The author writes the prose; an agent edits and flags. Don't invent stats, prices or benchmarks; mark anything unverified.
 8. Don't change a post's `date`. Set `updated` when the content changes meaningfully.
 9. Never commit `node_modules` (a worktree symlink once got merged and wiped the install) or `dist/`.

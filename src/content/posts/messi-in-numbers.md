@@ -28,7 +28,7 @@ The usual age curve for a forward rises into the mid-twenties and falls after 30
 <ms-age data-fig data-label="fig 1 · every age">
 <p class="fallback">Goals plus assists per 90 minutes at each age from 18 to 39, in all official club and country games. The rate climbs from 0.79 at 18 to 1.67 at 24, stays between 1.2 and 1.5 through his twenties and early thirties, dips to 1.01 and 0.96 at 33 and 34 (his last Barcelona season and first PSG season), and rises again in Miami to 1.48 at 36 and 1.70 at 38. Without penalties the line sits about 0.1 lower. A dashed line at 0.43 marks the median Big-5 forward at peak age.</p>
 </ms-age>
-<figcaption><b>fig 1</b>From 21 to 39 his rate stayed above 1.0 in all but two years, more than twice the median forward's best. <span class="m">MessiVsRonaldo.app by age, where an age year starts on his birthday, 24 June. Ages 19 and 22 have no penalty split. Benchmark: StatsBomb's 2016 age-curve study, Big-5 forwards, 2010-11 to 2015-16.</span></figcaption>
+<figcaption><b>fig 1</b>From 21 to 39 his rate dropped below 1.0 once, at 34. Without penalties it never fell below 0.85, about twice the median forward's best. <span class="m">MessiVsRonaldo.app by age, where an age year starts on his birthday, 24 June; age 39 runs only to 7 October 2026. Ages 19 and 22 have no penalty split. Benchmark: StatsBomb's 2016 age-curve study, Big-5 forwards, 2010-11 to 2015-16.</span></figcaption>
 </figure>
 
 His best rate came at 38, 50 goals and 30 assists in 50 games, but most of those minutes were in MLS, a weaker league than La Liga. The cleaner evidence for his late years is international. He won the 2022 World Cup and its Golden Ball at 35 with 7 goals and 3 assists, and at the 2026 World Cup, at 38 and 39, he had 8 goals and 4 assists in 8 games.
@@ -39,7 +39,7 @@ From 2010-11 to 2019-20, Messi averaged 1.42 non-penalty goals and assists per 9
 
 <figure class="wide">
 <ms-decade data-fig data-label="fig 2 · ten years at 1.42">
-<p class="fallback">Non-penalty goals plus assists per 90: Messi's ten-year La Liga average of 1.42, against Mbappé 1.24, Cristiano Ronaldo 1.13, Sancho 1.06 and Suárez 1.06 over the same kind of span. Below it, the only single seasons since 2010 that reached 1.42: Higuaín 2011-12, Ronaldo 2014-15, Ibrahimović 2015-16, Suárez 2015-16, Bale 2015-16 and Mbappé 2018-19.</p>
+<p class="fallback">Non-penalty goals plus assists per 90: Messi's ten-year La Liga average of 1.42, against Mbappé 1.24, Cristiano Ronaldo 1.13, Sancho 1.06 and Suárez 1.06 over the same kind of span. Below it, the only seasons by anyone else since 2010 that reached 1.42: Higuaín 2011-12, Ronaldo 2014-15, Ibrahimović 2015-16, Suárez 2015-16, Bale 2015-16 and Mbappé 2018-19.</p>
 </ms-decade>
 <figcaption><b>fig 2</b>Six players had one season at the level Messi averaged for ten years. <span class="m">Ryan O'Hanlon, ESPN, November 2020, from FBref data. Single source.</span></figcaption>
 </figure>
