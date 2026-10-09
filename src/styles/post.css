@@ -163,3 +163,10 @@
   .post-end { grid-template-columns: 1fr; }
   .post-end .nx { text-align: left; }
 }
+
+/* collapsible numbered sources at the end of a post */
+.sources { margin: 2.4em 0 0; padding-top: 1em; border-top: 1px solid var(--rule); font-size: 14px; color: var(--ink-2); }
+.sources summary { font: 13px var(--mono); color: var(--ink-3); cursor: pointer; letter-spacing: 0.04em; }
+.sources ol { margin: 1em 0 0; padding-left: 1.6em; }
+.sources li { margin: 0.35em 0; }
+.sources li:target { color: var(--ink); }

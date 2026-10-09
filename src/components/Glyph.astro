@@ -67,6 +67,14 @@ const { name, size = 52 } = Astro.props
       <path class="ka" d="M10 43 l3 3 l6 -7 M33 43 l3 3 l6 -7" />
     </g>
   )}
+  {name === 'outlier' && (
+    <g>
+      <path class="k3" d="M6 44h40" />
+      {[[9, 40], [12, 37], [14, 41], [16, 35], [18, 39], [20, 38], [22, 41], [24, 36], [26, 40], [29, 39], [31, 41]].map(([x, y]) => <circle class="f3" cx={x} cy={y} r="1.8" />)}
+      <circle class="fa mv" cx="42" cy="12" r="3.4" />
+      <path class="ka" d="M40 16 Q38 28 32 34" />
+    </g>
+  )}
   {name === 'cursor' && (
     <g><path class="k" d="M15 15 L6 26 L15 37 M37 15 L46 26 L37 37" /><rect class="fa mv" x="21" y="17" width="10" height="18" /></g>
   )}
