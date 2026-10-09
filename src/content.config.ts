@@ -11,7 +11,7 @@ const posts = defineCollection({
     tags: z.array(z.string()).default([]),
     category: z.enum(['ai', 'infra', 'algo', 'notes']).default('notes'),
     // small drawing used in the index; see components/Glyph.astro
-    glyph: z.enum(['attention', 'kv', 'cost', 'dp', 'search', 'cursor', 'versus', 'graph', 'proof']).default('cursor'),
+    glyph: z.enum(['attention', 'kv', 'cost', 'dp', 'search', 'cursor', 'versus', 'graph', 'proof', 'outlier']).default('cursor'),
     // number of live figures, shown in listings
     figures: z.number().default(0),
     featured: z.boolean().default(false),
