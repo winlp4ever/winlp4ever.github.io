@@ -280,7 +280,7 @@ class MsSeasons extends Figure {
 
 // ── finishing · goals against expected goals ───────────────────────────────
 // KU Leuven DTAI (2020): 16 La Liga seasons, 2,162 shots, 339.59 xG, 444 goals.
-// Ryan O'Hanlon (ESPN, 2020): domestic league goals minus xG since 2008, the top two.
+// Ryan O'Hanlon (No Grass in the Clouds, 2020): domestic league goals minus xG since 2008, the top two.
 class MsFinish extends Figure {
   build() {
     const svg = this.svgRoot(600, 270, 'Messi’s La Liga goals against expected goals, and goals above expected compared with the next best player');
@@ -308,7 +308,7 @@ class MsFinish extends Figure {
 
 
 // ── fig 2 · ten years at 1.42 ──────────────────────────────────────────────
-// La Liga 2010-11 to 2019-20, non-penalty G+A per 90 (Ryan O'Hanlon, ESPN, Nov 2020)
+// La Liga 2010-11 to 2019-20, non-penalty G+A per 90 (Ryan O'Hanlon, No Grass in the Clouds, Nov 2020)
 const DECADE = [['Messi, 10-year average', 1.42, 1], ['Mbappé', 1.24], ['Cristiano Ronaldo', 1.13], ['Sancho', 1.06], ['Suárez', 1.06]];
 const SIX = ['Higuaín 2011-12', 'Ronaldo 2014-15', 'Ibrahimović 2015-16', 'Suárez 2015-16', 'Bale 2015-16', 'Mbappé 2018-19'];
 class MsDecade extends Figure {
@@ -343,6 +343,46 @@ class MsDribbles extends Figure {
       grow(k);
       op(this.gap, seg(k, 0.8, 1)); op(this.arrow, seg(k, 0.8, 1));
     }, 1300);
+  }
+}
+
+// ── free kicks · the all-time list ────────────────────────────────────────
+// Direct free-kick goals in official top-division and international games, MessiVsRonaldo.app's
+// all-time table (7 Oct 2026); the same top six appear in El Gráfico's reconstruction.
+const FK = [['Marcelinho Carioca', 78], ['Lionel Messi', 76], ['Jair Rosa Pinto', 74], ['Roberto Dinamite', 73], ['Siniša Mihajlović', 72],
+  ['Juninho Pernambucano', 72], ['Marcos Assunção', 68], ['Jorge Aravena', 65], ['Cristiano Ronaldo', 64], ['Zico', 62], ['Ronaldinho', 59], ['Maradona', 59], ['Beckham', 53]];
+class MsFreeKicks extends Figure {
+  build() {
+    const svg = this.svgRoot(600, FK.length * 26 + 50, 'The players with the most direct free-kick goals in history');
+    const x0 = 190, X = (v) => (v / 80) * 340;
+    S('text', { x: 20, y: 22, class: 'sl', 'font-size': 11, text: 'DIRECT FREE-KICK GOALS, ALL TIME' }, svg);
+    const rows = FK.map(([n, v], i) => {
+      const y = 38 + i * 26, me = n === 'Lionel Messi';
+      S('text', { x: x0 - 10, y: y + 12, class: me ? 't' : 't2', 'font-size': 12, 'text-anchor': 'end', text: n }, svg);
+      return { r: bar(svg, me ? 'f-green' : 'f-rule2', { x: x0, y, height: 16 }), t: S('text', { y: y + 12, class: me ? 't' : 't2', 'font-size': 12 }, svg), v };
+    });
+    entrance(this, (k) => rows.forEach((r) => { attr(r.r, { width: X(r.v * k) }); attr(r.t, { x: x0 + X(r.v * k) + 8 }); r.t.textContent = Math.round(r.v * k); }), 1200);
+  }
+}
+
+// ── chances · big chances created ─────────────────────────────────────────
+// Europe's top five leagues. Career: StatMuse (Opta), coverage is reliable from 2015-16.
+// Single seasons since 2015-16: Sofascore, 27 May 2026.
+const BCC = [['Messi', 258], ['De Bruyne', 229], ['Thomas Müller', 171], ['Salah', 164], ['Di María', 162], ['Bruno Fernandes', 155], ['Griezmann', 135], ['Neymar', 132]];
+const BCC_SEASON = [['Messi 2015-16', 37], ['Messi 2019-20', 36], ['Messi 2018-19', 34], ['De Bruyne 2019-20', 33], ['Dimarco 2025-26', 33], ['B. Fernandes 2025-26', 33], ['Di María 2019-20', 32], ['Olise 2024-25', 32]];
+class MsChances extends Figure {
+  build() {
+    const svg = this.svgRoot(600, 300, 'Most big chances created in Europe’s top five leagues, career totals and single seasons');
+    const panel = (rows, x0, title, max) => {
+      S('text', { x: x0 - 130, y: 22, class: 'sl', 'font-size': 11, text: title }, svg);
+      return rows.map(([n, v], i) => {
+        const y = 38 + i * 30, me = n.startsWith('Messi');
+        S('text', { x: x0 - 8, y: y + 13, class: me ? 't' : 't2', 'font-size': 11.5, 'text-anchor': 'end', text: n }, svg);
+        return { r: bar(svg, me ? 'f-green' : 'f-rule2', { x: x0, y, height: 18 }), t: S('text', { y: y + 13, class: me ? 't' : 't2', 'font-size': 11.5 }, svg), v, x0, W: 120 / max };
+      });
+    };
+    const all = [...panel(BCC, 140, 'CAREER', 260), ...panel(BCC_SEASON, 445, 'BEST SEASONS SINCE 2015-16', 37)];
+    entrance(this, (k) => all.forEach((r) => { attr(r.r, { width: r.v * r.W * k }); attr(r.t, { x: r.x0 + r.v * r.W * k + 6 }); r.t.textContent = Math.round(r.v * k); }), 1200);
   }
 }
 
@@ -451,7 +491,7 @@ class MsMls extends Figure {
 // records. Free kicks are fan-site counts.
 const VS = [
   ['goals', 932, 979], ['non-penalty goals', 817, 795], ['assists', 426, 261], ['goals per game', 0.79, 0.73], ['Ballon d’Or', 8, 5],
-  ['Champions League goals', 129, 140], ['international goals', 126, 146], ['World Cup goals', 21, 10], ['direct free kicks', 76, 65],
+  ['Champions League goals', 129, 140], ['international goals', 126, 146], ['World Cup goals', 21, 10], ['direct free kicks', 76, 64],
 ];
 class MsVs extends Figure {
   build() {
@@ -475,4 +515,4 @@ class MsVs extends Figure {
   }
 }
 
-define({ 'ms-seasons': MsSeasons, 'ms-season-cluster': MsSeasonCluster, 'ms-finish': MsFinish, 'ms-cluster': MsCluster, 'ms-age': MsAge, 'ms-decade': MsDecade, 'ms-dribbles': MsDribbles, 'ms-leaders': MsLeaders, 'ms-mls': MsMls, 'ms-vs': MsVs });
+define({ 'ms-freekicks': MsFreeKicks, 'ms-chances': MsChances, 'ms-seasons': MsSeasons, 'ms-season-cluster': MsSeasonCluster, 'ms-finish': MsFinish, 'ms-cluster': MsCluster, 'ms-age': MsAge, 'ms-decade': MsDecade, 'ms-dribbles': MsDribbles, 'ms-leaders': MsLeaders, 'ms-mls': MsMls, 'ms-vs': MsVs });
