@@ -58,6 +58,99 @@ class MsAge extends Figure {
   }
 }
 
+// ── clusters · scorers and creators ───────────────────────────────────────
+// A scatter of goals against assists; Messi is the green dot. Hollow dots are players whose
+// assist counts are a floor (40%+ of their games before 1999, when assist data is thin).
+// Players with no assist data at all are drawn as ticks under the x axis.
+class Scatter extends Figure {
+  build() {
+    const c = this.cfg, svg = this.svgRoot(600, c.noAssist ? 410 : 360, c.aria);
+    const x0 = 56, x1 = 580, y0 = 330, y1 = 40;
+    const X = (v) => x0 + (v / c.xmax) * (x1 - x0), Y = (v) => y0 - (v / c.ymax) * (y0 - y1);
+    S('text', { x: 20, y: 22, class: 'sl', 'font-size': 11, text: c.title }, svg);
+    // iso lines of goals + assists
+    c.iso.forEach((s) => {
+      const xa = Math.min(s, c.xmax), ya = s - xa, yb = Math.min(s, c.ymax), xb = s - yb;
+      S('line', { x1: X(xa), y1: Y(ya), x2: X(xb), y2: Y(yb), class: 's-rule', 'stroke-width': 1, 'stroke-dasharray': '2 4' }, svg);
+      S('text', { x: X(xb) + 4, y: Y(yb) + 12, class: 't3', 'font-size': 10, text: `${s} together` }, svg);
+    });
+    S('line', { x1: x0, x2: x1, y1: y0, y2: y0, class: 's-rule', 'stroke-width': 1 }, svg);
+    S('line', { x1: x0, x2: x0, y1: y0, y2: y1, class: 's-rule', 'stroke-width': 1 }, svg);
+    c.xt.forEach((v) => S('text', { x: X(v), y: y0 + 15, class: 't3', 'font-size': 10.5, 'text-anchor': 'middle', text: v.toFixed(1) }, svg));
+    c.yt.forEach((v) => S('text', { x: x0 - 6, y: Y(v) + 4, class: 't3', 'font-size': 10.5, 'text-anchor': 'end', text: v.toFixed(1) }, svg));
+    S('text', { x: x1, y: y0 - 6, class: 't2', 'font-size': 11, 'text-anchor': 'end', text: c.xl }, svg);
+    S('text', { x: x0 + 4, y: y1 - 6, class: 't2', 'font-size': 11, text: c.yl }, svg);
+    this.dots = c.rows.map(([n, g, a, floor]) => {
+      const me = n === 'Messi', lab = me || c.label.includes(n);
+      const grp = S('g', {}, svg);
+      S('title', { text: `${n}: ${g.toFixed(2)} goals, ${a.toFixed(2)} assists` }, grp);
+      const d = S('circle', { r: me ? 7 : 4, class: me ? 'f-green' : floor ? 'f-panel s-ink2' : 'f-ink3', 'stroke-width': 1.5 }, grp);
+      const t = lab && S('text', { class: me ? 't' : 't2', 'font-size': me ? 13 : 10.5, text: n }, grp);
+      return { grp, d, t, g, a, me, dx: (c.nudge[n] || [7, 4])[0], dy: (c.nudge[n] || [7, 4])[1] };
+    });
+    // goals-only players: a tick on a strip under the axis, names staggered on two rows
+    (c.noAssist || []).forEach(([n, g], i) => {
+      S('line', { x1: X(g), x2: X(g), y1: y0 + 24, y2: y0 + 32, class: 's-ink2', 'stroke-width': 2 }, svg);
+      S('text', { x: X(g), y: y0 + 46 + (i % 2) * 14, class: 't3', 'font-size': 10, 'text-anchor': 'middle', text: n }, svg);
+    });
+    if (c.noAssist) S('text', { x: x0 - 6, y: y0 + 32, class: 't3', 'font-size': 10, 'text-anchor': 'end', text: 'no assists:' }, svg);
+    this.X = X; this.Y = Y;
+    entrance(this, (k) => this.dots.forEach((p) => {
+      const kk = p.me ? clamp((k - 0.6) / 0.4) : k;
+      const x = this.X(p.g * k), y = this.Y(p.a * k);
+      attr(p.d, { cx: x, cy: y }); op(p.grp, p.me ? kk : 1);
+      if (p.t) attr(p.t, { x: x + p.dx, y: y + p.dy });
+    }), 1500);
+  }
+}
+// top-5 leagues, every season each player played there, FBref (Opta) via Wayback snapshots
+const PER90 = [
+  ['Messi', 0.83, 0.42], ['Cristiano Ronaldo', 0.70, 0.24], ['Lewandowski', 0.76, 0.17], ['Suárez', 0.70, 0.29], ['Henry', 0.61, 0.29],
+  ['Ibrahimović', 0.60, 0.26], ['Benzema', 0.58, 0.27], ['Kane', 0.64, 0.17], ['Haaland', 0.82, 0.21], ['Mbappé', 0.83, 0.29],
+  ['Eto’o', 0.52, 0.18], ['Agüero', 0.63, 0.20], ['Shevchenko', 0.51, 0.16], ['Rooney', 0.44, 0.24], ['Griezmann', 0.42, 0.19],
+  ['Ronaldo Nazário', 0.67, 0.17], ['Özil', 0.20, 0.40], ['De Bruyne', 0.28, 0.48], ['Fàbregas', 0.18, 0.38], ['Iniesta', 0.10, 0.20],
+  ['Xavi', 0.14, 0.25], ['Zidane', 0.20, 0.26], ['Neymar', 0.55, 0.39], ['Ronaldinho', 0.31, 0.32], ['Kaká', 0.30, 0.28],
+  ['Modrić', 0.09, 0.19], ['Thomas Müller', 0.34, 0.44], ['Salah', 0.55, 0.31], ['Hazard', 0.28, 0.26], ['Riquelme', 0.17, 0.29],
+  ['Pirlo', 0.10, 0.21], ['Totti', 0.36, 0.32], ['David Silva', 0.20, 0.29],
+];
+class MsCluster extends Scatter {
+  constructor() {
+    super();
+    this.cfg = {
+      aria: 'Non-penalty goals per 90 against assists per 90 in Europe’s top five leagues for 33 great attackers and playmakers',
+      title: 'TOP-FIVE LEAGUES, PER 90 MINUTES, WHOLE CAREER THERE', xmax: 0.95, ymax: 0.55, xt: [0, 0.2, 0.4, 0.6, 0.8], yt: [0, 0.2, 0.4],
+      xl: 'non-penalty goals per 90 →', yl: '↑ assists per 90', iso: [0.5, 1.0], rows: PER90,
+      label: ['Cristiano Ronaldo', 'Haaland', 'Mbappé', 'Neymar', 'De Bruyne', 'Özil', 'Thomas Müller', 'Zidane', 'Iniesta'],
+      nudge: { Messi: [10, 5], Mbappé: [8, 4], Haaland: [8, 14], 'Cristiano Ronaldo': [8, -8], Zidane: [-46, 4], 'Thomas Müller': [7, -6] },
+    };
+  }
+}
+// whole club career, all competitions, per game: Transfermarkt (via a public API mirror)
+// and Wikipedia for goals of players Transfermarkt barely covers
+const CAREER = [
+  ['Messi', 0.83, 0.41], ['Ronaldo Nazário', 0.66, 0.17, 1], ['Gerd Müller', 0.93, 0.18, 1], ['Cristiano Ronaldo', 0.75, 0.24],
+  ['Lewandowski', 0.72, 0.18], ['Suárez', 0.60, 0.32], ['Henry', 0.45, 0.23], ['Ibrahimović', 0.60, 0.25], ['Benzema', 0.54, 0.23],
+  ['Kane', 0.69, 0.16], ['Haaland', 0.79, 0.17], ['Mbappé', 0.79, 0.29], ['Van Basten', 0.74, 0.23, 1], ['Raúl', 0.42, 0.18],
+  ['Eto’o', 0.49, 0.16], ['Agüero', 0.56, 0.17], ['Shevchenko', 0.50, 0.15], ['Rooney', 0.41, 0.22], ['Griezmann', 0.38, 0.17],
+  ['Özil', 0.16, 0.36], ['De Bruyne', 0.24, 0.39], ['Fàbregas', 0.17, 0.29], ['Iniesta', 0.11, 0.19], ['Xavi', 0.12, 0.25],
+  ['Zidane', 0.18, 0.21, 1], ['Neymar', 0.59, 0.37], ['Ronaldinho', 0.36, 0.28], ['Kaká', 0.31, 0.27], ['Modrić', 0.11, 0.15],
+  ['Thomas Müller', 0.34, 0.36], ['Salah', 0.49, 0.25], ['Hazard', 0.27, 0.25], ['Riquelme', 0.25, 0.26], ['Pirlo', 0.10, 0.18],
+  ['Totti', 0.39, 0.26], ['David Silva', 0.16, 0.25], ['Bergkamp', 0.36, 0.21, 1], ['Cruyff', 0.57, 0.43, 1],
+];
+const NO_ASSISTS = [['Eusébio', 1.01], ['Pelé', 0.94], ['Romário', 0.77], ['Batistuta', 0.54], ['Maradona', 0.53]];
+class MsCareer extends Scatter {
+  constructor() {
+    super();
+    this.cfg = {
+      aria: 'Club goals per game against assists per game over whole careers for 38 great players, with five more shown on goals only',
+      title: 'WHOLE CLUB CAREER, PER GAME', xmax: 1.05, ymax: 0.5, xt: [0, 0.2, 0.4, 0.6, 0.8, 1.0], yt: [0, 0.2, 0.4],
+      xl: 'goals per game →', yl: '↑ assists per game', iso: [0.5, 1.0], rows: CAREER, noAssist: NO_ASSISTS,
+      label: ['Cristiano Ronaldo', 'Gerd Müller', 'Haaland', 'Mbappé', 'Cruyff', 'Neymar', 'De Bruyne', 'Özil', 'Thomas Müller', 'Zidane'],
+      nudge: { Messi: [10, 5], Cruyff: [-44, -6], 'Gerd Müller': [-34, -8], Haaland: [8, 14], Mbappé: [8, 4], 'Cristiano Ronaldo': [8, -8], Zidane: [7, 8] },
+    };
+  }
+}
+
 // ── fig 2 · ten years at 1.42 ──────────────────────────────────────────────
 // La Liga 2010-11 to 2019-20, non-penalty G+A per 90 (Ryan O'Hanlon, ESPN, Nov 2020)
 const DECADE = [['Messi, 10-year average', 1.42, 1], ['Mbappé', 1.24], ['Cristiano Ronaldo', 1.13], ['Sancho', 1.06], ['Suárez', 1.06]];
@@ -101,16 +194,17 @@ class MsDribbles extends Figure {
 // Successful dribbles, top-20 player-seasons since 2009 (GiveMeSport, Jul 2022, crediting
 // @ThePopFoot; probably league plus Champions League). A season whose leader is not in the
 // top 20 had nobody above 160, so those values are drawn as "under 160".
+// [season, leader, leader's total, Messi's total (0 = under 160, not listed), Messi's rank]
 const SEASONS = [
-  ['09-10', 'Messi', 202, 202], ['10-11', 'Messi', 265, 265], ['11-12', 'Messi', 220, 220], ['12-13', null, null, null],
-  ['13-14', 'Hazard', 174, 167], ['14-15', 'Messi', 266, 266], ['15-16', 'Neymar', 189, 0], ['16-17', 'Neymar', 218, 0],
-  ['17-18', 'Messi', 222, 222], ['18-19', 'Hazard', 170, 169], ['19-20', 'Messi', 239, 239], ['20-21', 'Messi', 188, 188],
+  ['09-10', 'Messi', 202, 202, 1], ['10-11', 'Messi', 265, 265, 1], ['11-12', 'Messi', 220, 220, 1], ['12-13', null, null, null, null],
+  ['13-14', 'Hazard', 174, 167, 2], ['14-15', 'Messi', 266, 266, 1], ['15-16', 'Neymar', 189, 0, null], ['16-17', 'Neymar', 218, 0, null],
+  ['17-18', 'Messi', 222, 222, 1], ['18-19', 'Hazard', 170, 169, 2], ['19-20', 'Messi', 239, 239, 1], ['20-21', 'Messi', 188, 188, 1],
 ];
 const STEP = 1.1;
 class MsLeaders extends Figure {
   constructor() { super(); this.duration = SEASONS.length * STEP + 1.5; }
   build() {
-    const svg = this.svgRoot(600, 330, 'Leader in successful dribbles in Europe’s top five leagues each season from 2009-10 to 2020-21, with Messi’s total');
+    const svg = this.svgRoot(600, 348, 'Leader in successful dribbles in Europe’s top five leagues each season from 2009-10 to 2020-21, with Messi’s total');
     const x0 = 40, y0 = 262, cw = 540 / SEASONS.length, Y = (v) => y0 - (v / 300) * 200;
     this.Y = Y;
     [100, 200].forEach((v) => {
@@ -123,7 +217,7 @@ class MsLeaders extends Figure {
     S('rect', { x: nx, y: 50, width: cw * 2, height: y0 - 50, class: 'f-ochre', opacity: 0.08 }, svg);
     this.msn = S('text', { x: nx + cw, y: 44, class: 'hand', 'font-size': 15, 'text-anchor': 'middle', text: 'Neymar’s years' }, svg);
     S('text', { x: x0, y: 22, class: 'sl', 'font-size': 11, text: 'MOST SUCCESSFUL DRIBBLES IN EUROPE, EACH SEASON' }, svg);
-    this.cols = SEASONS.map(([s, who, lead, me], i) => {
+    this.cols = SEASONS.map(([s, who, lead, me, rank], i) => {
       const x = x0 + i * cw + 6, w = cw - 12;
       S('text', { x: x + w / 2, y: y0 + 16, class: 't3', 'font-size': 10.5, 'text-anchor': 'middle', text: s }, svg);
       const g = S('g', {}, svg);
@@ -133,13 +227,15 @@ class MsLeaders extends Figure {
       const val = S('text', { x: x + w / 2, class: 't2', 'font-size': 10.5, 'text-anchor': 'middle', text: lead || '' }, g);
       // Messi's own total when someone else led and it is known (not for the seasons he was under 160)
       const mine = who && who !== 'Messi' && me > 0 && S('line', { x1: x - 2, x2: x + w + 2, class: 's-green', 'stroke-width': 3 }, g);
-      return { g, r, name, val, mine, x, w, who, lead, me };
+      // where someone else led: Messi's place, or "?" when no source gives it
+      const place = who && who !== 'Messi' && S('text', { x: x + w / 2, y: me ? Y(me) + 15 : Y(130), class: 't', 'font-size': 10, 'text-anchor': 'middle', text: rank ? `M #${rank}` : 'M ?' }, g);
+      return { g, r, name, val, mine, place, x, w, who, lead, me };
     });
     this.foot = S('text', { x: x0, y: 306, class: 't2', 'font-size': 12 }, svg);
     S('line', { x1: x0, x2: x0 + 16, y1: 322, y2: 322, class: 's-green', 'stroke-width': 3 }, svg);
-    S('text', { x: x0 + 22, y: 326, class: 't3', 'font-size': 11, text: 'Messi’s total when someone else led' }, svg);
-    S('line', { x1: 330, x2: 346, y1: 322, y2: 322, class: 's-ink3', 'stroke-width': 1, 'stroke-dasharray': '3 3' }, svg);
-    S('text', { x: 352, y: 326, class: 't3', 'font-size': 11, text: 'under 160, outside the top 20' }, svg);
+    S('text', { x: x0 + 22, y: 326, class: 't3', 'font-size': 11, text: 'Messi’s total and place (M #2) when someone else led' }, svg);
+    S('line', { x1: x0, x2: x0 + 16, y1: 340, y2: 340, class: 's-ink3', 'stroke-width': 1, 'stroke-dasharray': '3 3' }, svg);
+    S('text', { x: x0 + 22, y: 344, class: 't3', 'font-size': 11, text: 'under 160, not in the list; M ? means his place is unknown' }, svg);
   }
   label(t) { const i = Math.min(SEASONS.length - 1, Math.floor(t / STEP)); return '20' + SEASONS[i][0]; }
   render(t) {
@@ -154,6 +250,7 @@ class MsLeaders extends Figure {
         attr(c.name, { y: this.Y(v) - 18 }); attr(c.val, { y: this.Y(v) - 5 }); c.val.textContent = Math.round(v);
         if (c.who === 'Messi' && k >= 1) led++;
         if (c.mine) attr(c.mine, { y1: this.Y(c.me * k), y2: this.Y(c.me * k) });
+        if (c.place) op(c.place, k >= 1 ? 1 : 0);
       } else { attr(c.name, { y: this.Y(160) - 6 }); }
     });
     op(this.msn, seg(t, 7 * STEP, 7 * STEP + 0.6));
@@ -195,12 +292,12 @@ class MsMls extends Figure {
 // Official senior matches; totals from MessiVsRonaldo.app (7 Oct 2026), Wikipedia for
 // records. Free kicks are fan-site counts.
 const VS = [
-  ['goals', 932, 979], ['assists', 426, 261], ['goals per game', 0.79, 0.73], ['Ballon d’Or', 8, 5],
+  ['goals', 932, 979], ['non-penalty goals', 817, 795], ['assists', 426, 261], ['goals per game', 0.79, 0.73], ['Ballon d’Or', 8, 5],
   ['Champions League goals', 129, 140], ['international goals', 126, 146], ['World Cup goals', 21, 10], ['direct free kicks', 76, 65],
 ];
 class MsVs extends Figure {
   build() {
-    const svg = this.svgRoot(600, 330, 'Messi and Cristiano Ronaldo compared on eight career measures');
+    const svg = this.svgRoot(600, 360, 'Messi and Cristiano Ronaldo compared on nine career measures');
     const cx = 300, W = 190;
     S('text', { x: cx - 10, y: 22, class: 't', 'font-size': 13, 'text-anchor': 'end', text: 'Messi' }, svg);
     S('text', { x: cx + 10, y: 22, class: 't', 'font-size': 13, text: 'Ronaldo' }, svg);
@@ -220,4 +317,4 @@ class MsVs extends Figure {
   }
 }
 
-define({ 'ms-age': MsAge, 'ms-decade': MsDecade, 'ms-dribbles': MsDribbles, 'ms-leaders': MsLeaders, 'ms-mls': MsMls, 'ms-vs': MsVs });
+define({ 'ms-cluster': MsCluster, 'ms-career': MsCareer, 'ms-age': MsAge, 'ms-decade': MsDecade, 'ms-dribbles': MsDribbles, 'ms-leaders': MsLeaders, 'ms-mls': MsMls, 'ms-vs': MsVs });
