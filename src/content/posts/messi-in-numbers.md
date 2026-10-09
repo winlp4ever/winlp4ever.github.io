@@ -5,7 +5,7 @@ description: Lionel Messi is the greatest footballer of all time, and the number
 tags: [football, data]
 category: notes
 glyph: outlier
-figures: 12
+figures: 15
 ---
 
 On 6 October Lionel Messi played his last game for Argentina, a 3-0 friendly against Benin at the Monumental. He set up two goals and scored a penalty. I think he's the best player there has ever been, and this post is the numbers behind that.
@@ -84,24 +84,35 @@ Assists depend on a teammate finishing the chance. Big chances created count the
 
 **His 37 big chances in 2015-16 are still the record for a season**, and his 36 in 2019-20 and 34 in 2018-19 are second and third<sup><a href="#src-15">15</a></sup>. At the World Cup he created **99 chances, the most since records began in 1966**, with Maradona next on 71<sup><a href="#src-16">16</a></sup>.
 
+Where those passes came from<sup><a href="#src-25">25</a></sup>:
+
+<figure class="wide">
+<ms-pass-map data-fig data-label="fig 7 · where the chances came from">
+<p class="fallback">A full pitch, attacking to the right, with the starting point of every key pass Messi made in La Liga from 2004-05 to 2020-21: 1,061 passes that led to a shot, 186 of them assists. In the assists view each assist is drawn as a line from where he passed to where the ball was received. 61% of his assists started on the right half of the pitch, his side, and 73% started outside the box.</p>
+</ms-pass-map>
+<figcaption><b>fig 7</b>Most of his assists start from the right half-space, outside the box, which is where he played from his twenties on. <span class="m">Data: StatsBomb<sup><a href="#src-25">25</a></sup>. A key pass is a pass followed by a shot. Switch between assists and all key passes.</span></figcaption>
+</figure>
+
+**61% of his La Liga assists started on the right of the pitch and 73% started outside the box.**
+
 ## the dribbler
 
 Opta has counted completed dribbles in the top five leagues since 2006-07. By October 2023 **Messi had 2,358 and Eden Hazard was second with 1,285**<sup><a href="#src-6">6</a></sup>.
 
 <figure class="wide">
-<ms-dribbles data-fig data-label="fig 7 · completed dribbles">
+<ms-dribbles data-fig data-label="fig 8 · completed dribbles">
 <p class="fallback">Most completed dribbles in Europe's top five leagues from 2006-07 to October 2023: Lionel Messi 2,358, Eden Hazard 1,285, Franck Ribéry 1,061, Neymar 984, Wilfried Zaha 972, Cristiano Ronaldo 937. Messi's total is 1,073 above second place.</p>
 </ms-dribbles>
-<figcaption><b>fig 7</b>The gap between first and second is bigger than Ronaldo's whole total. <span class="m">Top-five leagues, 2006-07 to October 2023<sup><a href="#src-6">6</a></sup>.</span></figcaption>
+<figcaption><b>fig 8</b>The gap between first and second is bigger than Ronaldo's whole total. <span class="m">Top-five leagues, 2006-07 to October 2023<sup><a href="#src-6">6</a></sup>.</span></figcaption>
 </figure>
 
 Season by season, **he was the top dribbler in Europe in seven of the twelve seasons from 2009-10 to 2020-21**<sup><a href="#src-7">7</a>,<a href="#src-1">1</a></sup>.
 
 <figure class="wide">
-<ms-leaders data-fig data-label="fig 8 · who led europe">
+<ms-leaders data-fig data-label="fig 9 · who led europe">
 <p class="fallback">The player with the most successful dribbles in Europe's top five leagues each season from 2009-10 to 2020-21. Messi led in 2009-10 (202), 2010-11 (265), 2011-12 (220), 2014-15 (266), 2017-18 (222), 2019-20 (239) and 2020-21 (188). In 2012-13 Messi had 143 and nobody passed 160, but the season's leader isn't published. Hazard led in 2013-14 (174, Messi second with 167) and 2018-19 (170, Messi second with 169). Neymar led in 2015-16 (189) and 2016-17 (218), when Messi had 151 and 154 and his place is unknown. Messi led again in 2017-18, the season after Neymar left for PSG.</p>
 </ms-leaders>
-<figcaption><b>fig 8</b>Messi was first in seven of these twelve seasons and second in two more. The two Neymar led were Neymar's last two seasons at Barcelona. <span class="m">League and Champions League<sup><a href="#src-7">7</a>,<a href="#src-1">1</a></sup>. A season missing from the top-20 list had nobody above 160.</span></figcaption>
+<figcaption><b>fig 9</b>Messi was first in seven of these twelve seasons and second in two more. The two Neymar led were Neymar's last two seasons at Barcelona. <span class="m">League and Champions League<sup><a href="#src-7">7</a>,<a href="#src-1">1</a></sup>. A season missing from the top-20 list had nobody above 160.</span></figcaption>
 </figure>
 
 2012-13 is his lowest total in that run, at 143. Then, after his best season in 2014-15, he falls out of the top 20 for two years with 151 and 154. Those were Neymar's last two years at Barcelona, when Neymar took on more of the dribbling and Messi dropped deeper to play as a playmaker. In 2017-18, the first season after Neymar left, Messi was first again.
@@ -116,20 +127,42 @@ Lamine Yamal is the volume leader now, with 223 completed dribbles in 2024-25<su
 
 Over 16 La Liga seasons Messi took 2,162 shots worth 339.6 expected goals and scored **444, about 104 more than an average finisher would have from the same chances**<sup><a href="#src-13">13</a></sup>. Since 2008 he scored **108.6 more league goals than expected, and the next player was Gonzalo Higuaín at 58.1**<sup><a href="#src-5">5</a></sup>.
 
+Where the goals came from<sup><a href="#src-25">25</a></sup>:
+
 <figure class="wide">
-<ms-finish data-fig data-label="fig 9 · finishing">
+<ms-goal-map data-fig data-label="fig 10 · where he scored">
+<p class="fallback">A half pitch with the location of all 412 non-penalty goals Messi scored in La Liga from 2004-05 to 2020-21. 324 came from inside the box and 88 from outside it, 49 in open play and 39 from direct free kicks. 87 of the 88 from outside the box were scored with his left foot.</p>
+</ms-goal-map>
+<figcaption><b>fig 10</b>88 goals from outside the box, and 87 of them with his left foot. <span class="m">Data: StatsBomb<sup><a href="#src-25">25</a></sup>. Faded dots are goals from inside the box; rings are free kicks.</span></figcaption>
+</figure>
+
+**88 of his 412 non-penalty La Liga goals came from outside the box, and 87 of those 88 were left-footed.**
+
+<figure class="wide">
+<ms-finish data-fig data-label="fig 11 · finishing">
 <p class="fallback">Two bar pairs. La Liga, 16 seasons and 2,162 shots: 339.6 expected goals against 444 goals scored, 104 above the model. League goals above expected since 2008: Messi +108.6, Gonzalo Higuaín +58.1, the next best.</p>
 </ms-finish>
-<figcaption><b>fig 9</b>Messi beat the expected-goals model by almost twice as much as the next best finisher. <span class="m">La Liga<sup><a href="#src-13">13</a></sup>; domestic leagues since 2008<sup><a href="#src-5">5</a></sup>.</span></figcaption>
+<figcaption><b>fig 11</b>Messi beat the expected-goals model by almost twice as much as the next best finisher. <span class="m">La Liga<sup><a href="#src-13">13</a></sup>; domestic leagues since 2008<sup><a href="#src-5">5</a></sup>.</span></figcaption>
 </figure>
+
+## free kicks
 
 He has **76 direct free-kick goals, second all-time**<sup><a href="#src-1">1</a></sup>. The only player ahead is Marcelinho Carioca with 78, nearly all of them in Brazil. Marcelinho's time in Europe's big leagues was five La Liga games for Valencia and ten Ligue 1 games for Ajaccio<sup><a href="#src-17">17</a></sup>.
 
 <figure class="wide">
-<ms-freekicks data-fig data-label="fig 10 · free kicks">
+<ms-freekicks data-fig data-label="fig 12 · free kicks">
 <p class="fallback">Most direct free-kick goals in history: Marcelinho Carioca 78, Lionel Messi 76, Jair Rosa Pinto 74, Roberto Dinamite 73, Siniša Mihajlović 72, Juninho Pernambucano 72, Marcos Assunção 68, Jorge Aravena 65, Cristiano Ronaldo 64, Zico 62, Ronaldinho 59, Maradona 59, Beckham 53.</p>
 </ms-freekicks>
-<figcaption><b>fig 10</b>Messi is two behind the record and twelve ahead of Cristiano Ronaldo. <span class="m">Official top-division and international games<sup><a href="#src-1">1</a></sup>.</span></figcaption>
+<figcaption><b>fig 12</b>Messi is two behind the record and twelve ahead of Cristiano Ronaldo. <span class="m">Official top-division and international games<sup><a href="#src-1">1</a></sup>.</span></figcaption>
+</figure>
+
+In La Liga, where every free kick is recorded<sup><a href="#src-25">25</a></sup>, he took **420 direct free kicks and scored 39**, a La Liga record, which is **9.3% of them**. He got better at it as he got older. From 2009-10 to 2016-17, aged 22 to 29, he scored about one in thirteen. **From 2017-18 to 2019-20, aged 30 to 32, he scored 17 from 132, about one in eight.**
+
+<figure class="wide">
+<ms-fk-map data-fig data-label="fig 13 · every free kick">
+<p class="fallback">A half pitch with every direct free kick Messi took in La Liga from 2004-05 to 2020-21: 420 attempts, 39 goals, 9.3%. The goals came from 19 to 33 yards out, 26 yards on average, and 29 of the 39 from right of centre. A small chart shows the share scored each season, rising from about 7% around 2010 to 12.5% in 2017-18 and 14.6% in 2018-19.</p>
+</ms-fk-map>
+<figcaption><b>fig 13</b>420 free kicks and 39 goals, 29 of them from right of centre. His best seasons came last. <span class="m">Data: StatsBomb<sup><a href="#src-25">25</a></sup>. Green dots are goals; the bars show the share scored each season, green where it was 12% or more.</span></figcaption>
 </figure>
 
 ## at 39
@@ -139,10 +172,10 @@ Most players his age have retired. Cristiano Ronaldo scored 25 Saudi league goal
 American Soccer Analysis publishes a model called goals added, which values every pass, dribble, shot and tackle by how much it changes the chance of a goal. I pulled every MLS player-season since 2013 with at least 1,500 minutes from its open API, 3,649 of them<sup><a href="#src-18">18</a></sup>.
 
 <figure class="wide">
-<ms-mls data-fig data-label="fig 11 · goals added in mls">
+<ms-mls data-fig data-label="fig 14 · goals added in mls">
 <p class="fallback">A histogram of goals added per 96 minutes for 3,649 MLS player-seasons from 2013 to 2026 with at least 1,500 minutes. Most seasons sit between -0.1 and 0.1, with 0 being league average. The best seasons by anyone else are Carlos Vela 2019 at 0.338 and Zlatan Ibrahimović 2019 at 0.327. Messi's three seasons sit further out: 0.377 in 2024, 0.443 in 2026 so far and 0.501 in 2025.</p>
 </ms-mls>
-<figcaption><b>fig 11</b>Messi's three MLS seasons are the three highest in the league's goals-added history. <span class="m">Every MLS player-season since 2013 with 1,500+ minutes<sup><a href="#src-18">18</a></sup>; 2025 appears to include the playoffs and 2026 is in progress.</span></figcaption>
+<figcaption><b>fig 14</b>Messi's three MLS seasons are the three highest in the league's goals-added history. <span class="m">Every MLS player-season since 2013 with 1,500+ minutes<sup><a href="#src-18">18</a></sup>; 2025 appears to include the playoffs and 2026 is in progress.</span></figcaption>
 </figure>
 
 **His 2025 total of 17.35 goals added is the highest season in the league's data**, ahead of Carlos Vela's 11.21 in 2019. Most of it came from passing and dribbling. MLS is a weaker league than La Liga, but in 2025 he was about five standard deviations above its attacking players.
@@ -160,10 +193,10 @@ On 31 August he announced he would stop playing for Argentina. He ends with **20
 Ronaldo has more goals, 979 to 932, more Champions League goals and more international goals. **Messi has more non-penalty goals, more assists, more Ballon d'Ors and a better scoring rate.**
 
 <figure class="wide">
-<ms-vs data-fig data-label="fig 12 · messi and ronaldo">
+<ms-vs data-fig data-label="fig 15 · messi and ronaldo">
 <p class="fallback">Messi against Cristiano Ronaldo on nine measures: goals 932 to 979, non-penalty goals 817 to 795, assists 426 to 261, goals per game 0.79 to 0.73, Ballon d'Or 8 to 5, Champions League goals 129 to 140, international goals 126 to 146, World Cup goals 21 to 10, direct free-kick goals 76 to 64.</p>
 </ms-vs>
-<figcaption><b>fig 12</b>Ronaldo leads on totals in the competitions he played longest. Messi leads on rate and on creating. <span class="m">Official senior matches<sup><a href="#src-1">1</a></sup>.</span></figcaption>
+<figcaption><b>fig 15</b>Ronaldo leads on totals in the competitions he played longest. Messi leads on rate and on creating. <span class="m">Official senior matches<sup><a href="#src-1">1</a></sup>.</span></figcaption>
 </figure>
 
 At 39 Messi had 916 goals and 414 assists to Ronaldo's 873 and 249 at the same age, a goal involvement every 71.5 minutes against 87.4<sup><a href="#src-21">21</a></sup>. Ronaldo won league titles in four countries and five Champions Leagues, and he's still scoring in a top flight at 41.
@@ -298,5 +331,6 @@ Records he shares are marked, and so are the ones he held and lost. Up to date a
 <li id="src-22"><a href="https://en.wikipedia.org/wiki/List_of_career_achievements_by_Lionel_Messi">Wikipedia, list of career achievements by Lionel Messi</a></li>
 <li id="src-23"><a href="https://www.planetfootball.com/lists-and-rankings/the-athletic-100-best-footballers-all-time-ranking-active">FourFourTwo, the 100 best football players of all time; The Athletic's Soccer 100 via Planet Football</a></li>
 <li id="src-24"><a href="https://www.espn.com/soccer/stats/_/league/USA.1">ESPN, MLS 2026 statistics</a></li>
+<li id="src-25"><a href="https://github.com/statsbomb/open-data">StatsBomb open data: every La Liga match Messi played, 2004-05 to 2020-21 (events with pitch coordinates)</a></li>
 </ol>
 </details>

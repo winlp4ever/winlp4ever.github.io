@@ -516,3 +516,6 @@ class MsVs extends Figure {
 }
 
 define({ 'ms-freekicks': MsFreeKicks, 'ms-chances': MsChances, 'ms-seasons': MsSeasons, 'ms-season-cluster': MsSeasonCluster, 'ms-finish': MsFinish, 'ms-cluster': MsCluster, 'ms-age': MsAge, 'ms-decade': MsDecade, 'ms-dribbles': MsDribbles, 'ms-leaders': MsLeaders, 'ms-mls': MsMls, 'ms-vs': MsVs });
+
+// the pitch maps carry about 9 KB of shot and pass data, so they load as their own chunk
+import('./messi-in-numbers-pitch.js');
