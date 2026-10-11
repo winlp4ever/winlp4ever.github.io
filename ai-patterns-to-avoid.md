@@ -178,12 +178,13 @@ Cut the announcement and keep the sentence.
 
 ---
 
-## 15. Bolding for drama
+## 15. Bolding
 
-A run of bold numbers reads like a pitch deck.
+A run of bold numbers inside one sentence reads like a pitch deck.
 
 - ✗ "**90% over-permissioned** … **88% of orgs** … **45 to 1**"
-- ✓ bold a term where it's defined (**tokens**, **embedding**). Leave numbers plain.
+- ✓ bold a term where it's defined (**tokens**, **embedding**).
+- ✓ in data posts, bold the one or two key findings of each section so a skimming reader gets them: "**Messi had 2,358 and Eden Hazard was second with 1,285.**" One finding per bold, not every number.
 
 ---
 
@@ -221,6 +222,24 @@ One honest joke in a piece is fine. A joke on every section is the pattern.
 
 ---
 
+## 19. Chained clauses
+
+The "I do X, then Y, with Z" sentence that packs a whole bio or argument into one line. It reads like a tagline.
+
+- ✗ "I build AI systems that are useful and cheap to run, then write about how they actually work, with figures you can poke."
+- ✓ short sentences in the author's own words: "I develop AI solutions that are useful and cheap to use. Lead AI engineer in Paris, creator of dim0, minmux and kiframe."
+
+---
+
+## 20. Things the author didn't say
+
+- **Invented personal detail.** ✗ "I watched a tribute video this week and wanted the numbers next to the pictures." Don't give the author experiences, reasons or habits they didn't mention.
+- **Hedges that undercut the post.** ✗ "Not every season beat the model. In the first half of 2020-21…" when the post is making a case. Put real caveats in captions or sources, not in a paragraph that argues against the point.
+- **Explanations nobody asked for.** ✗ attributing a dip in the data to an injury. If the data doesn't show the cause, don't supply one.
+- **Lukewarm wording for a clear view.** ✗ "among the great scorers" when the author's view, backed by the data, is "the best forward and the best playmaker who ever played". It's the author's blog: state their opinion plainly.
+
+---
+
 ## What's fine
 
 - one em-dash in a piece, where it's the right mark
@@ -236,10 +255,11 @@ The problem is never one instance. It's the same move on repeat.
 
 ## House style
 
-- lowercase headings, conversational, opinionated
+- lowercase headings, conversational, opinionated: the author's view stated plainly, bias included
+- the author's words for things: "playmaker", not "creator"
 - plain declarative sentences that state the fact
 - concrete beats abstract. A number, a name or a source beats an adjective.
-- cite real sources with dates, and flag claims that only one source makes
+- cite real sources with dates, and flag claims that only one source makes (see "Sources" below)
 - vary sentence and paragraph length
 - end the piece on a concrete detail or a decision you made, not a recap
 - if a sentence doesn't earn its place, cut it
@@ -247,7 +267,22 @@ The problem is never one instance. It's the same move on repeat.
 
 ### Descriptions and deks
 
-Declarative, one or two sentences, saying what the post covers. No questions, no teasers. ✓ "A walk through the parts of a transformer, from tokens to sampling, with a working figure for each step."
+Declarative, one or two sentences, saying what the post covers. No questions, no teasers. ✓ "A walk through the parts of a transformer, from tokens to sampling, with a working figure for each step." A personal piece can be warmer and take a side, as long as it's the author's view: ✓ "Lionel Messi made football look like art, and no spreadsheet can hold that. But the spreadsheet still says it, plainly. The best forward who ever played and the best playmaker who ever played are the same person."
+
+### Sources
+
+Cite with numbered superscripts, not inline attributions. ✗ "according to KU Leuven's sports analytics group", "from Opta". ✓ "…and scored 444<sup>13</sup>." Use HTML (`<sup><a href="#src-13">13</a></sup>`) so it also works inside captions, and end the post with a collapsible list:
+
+```html
+<details class="sources">
+<summary>sources</summary>
+<ol>
+<li id="src-1"><a href="…">Name, title (date)</a></li>
+</ol>
+</details>
+```
+
+Licences that require attribution (StatsBomb open data, for example) still get a short "Data: StatsBomb" in the caption.
 
 ### Figure captions
 
