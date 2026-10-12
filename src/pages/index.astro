@@ -16,7 +16,7 @@ const jsonld = {
   '@type': 'Blog',
   name: SITE.name,
   url: SITE.url,
-  author: { '@type': 'Person', name: SITE.author, alternateName: SITE.fullName, url: SITE.url, jobTitle: 'Senior Software Engineer' },
+  author: { '@type': 'Person', name: SITE.author, url: SITE.url, jobTitle: 'Senior Software Engineer' },
   blogPost: posts.map((p) => ({ '@type': 'BlogPosting', headline: p.data.title, datePublished: isoDate(p.data.date), url: `${SITE.url}/blog/${p.id}/` })),
 }
 ---

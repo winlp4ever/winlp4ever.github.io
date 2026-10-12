@@ -2,8 +2,6 @@ export const SITE = {
   url: 'https://quanglee.dev',
   name: 'field notes',
   author: 'quanglee',
-  // full name, kept in structured data so search engines can tie the handle to the person
-  fullName: 'Ha-Quang Le',
   role: 'senior software engineer',
   city: 'paris',
   description:
