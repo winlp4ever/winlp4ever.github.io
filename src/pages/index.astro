@@ -16,7 +16,7 @@ const jsonld = {
   '@type': 'Blog',
   name: SITE.name,
   url: SITE.url,
-  author: { '@type': 'Person', name: SITE.author, url: SITE.url, jobTitle: 'Lead AI Engineer' },
+  author: { '@type': 'Person', name: SITE.author, url: SITE.url, jobTitle: 'Senior Software Engineer' },
   blogPost: posts.map((p) => ({ '@type': 'BlogPosting', headline: p.data.title, datePublished: isoDate(p.data.date), url: `${SITE.url}/blog/${p.id}/` })),
 }
 ---
@@ -35,7 +35,7 @@ const jsonld = {
         <span class="tag">~/hql <b>hi!</b></span>
       </div>
       <div>
-        <p class="lede">I develop AI solutions that are useful and cheap to use. Lead AI engineer in Paris, creator of <a href="https://dim0.net">dim0</a>, <a href="https://minmux.dev">minmux</a> and <a href="https://github.com/vcmf/kiframe">kiframe</a>. Here I write about what I learn, with <span class="hl">figures you can poke</span>.</p>
+        <p class="lede">I develop AI solutions that are useful and cheap to use. Senior software engineer in Paris, math, tech and AI enthusiast, creator of <a href="https://dim0.net">dim0</a>, <a href="https://minmux.dev">minmux</a> and <a href="https://github.com/vcmf/kiframe">kiframe</a>. Here I write about what I learn, with <span class="hl">figures you can poke</span>.</p>
         <div class="facts">
           <span>also: draws, plays PES, null at Age of Empires</span>
           <span>barça · arsenal, all the way</span>
