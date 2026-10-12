@@ -16,7 +16,7 @@ The numbers below come from Mistral's launch post and model card, Artificial Ana
 
 ## nine to 38
 
-Large 3 came out in December 2025 and scored 9 on Artificial Analysis's Intelligence Index<sup><a href="#src-5">5</a></sup>, which combines a dozen evaluations into one number. Large 4 scores 38<sup><a href="#src-6">6</a></sup>. Artificial Analysis calls it "the most intelligent model outside the US and China"<sup><a href="#src-7">7</a></sup>.
+Large 3 came out in December 2025 and, as Simon Willison noted at launch, scored 9 on Artificial Analysis's Intelligence Index<sup><a href="#src-5">5</a></sup>, which combines a dozen evaluations into one number. Large 4 scores 38<sup><a href="#src-6">6</a></sup>. Artificial Analysis calls it "the most intelligent model outside the US and China"<sup><a href="#src-7">7</a></sup>.
 
 The model is bigger, from 675 billion parameters to about a trillion and from 41 billion active to 49. Mistral's post says the reinforcement learning run was "still in flight" at launch<sup><a href="#src-1">1</a></sup>, so the preview isn't the final model either, and The Register reports an update hinted at for about two months out<sup><a href="#src-8">8</a></sup>.
 
@@ -50,7 +50,7 @@ On Terminal-Bench 4.0, where an agent works through long tasks in a real termina
 
 Mistral's launch post leaves out GPQA, Humanity's Last Exam and SWE-bench Verified, and it has no multilingual benchmark for a model trained on more than 160 languages, or a long-context test for its million tokens. Nobody independent has published SWE-bench or ARC-AGI numbers yet either. Those should come once the weights are out.
 
-Cybersecurity is where it leads. On Artificial Analysis's CyberGym run, Large 4 reproduces and patches 82% of the vulnerabilities, ahead of MiMo-V2.6-Pro at 79% and GPT-6 Luna at 78%<sup><a href="#src-7">7</a></sup>. Mistral's post adds that "several leading closed models score near zero on the same test because they refuse to perform the task". On Artificial Analysis's wider Cyber Index it scores 50, in the middle of the open models.
+Cybersecurity is where it leads. On Artificial Analysis's CyberGym run, Large 4 reproduces and patches 82% of the vulnerabilities, ahead of MiMo-V2.6-Pro at 79% and GPT-6 Luna at 78%<sup><a href="#src-7">7</a></sup>. Mistral's post adds that "several leading closed models score near zero on the same test because they refuse to perform the task"<sup><a href="#src-1">1</a></sup>. On Artificial Analysis's wider Cyber Index it scores 50, in the middle of the open models<sup><a href="#src-7">7</a></sup>.
 
 ## what a task costs
 
@@ -73,7 +73,7 @@ My guess is that most of the extra tokens go to reasoning and to longer agent ru
 
 Mistral's chart says Large 4 scores 28.3% on Terminal-Bench 4.0. A footnote inside the chart image explains that these are "the numbers evaluated privately by Artificial Analysis ahead of the harness' public launch"<sup><a href="#src-1">1</a></sup>. Artificial Analysis's public run gives 26.8%, and Vals' gives 22.7%. Both run the same open-source agent, mini-swe-agent, on the same 66 tasks three times each. The known differences are a 500-step cap on Artificial Analysis's side and the sampling temperature<sup><a href="#src-13">13</a></sup>.
 
-The other models move as much between boards. Each lab submits its own agent to the official Terminal-Bench leaderboard (Claude Code for Anthropic, Codex for OpenAI, Grok Build for xAI), while Artificial Analysis and Vals use mini-swe-agent for everyone.
+The other models move as much between boards. On the official Terminal-Bench leaderboard most labs submit their own agent (Claude Code for Anthropic, Codex for OpenAI, Grok Build for xAI; Alibaba's Qwen ran in Claude Code), while Artificial Analysis and Vals use mini-swe-agent for everyone.
 
 <figure class="wide">
 <ml-boards data-fig data-label="fig 4 · one benchmark, three boards">

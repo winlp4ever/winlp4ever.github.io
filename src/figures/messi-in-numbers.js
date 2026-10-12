@@ -1,6 +1,6 @@
 // Figures for "Messi in numbers".
 // Sources are in each figure's caption; the research notes are in ~/workspace/blog/my-blog/reports.
-import { S, attr, op, seg, inout, ease, clamp, handArrow, REDUCED, STILL, Figure, define, entrance, pills, tooltip, hit } from './core.js';
+import { S, attr, op, seg, inout, clamp, handArrow, Figure, define, entrance, pills, tooltip, hit, tween } from './core.js';
 
 const bar = (parent, cls, a = {}) => S('rect', { rx: 2, class: cls, ...a }, parent);
 // labelled horizontal bars that grow in; rows are [label, value, highlight]
@@ -72,11 +72,6 @@ function frame(g, c, X, Y, x0, x1, y0, y1) {
   S('text', { x: x1, y: y0 - 6, class: 't2', 'font-size': 11, 'text-anchor': 'end', text: c.xl }, g);
   S('text', { x: x0 + 4, y: y1 - 6, class: 't2', 'font-size': 11, text: c.yl }, g);
 }
-const tween = (fig, paint, ms) => {
-  if (STILL || REDUCED) return paint(1);
-  const t0 = performance.now(), f = (now) => { const k = clamp((now - t0) / ms); paint(ease(k)); if (k < 1) fig._tw = requestAnimationFrame(f); };
-  cancelAnimationFrame(fig._tw); fig._tw = requestAnimationFrame(f);
-};
 
 // ── fig 1 · scorers and creators, two views ────────────────────────────────
 // top-5 leagues, every season each player played there, FBref (Opta) via Wayback snapshots

@@ -1,34 +1,21 @@
 // Figures for "Mistral Large 4, about seven months behind".
 // Encoding used everywhere: Mistral = green, Chinese labs = ochre, US closed = ink, US open = grey.
 // Data read 2026-10-12; sources are in each figure's caption.
-import { S, attr, op, ease, lerp, clamp, handArrow, REDUCED, STILL, Figure, define, entrance, pills, tooltip } from './core.js';
+import { S, attr, op, lerp, handArrow, Figure, define, entrance, pills, tooltip, hit, tween } from './core.js';
+import { CLOSED, OPEN, D, firstClosed } from './data/aa-index.js';
 
 const COL = { eu: 'green', cn: 'ochre', us: 'ink', uso: 'ink3' };
 const tcol = (o) => (o === 'eu' ? 'fill:var(--green-t)' : o === 'cn' ? 'fill:var(--ochre-t)' : '');
-// tween any paint(k) function from 0 to 1, for toggles after the entrance
-function tween(fig, paint, ms = 600) {
-  if (STILL || REDUCED) return paint(1);
-  cancelAnimationFrame(fig._tw);
-  const t0 = performance.now();
-  const f = (now) => { const k = clamp((now - t0) / ms); paint(ease(k)); if (k < 1) fig._tw = requestAnimationFrame(f); };
-  fig._tw = requestAnimationFrame(f);
-}
 
 // ── fig 1 · seven months behind ────────────────────────────────────────────
-// AA Intelligence Index v4.3.2 with release dates, same series as the DeepSeek / GLM post.
-const CLOSED = [['2025-11-24', 29.1, 'Opus 4.5'], ['2025-12-11', 30.4, 'GPT-5.2'], ['2026-02-05', 31.9, 'Opus 4.6'], ['2026-02-24', 32.5, 'GPT-5.3 Codex'],
-  ['2026-03-05', 39, 'GPT-5.4'], ['2026-04-16', 40.7, 'Opus 4.7'], ['2026-05-28', 41.8, 'Opus 4.8'], ['2026-06-09', 49.6, 'Fable 5'],
-  ['2026-07-23', 50.8, 'Opus 5'], ['2026-08-03', 53.4, 'Qwen3.8 Max'], ['2026-09-21', 57.6, 'Opus 5.5']];
-const OPEN = [['2026-02-11', 27.9, 'GLM-5'], ['2026-04-23', 30.4, 'V4 Pro'], ['2026-06-16', 33.7, 'GLM-5.2'],
-  ['2026-07-15', 43.6, 'Kimi K3'], ['2026-08-16', 44.8, 'GLM-5.3'], ['2026-09-21', 46.3, 'MiMo-V2.6-Pro']];
+// AA Intelligence Index v4.3.2 with release dates, shared with the DeepSeek / GLM post.
 const ML4 = ['2026-10-06', 38];
-const D = (s) => Date.parse(s + 'T00:00:00Z') / 864e5;
-export const lagDays = (score, date) => { const c = CLOSED.find((r) => r[1] >= score); return c ? Math.round(D(date) - D(c[0])) : 0; };
 
 class MlGap extends Figure {
   build() {
     const svg = this.svgRoot(600, 320, 'Best closed and best open model scores through 2026, with Mistral Large 4 and the gap to the first closed model at its score');
     const d0 = D('2025-11-15'), d1 = D('2026-10-20');
+    const first = firstClosed(ML4[1]);
     const X = (d) => 56 + (d - d0) / (d1 - d0) * 500, Y = (v) => 266 - (v - 25) / 35 * 226;
     [30, 40, 50, 60].forEach((v) => {
       S('line', { x1: 56, x2: 556, y1: Y(v), y2: Y(v), class: 's-rule', 'stroke-width': 1 }, svg);
@@ -50,20 +37,20 @@ class MlGap extends Figure {
     S('path', { d: step(OPEN, '2026-10-06'), class: 'f-none s-ochre', 'stroke-width': 2, 'stroke-dasharray': '5 4' }, svg);
     S('text', { x: X(D('2025-11-26')), y: Y(31.5) - 8, class: 't', 'font-size': 11.5, text: 'best closed' }, svg);
     S('text', { x: X(D('2026-05-02')), y: Y(30.4) + 16, class: 't', 'font-size': 11.5, text: 'best open (all Chinese)', style: 'fill:var(--ochre-t)' }, svg);
-    [['2026-03-05', 39, 'GPT-5.4'], ['2026-06-09', 49.6, 'Fable 5'], ['2026-09-21', 57.6, 'Opus 5.5']].forEach(([d, v, n]) =>
+    [first, ...CLOSED.filter((r) => ['Fable 5', 'Opus 5.5'].includes(r[2]))].forEach(([d, v, n]) =>
       S('text', { x: X(D(d)) - 4, y: Y(v) - 6, class: 't2', 'font-size': 10.5, 'text-anchor': 'end', text: n }, svg));
     S('text', { x: X(D('2026-09-21')) - 4, y: Y(46.3) - 7, class: 't2', 'font-size': 10.5, 'text-anchor': 'end', text: 'MiMo-V2.6-Pro', style: 'fill:var(--ochre-t)' }, svg);
-    // the lag: from GPT-5.4's release to Large 4's, at Large 4's score
-    const xa = X(D('2026-03-05')), xb = X(D(ML4[0])), y = Y(ML4[1]);
+    // the lag: from the first closed record at Large 4's score to Large 4's release
+    const xa = X(D(first[0])), xb = X(D(ML4[0])), y = Y(ML4[1]);
     this.lag = S('line', { x1: xb, x2: xb, y1: y, y2: y, class: 's-green', 'stroke-width': 1.6, 'stroke-dasharray': '3 3' }, svg);
-    S('circle', { cx: xa, cy: Y(39), r: 3.5, class: 'f-ink' }, svg);
+    S('circle', { cx: xa, cy: Y(first[1]), r: 3.5, class: 'f-ink' }, svg);
     S('circle', { cx: xb, cy: y, r: 6, class: 'f-green' }, svg);
     S('text', { x: xb + 10, y: y + 4, class: 't', 'font-size': 11, text: 'Large 4', style: 'fill:var(--green-t)' }, svg);
     S('text', { x: xb + 10, y: y + 18, class: 't3', 'font-size': 10.5, text: '38' }, svg);
     this.days = S('text', { x: xa + (xb - xa) * 0.4, y: y + 18, class: 't', 'font-size': 12, 'text-anchor': 'middle', style: 'fill:var(--green-t)' }, svg);
     S('text', { x: X(D('2026-03-28')), y: Y(46), class: 'hand', 'font-size': 14, 'text-anchor': 'middle', text: 'about seven months' }, svg);
     S('path', { d: handArrow(X(D('2026-04-14')), Y(44.6), X(D('2026-05-20')), y - 5, 0.2), class: 'f-none s-ink2', 'stroke-width': 1.3, 'stroke-linecap': 'round' }, svg);
-    this.xa = xa; this.xb = xb; this.n = lagDays(ML4[1], ML4[0]);
+    this.xa = xa; this.xb = xb; this.n = Math.round(D(ML4[0]) - D(first[0]));
     entrance(this, (k) => this.paint(k), 1200);
   }
   paint(k) {
@@ -110,7 +97,7 @@ class MlBoard extends Figure {
   layout(mode, now) {
     let i = 0;
     this.rows.forEach((r) => {
-      r.y = r.ny; r.a = r.na;
+      r.y = r.cy ?? r.ny; r.a = r.ca ?? r.na;
       const show = mode === 'all' || r.w > 0;
       r.na = show ? 1 : 0;
       r.ny = 40 + (show ? i++ : i) * 14.4;
@@ -118,7 +105,12 @@ class MlBoard extends Figure {
     });
     if (now) this.place(1);
   }
-  place(k) { this.rows.forEach((r) => { attr(r.g, { transform: `translate(0 ${lerp(r.y, r.ny, k).toFixed(1)})` }); op(r.g, lerp(r.a, r.na, k)); }); }
+  place(k) {
+    this.rows.forEach((r) => {
+      r.cy = lerp(r.y, r.ny, k); r.ca = lerp(r.a, r.na, k);
+      attr(r.g, { transform: `translate(0 ${r.cy.toFixed(1)})` }); op(r.g, r.ca);
+    });
+  }
   grow(k) {
     this.rows.forEach((r) => {
       const w = (this.B(r.v) - this.B(0)) * k;
@@ -155,18 +147,16 @@ class MlCost extends Figure {
       const g = S('g', {}, svg);
       const c = S('circle', { r: o === 'eu' ? 6.5 : 5, class: 'f-' + COL[o] }, g);
       const t = S('text', { class: o === 'eu' ? 't' : 't2', 'font-size': 10.5, 'text-anchor': anchor === 'up' || anchor === 'down' ? 'middle' : anchor, text: n, style: tcol(o) }, g);
-      const h = S('circle', { r: 10, fill: 'none', 'pointer-events': 'all', style: 'cursor:pointer' }, g);
-      h.addEventListener('pointerleave', () => tip.hide());
+      const money = (x) => '$' + (x < 0.1 ? x.toFixed(3) : x.toFixed(2));
+      const h = hit(g, tip, 0, 0, `${n} · ${v}`, `${money(tok)}/M out · ${out}M tokens · ${money(task)} a task`);
       return { n, v, tok, task, out, c, t, h, anchor, x: 0 };
     });
-    this.tip = tip;
     this.mode = 'tok';
     pills(this, [['tok', 'per million output tokens'], ['task', 'per task']], 'tok', (m) => {
       this.mode = m; this.pts.forEach((p) => { p.from = p.x; }); tween(this, (k) => this.place(k), 900);
     });
     this.pts.forEach((p) => { p.from = this.X(p.tok); });
     this.place(1);
-    this.idleText = 'interactive';
   }
   place(k) {
     const per = this.mode === 'tok';
@@ -174,17 +164,14 @@ class MlCost extends Figure {
     this.pts.forEach((p) => {
       const to = this.X(per ? p.tok : p.task), x = lerp(p.from, to, k), y = this.Y(p.v);
       p.x = x;
-      attr(p.c, { cx: x, cy: y }); attr(p.h, { cx: x, cy: y });
+      attr(p.c, { cx: x, cy: y }); p.h.move(x, y);
       if (p.anchor === 'up' || p.anchor === 'down') attr(p.t, { x, y: p.anchor === 'up' ? y - 10 : y + 19 }); else attr(p.t, { x: x + (p.anchor === 'end' ? -9 : 9), y: y + 4 });
-      const money = (v) => '$' + (v < 0.1 ? v.toFixed(3) : v.toFixed(2));
-      const b = `${money(p.tok)}/M out · ${p.out}M tokens · ${money(p.task)} a task`;
-      p.h.onpointerenter = p.h.onpointerdown = () => this.tip.show(x, y, `${p.n} · ${p.v}`, b);
     });
   }
 }
 
 // ── fig 4 · one benchmark, three boards ────────────────────────────────────
-// Terminal-Bench 4.0, 2026-10-12. v = lab's own harness on tbench.ai, a = AA (mini-swe-agent, 500 steps), s = Vals (mini-swe-agent, no cap).
+// Terminal-Bench 4.0, 2026-10-12. v = official tbench.ai board (usually the lab's own agent), a = AA (mini-swe-agent, 500 steps), s = Vals (mini-swe-agent, no cap).
 const TB = [
   ['Qwen3.8 Max', 'cn', 26.97, 38.89, 34.34], ['Grok 4.7', 'us', 37.58, 25.76, 28.79], ['Claude Fable 5.1', 'us', 57.88, 52.02, 58.08],
   ['Claude Opus 5.5', 'us', 64.85, 59.60, 65.15], ['GPT-6 Sol', 'us', 49.39, 43.94, 44.44], ['Mistral Large 4', 'eu', null, 26.77, 22.73, 28.3],
@@ -200,9 +187,9 @@ class MlBoards extends Figure {
       S('text', { x: this.X(v), y: 308, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: v + '%' }, svg);
     });
     const key = S('g', { transform: 'translate(170 16)' }, svg);
-    S('circle', { cx: 4, cy: 0, r: 4.5, class: 'f-ink' }, key); S('text', { x: 13, y: 4, class: 't2', 'font-size': 10.5, text: "lab's own harness" }, key);
-    S('circle', { cx: 140, cy: 0, r: 4, class: 'f-panel s-ink', 'stroke-width': 1.6 }, key); S('text', { x: 149, y: 4, class: 't2', 'font-size': 10.5, text: 'Artificial Analysis' }, key);
-    S('rect', { x: 276, y: -4, width: 8, height: 8, class: 'f-ink3' }, key); S('text', { x: 289, y: 4, class: 't2', 'font-size': 10.5, text: 'Vals' }, key);
+    S('circle', { cx: 4, cy: 0, r: 4.5, class: 'f-ink' }, key); S('text', { x: 13, y: 4, class: 't2', 'font-size': 10.5, text: 'official leaderboard' }, key);
+    S('circle', { cx: 150, cy: 0, r: 4, class: 'f-panel s-ink', 'stroke-width': 1.6 }, key); S('text', { x: 159, y: 4, class: 't2', 'font-size': 10.5, text: 'Artificial Analysis' }, key);
+    S('rect', { x: 286, y: -4, width: 8, height: 8, class: 'f-ink3' }, key); S('text', { x: 299, y: 4, class: 't2', 'font-size': 10.5, text: 'Vals' }, key);
     this.rows = TB.map(([n, o, v, a, s, m], i) => {
       const y = 48 + i * 23.5, vals = [v, a, s, m].filter((x) => x != null);
       const lo = Math.min(...vals), hi = Math.max(...vals);
@@ -260,12 +247,11 @@ class MlPrompt extends Figure {
     this.note = S('text', { x: 150, y: 160, class: 't3', 'font-size': 10.5 }, svg);
     this.set('five', true);
     pills(this, [['five', '5-shot'], ['cot', 'chain of thought, 32 samples']], 'five', (m) => { this.set(m); tween(this, (k) => this.place(k), 700); });
-    this.idleText = 'interactive';
   }
   set(m, now) {
     const list = MMLU[m], order = [...list].sort((a, b) => b[1] - a[1]).map((r) => r[0]);
     this.rows.forEach((r) => {
-      r.v = r.nv; r.y = r.ny;
+      r.v = r.cv ?? r.nv; r.y = r.cy ?? r.ny;
       r.nv = list.find((x) => x[0] === r.n)[1];
       r.ny = 46 + order.indexOf(r.n) * 36;
       if (now) { r.v = r.nv; r.y = r.ny; }
@@ -275,8 +261,9 @@ class MlPrompt extends Figure {
   }
   place(k) {
     this.rows.forEach((r) => {
-      const v = lerp(r.v, r.nv, k), w = this.B(v) - this.B(80);
-      attr(r.g, { transform: `translate(0 ${lerp(r.y, r.ny, k).toFixed(1)})` });
+      const v = r.cv = lerp(r.v, r.nv, k), w = this.B(v) - this.B(80);
+      r.cy = lerp(r.y, r.ny, k);
+      attr(r.g, { transform: `translate(0 ${r.cy.toFixed(1)})` });
       attr(r.bar, { width: w }); attr(r.val, { x: this.B(80) + w + 6 });
       r.val.textContent = (k < 1 ? v.toFixed(1) : String(+v.toFixed(2))) + '%';
     });

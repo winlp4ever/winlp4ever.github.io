@@ -3,6 +3,7 @@
 // Filled dot = big tier (GLM-5.3, V4-Pro), ring = small tier (GLM-5.3-Flash, V4.1-Flash).
 // Data fetched 2026-10-06; sources are in each figure's caption.
 import { S, H, attr, op, seg, ease, inout, lerp, clamp, handArrow, REDUCED, STILL, Figure, define, entrance, pills } from './core.js';
+import { CLOSED, OPEN as OPEN_BEST, D } from './data/aa-index.js';
 
 const M = {
   glm: { name: 'GLM-5.3', c: 'green', big: true },
@@ -72,16 +73,13 @@ class GxTiers extends Figure {
 }
 
 // ── fig 2 · best open vs best closed ───────────────────────────────────────
-// AA Intelligence Index v4.3.2 with release dates (from the AA block on openrouter.ai/rankings).
-const CLOSED = [['2025-11-24', 29.1, 'Opus 4.5'], ['2025-12-11', 30.4, 'GPT-5.2'], ['2026-02-05', 31.9, 'Opus 4.6'], ['2026-02-24', 32.5, 'GPT-5.3 Codex'],
-  ['2026-03-05', 39, 'GPT-5.4'], ['2026-04-16', 40.7, 'Opus 4.7'], ['2026-05-28', 41.8, 'Opus 4.8'], ['2026-06-09', 49.6, 'Fable 5'],
-  ['2026-07-23', 50.8, 'Opus 5'], ['2026-08-03', 53.4, 'Qwen3.8 Max'], ['2026-09-21', 57.6, 'Opus 5.5']];
-// [date, score, label, colour, (big?), label dx, label dy, anchor]
-const OPEN = [['2026-02-11', 27.9, 'GLM-5', 'green', true, 0, 17, 'middle'], ['2026-04-23', 30.4, 'V4 Pro', 'ochre', true, 0, -9, 'middle'], ['2026-06-16', 33.7, 'GLM-5.2', 'green', true, 0, -9, 'middle'],
-  ['2026-07-15', 43.6, 'Kimi K3', 'ink', true, -6, -8, 'end'], ['2026-08-16', 44.8, 'GLM-5.3', 'green', true, -8, 4, 'end'], ['2026-09-21', 46.3, 'MiMo-V2.6-Pro', 'ink', true, 0, -9, 'end']];
+// AA Intelligence Index v4.3.2 with release dates, from ./data/aa-index.js.
+// [label colour, big?, label dx, label dy, anchor] for each open record
+const OPEN_STYLE = { 'GLM-5': ['green', true, 0, 17, 'middle'], 'V4 Pro': ['ochre', true, 0, -9, 'middle'], 'GLM-5.2': ['green', true, 0, -9, 'middle'],
+  'Kimi K3': ['ink', true, -6, -8, 'end'], 'GLM-5.3': ['green', true, -8, 4, 'end'], 'MiMo-V2.6-Pro': ['ink', true, 0, -9, 'end'] };
+const OPEN = OPEN_BEST.map((r) => [...r, ...OPEN_STYLE[r[2]]]);
 const FAMILY = [['2026-07-31', 34.3, 'V4-Flash 0731', 'ochre', false, 0, 17, 'middle'], ['2026-08-13', 36.0, 'V4-Pro 0813', 'ochre', true, 8, 4, 'start'],
   ['2026-08-26', 41.8, 'GLM-5.3-Flash', 'green', false, -8, 4, 'end'], ['2026-09-10', 39.5, 'V4.1-Flash', 'ochre', false, 8, 4, 'start']];
-const D = (s) => Date.parse(s + 'T00:00:00Z') / 864e5;
 const best = (list, d) => { let v = null; for (const r of list) if (D(r[0]) <= d) v = r; return v; };
 export function lagAt(d) {
   const o = best(OPEN, d); if (!o) return null;
