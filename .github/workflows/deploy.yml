@@ -40,16 +40,22 @@ jobs:
   indexnow:
     needs: deploy
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 2
 
       - name: Submit changed posts to IndexNow
         env:
           BEFORE: ${{ github.event.before }}
         run: |
-          # a manual run or a first push has no previous commit to diff against
-          if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then BEFORE=HEAD~1; fi
-          node scripts/indexnow.mjs $(git diff --name-only --diff-filter=AM "$BEFORE" HEAD)
+          # GitHub Pages caches pages for up to 10 minutes; wait so crawlers fetch the new version
+          sleep 600
+          # a manual run has no previous commit: submit every published post
+          if [ "${{ github.event_name }}" != "push" ]; then node scripts/indexnow.mjs --all; exit 0; fi
+          git fetch --depth=1 origin "$BEFORE" 2>/dev/null || BEFORE=HEAD~1
+          # -z and quotePath=false keep names with spaces or accents intact; --no-renames reports a rename as delete + add
+          git -c core.quotePath=false diff -z --no-renames --name-only "$BEFORE" HEAD | xargs -0 node scripts/indexnow.mjs

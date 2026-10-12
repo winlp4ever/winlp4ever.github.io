@@ -10,10 +10,12 @@ const POSTS = Object.fromEntries(
   readdirSync('./src/content/posts')
     .filter((f) => f.endsWith('.md'))
     .map((f) => {
-      const fm = readFileSync(`./src/content/posts/${f}`, 'utf8').split('---')[1] ?? ''
+      const fm = readFileSync(`./src/content/posts/${f}`, 'utf8').match(/^---\r?\n([\s\S]*?)\r?\n---/)?.[1] ?? ''
+      if (/^draft:\s*true/m.test(fm)) return [] // drafts have no page and must not move the home page's date
       const d = (fm.match(/^updated:\s*(\S+)/m) ?? fm.match(/^date:\s*(\S+)/m) ?? [])[1]
       return [`/blog/${f.slice(0, -3)}/`, d?.replace(/['"]/g, '')]
-    }),
+    })
+    .filter((e) => e.length),
 )
 const NEWEST = Object.values(POSTS).filter(Boolean).sort().at(-1)
 
