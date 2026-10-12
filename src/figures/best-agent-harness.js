@@ -409,4 +409,70 @@ class AhLineage extends Figure {
   }
 }
 
-define({ 'ah-loop': AhLoop, 'ah-spread': AhSpread, 'ah-levers': AhLevers, 'ah-board': AhBoard, 'ah-pair': AhPair, 'ah-anatomy': AhAnatomy, 'ah-lineage': AhLineage });
+// ── fig 8 · what teams say they use, and what gets installed ───────────────
+// Stack Overflow 2026, agent frameworks question (n = 4,400, multi-select), with 2025 where the option existed.
+// k: f = framework, l = a model lab's SDK, o = other or unclear. PyPI: last 30 days to 11 October 2026, millions.
+const SURVEY = [
+  ['LangChain', 'f', 30.2, 32.9], ['OpenAI Agents SDK', 'l', 23.8], ['Terminal Use', 'o', 18.9], ['LangGraph', 'f', 18.8, 16.2],
+  ['Llama Stack', 'o', 17.4], ['Google ADK', 'l', 14.0], ['Hermes Agent', 'o', 10.2], ['Vercel AI SDK', 'f', 9.0],
+  ['Pydantic AI', 'f', 8.9], ['CrewAI', 'f', 5.5, 7.5], ['Semantic Kernel', 'f', 5.0, 6.0], ['AutoGen', 'f', 4.5, 12.0],
+];
+// [package, kind, millions, share of downloads on the current major version where it matters]
+const PYPI = [
+  ['langchain', 'f', 170.5, 0.368], ['langgraph', 'f', 44.8], ['strands-agents', 'f', 37.1], ['claude-agent-sdk', 'l', 29.8],
+  ['openai-agents', 'l', 12.4], ['google-adk', 'l', 10.1], ['pydantic-ai', 'f', 5.4], ['crewai', 'f', 2.4], ['autogen-agentchat', 'f', 0.4],
+];
+const KCLS = { f: 'f-ink', l: 'f-green', o: 'f-ink3' };
+class AhFrameworks extends Figure {
+  build() {
+    const svg = this.svgRoot(600, 372, 'Agent framework use from the Stack Overflow 2026 survey, and PyPI downloads for the same libraries');
+    [['f-ink', 'framework'], ['f-green', "a model lab's SDK"], ['f-ink3', 'other or unclear']].forEach(([c, n], i) => {
+      S('rect', { x: 170 + i * 140, y: 10, width: 10, height: 10, rx: 2, class: c }, svg);
+      S('text', { x: 185 + i * 140, y: 19, class: 't2', 'font-size': 11, text: n }, svg);
+    });
+    const panel = (rows, max, ticks, unit, extra) => {
+      const g = S('g', {}, svg), B = (v) => 170 + v / max * 370;
+      ticks.forEach((v) => {
+        S('line', { x1: B(v), x2: B(v), y1: 34, y2: 336, class: 's-rule', 'stroke-width': 1 }, g);
+        S('text', { x: B(v), y: 352, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: v + unit }, g);
+      });
+      const bars = rows.map((r, i) => {
+        const y = 44 + i * 25;
+        S('text', { x: 162, y: y + 9, class: r[1] === 'o' ? 't3' : 't2', 'font-size': 11, 'text-anchor': 'end', text: r[0] }, g);
+        const bar = S('rect', { x: B(0), y, height: 12, rx: 2, class: KCLS[r[1]] }, g);
+        const val = S('text', { y: y + 10, class: 't', 'font-size': 11, style: HALO }, g);
+        return { r, y, bar, val, ...extra(g, r, y, B) };
+      });
+      return { g, bars, B };
+    };
+    this.p = {
+      sv: panel(SURVEY, 35, [0, 10, 20, 30], '%', (g, r, y, B) => (r[3] ? { tick: S('line', { x1: B(r[3]), x2: B(r[3]), y1: y - 3, y2: y + 15, class: 's-ochre', 'stroke-width': 2.5 }, g) } : {})),
+      py: panel(PYPI, 180, [0, 50, 100, 150], 'M', (g, r, y, B) => (r[3] ? { cur: S('rect', { x: B(0), y, height: 12, rx: 2, class: 'f-ink' }, g) } : {})),
+    };
+    this.p.sv.note = S('text', { x: 16, y: 352, class: 't3', 'font-size': 10.5, text: '| 2025 share' }, this.p.sv.g);
+    this.p.sv.note.style.fill = 'var(--ochre-t)';
+    // langchain: the darker part is version 1.x, the lighter rest older releases
+    this.p.py.bars[0].bar.setAttribute('class', 'f-ink3');
+    S('text', { x: 172, y: 44 + 9 * 25 + 4, class: 't3', 'font-size': 10, text: 'langchain: dark = current 1.x, light = older versions' }, this.p.py.g);
+    this.mode = 'sv'; op(this.p.py.g, 0);
+    pills(this, [['sv', 'what developers say they use'], ['py', 'PyPI downloads']], 'sv', (m) => {
+      if (m === this.mode) return;
+      const from = this.p[this.mode], to = this.p[m]; this.mode = m;
+      tween(this, (k) => { op(from.g, 1 - k); op(to.g, k); this.grow(k, m); }, 600);
+    });
+    entrance(this, (k) => this.grow(k, this.mode));
+  }
+  grow(k, m) {
+    const P = this.p[m];
+    P.bars.forEach((b) => {
+      const v = b.r[2], w = (P.B(v) - P.B(0)) * k;
+      // the value sits past the bar or the 2025 tick, whichever ends later
+      const t = b.tick ? (P.B(b.r[3]) - P.B(0)) * k + 4 : 0;
+      attr(b.bar, { width: Math.max(1, w) }); attr(b.val, { x: P.B(0) + Math.max(w, t) + 6 });
+      if (b.cur) attr(b.cur, { width: Math.max(1, w * b.r[3]) });
+      b.val.textContent = (v * k).toFixed(1) + (m === 'sv' ? '%' : 'M');
+    });
+  }
+}
+
+define({ 'ah-loop': AhLoop, 'ah-spread': AhSpread, 'ah-levers': AhLevers, 'ah-board': AhBoard, 'ah-pair': AhPair, 'ah-anatomy': AhAnatomy, 'ah-lineage': AhLineage, 'ah-frameworks': AhFrameworks });

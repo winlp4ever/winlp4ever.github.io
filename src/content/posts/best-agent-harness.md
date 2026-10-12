@@ -5,7 +5,7 @@ description: Every coding agent is a model inside a harness, the program that ru
 tags: [ai, agents, benchmarks]
 category: ai
 glyph: cursor
-figures: 7
+figures: 8
 ---
 
 Every coding agent you can install, Claude Code, Codex, Gemini CLI, Cursor or Droid, is a model inside a harness. The model is what the labs train. The harness is the program around it: it sends the model a request, runs the tools the model asks for, appends the results to the request and calls the model again, until the model answers without asking for a tool.
@@ -123,21 +123,34 @@ None of the leading coding harnesses is built on an agent framework. Gemini CLI 
 
 What people build on now is a lab's harness shipped as a library. The Claude Agent SDK bundles the Claude Code CLI and drives it from Python or TypeScript<sup><a href="#src-36">36</a></sup>. It was downloaded 51 million times from npm and 30 million from PyPI in the last month, against 9 and 12 million for the OpenAI Agents SDK<sup><a href="#src-37">37</a></sup>. The Codex SDK spawns the Codex CLI the same way, and Cursor, Cline and OpenHands now ship their harnesses as SDKs too. OpenCode has its own history of forks: it started as a Go project, and when its original author joined Charm in 2025 that code became Crush, while the SST team kept the name and rewrote OpenCode in TypeScript<sup><a href="#src-38">38</a></sup>.
 
-Anthropic's own advice is to "start by using LLM APIs directly: many patterns can be implemented in a few lines of code"<sup><a href="#src-39">39</a></sup>. I agree with it. To build a harness for a lab's model I'd start from that lab's SDK, and for any other model from a small loop like mini-swe-agent or pi, adding parts as the model shows it needs them.
+Outside coding agents, many teams do build on frameworks. Stack Overflow's 2026 survey asked developers which agent frameworks they had used in the past year, and of the 4,400 who answered, 30.2% named LangChain, 23.8% the OpenAI Agents SDK, 18.8% LangGraph and 14.0% Google's ADK<sup><a href="#src-20">20</a></sup>. LangChain was at 32.9% the year before, CrewAI fell from 7.5% to 5.5% and AutoGen from 12.0% to 4.5%, while LangGraph rose from 16.2%<sup><a href="#src-39">39</a></sup>.
+
+<figure class="wide">
+<ah-frameworks data-fig data-label="fig 8 · agent frameworks: used and installed">
+<p class="fallback">Two views of agent framework popularity. Stack Overflow 2026, share of 4,400 developers who had used each in the past year: LangChain 30.2% (32.9% in 2025), OpenAI Agents SDK 23.8%, Terminal Use 18.9%, LangGraph 18.8% (16.2%), Llama Stack 17.4%, Google ADK 14.0%, Hermes Agent 10.2%, Vercel AI SDK 9.0%, Pydantic AI 8.9%, CrewAI 5.5% (7.5%), Semantic Kernel 5.0% (6.0%), AutoGen 4.5% (12.0%). PyPI downloads in the 30 days to 11 October 2026: langchain 170.5 million, of which 36.8% were the current 1.x versions; langgraph 44.8 million; strands-agents 37.1 million; claude-agent-sdk 29.8 million; openai-agents 12.4 million; google-adk 10.1 million; pydantic-ai 5.4 million; crewai 2.4 million; autogen-agentchat 0.4 million.</p>
+</ah-frameworks>
+<figcaption><b>fig 8</b>LangChain leads both views, but only about a third of its downloads are versions released in the last year. <span class="m">Stack Overflow Developer Survey 2026 and 2025<sup><a href="#src-20">20</a></sup><sup><a href="#src-39">39</a></sup>, multi-select, so the bars don't add up to 100%. The 2026 list had no Claude Agent SDK and no "I wrote my own loop" option, and changed options since 2025. PyPI counts from pypistats and version shares from pepy.tech<sup><a href="#src-40">40</a></sup>; downloads include CI runs and packages installed as dependencies.</span></figcaption>
+</figure>
+
+Downloads are a noisier signal. LangChain was installed 170 million times from PyPI last month, more than any other agent library, but 33% of those downloads were 2023 releases and only 37% the current 1.x versions<sup><a href="#src-40">40</a></sup>. Since April, downloads of the Claude Agent SDK grew 2.7 times and of AWS's Strands 6.7 times, while CrewAI fell to a third and AutoGen to about a quarter. LangChain's own 1.0 release in October 2025 cut the library back to an agent loop, after "consistent feedback" that "LangChain's abstractions were sometimes too heavy"<sup><a href="#src-41">41</a></sup>.
+
+Production agents look different again. The Berkeley-led "Measuring Agents in Production" study interviewed 20 teams running agents in production: 17 built "custom in-house implementations with direct API calls", and two more had started on CrewAI and moved to their own code before shipping<sup><a href="#src-42">42</a></sup>. The teams gave three reasons: frameworks didn't fit their own infrastructure, "core agent loops are straightforward to implement directly", and some security rules ban external libraries. The same paper's survey of 29 deployed agents found 61% on a framework, so the split isn't settled, and nobody has compared framework-built and hand-written agents on the same tasks.
+
+**My take: prototype with whatever gets you there fastest, then ship a single agent on a small loop you own, or on a lab's SDK if you're committed to that lab's models.** A graph framework like LangGraph is worth it when the job needs state that survives long runs or steps where a person reviews the work, which is where its published production stories sit<sup><a href="#src-43">43</a></sup>. Anthropic's guide says the same: "the most successful implementations use simple, composable patterns rather than complex frameworks"<sup><a href="#src-44">44</a></sup>.
 
 ## subscriptions and access
 
-The labs now fight over which harness may use their models on a subscription. Anthropic blocked third-party clients that impersonated Claude Code in January<sup><a href="#src-40">40</a></sup>, barred subscription use in third-party harnesses such as OpenClaw in April, then in May allowed it again against a separate credit for programmatic use<sup><a href="#src-41">41</a></sup>. That change was paused on 15 June, the day it was due<sup><a href="#src-42">42</a></sup>. Google moved its paid-plan and free users from the open-source Gemini CLI to Antigravity CLI, cutting them off on 18 June<sup><a href="#src-43">43</a></sup>, and The Register reports the new CLI is not open source<sup><a href="#src-44">44</a></sup>.
+The labs now fight over which harness may use their models on a subscription. Anthropic blocked third-party clients that impersonated Claude Code in January<sup><a href="#src-45">45</a></sup>, barred subscription use in third-party harnesses such as OpenClaw in April, then in May allowed it again against a separate credit for programmatic use<sup><a href="#src-46">46</a></sup>. That change was paused on 15 June, the day it was due<sup><a href="#src-47">47</a></sup>. Google moved its paid-plan and free users from the open-source Gemini CLI to Antigravity CLI, cutting them off on 18 June<sup><a href="#src-48">48</a></sup>, and The Register reports the new CLI is not open source<sup><a href="#src-49">49</a></sup>.
 
-OpenCode shows what this means for a harness that runs any model. It is built by Anomaly, the company behind the SST framework<sup><a href="#src-38">38</a></sup>, and many of its users signed in with Claude Pro and Max accounts. The day after Anthropic's January block, OpenCode 1.1.11 added sign-in with ChatGPT and Codex accounts<sup><a href="#src-45">45</a></sup>. In March a pull request titled "anthropic legal requests" removed Claude sign-in from the code<sup><a href="#src-46">46</a></sup>, and Claude models now need an API key there.
+OpenCode shows what this means for a harness that runs any model. It is built by Anomaly, the company behind the SST framework<sup><a href="#src-38">38</a></sup>, and many of its users signed in with Claude Pro and Max accounts. The day after Anthropic's January block, OpenCode 1.1.11 added sign-in with ChatGPT and Codex accounts<sup><a href="#src-50">50</a></sup>. In March a pull request titled "anthropic legal requests" removed Claude sign-in from the code<sup><a href="#src-51">51</a></sup>, and Claude models now need an API key there.
 
-OpenAI went the other way. It publishes the Codex CLI, app server and SDK as open source<sup><a href="#src-10">10</a></sup>, and added "Sign in with ChatGPT" so third-party apps can use a ChatGPT plan<sup><a href="#src-47">47</a></sup>.
+OpenAI went the other way. It publishes the Codex CLI, app server and SDK as open source<sup><a href="#src-10">10</a></sup>, and added "Sign in with ChatGPT" so third-party apps can use a ChatGPT plan<sup><a href="#src-52">52</a></sup>.
 
-Meanwhile other labs benchmark their models in Claude Code. Z.ai evaluated GLM-5.3 "in Claude Code 2.1.207" on most of its agent benchmarks<sup><a href="#src-48">48</a></sup>, and its docs show how to point Claude Code at Z.ai's endpoint<sup><a href="#src-49">49</a></sup>. MiniMax and Qwen report results in Claude Code as well.
+Meanwhile other labs benchmark their models in Claude Code. Z.ai evaluated GLM-5.3 "in Claude Code 2.1.207" on most of its agent benchmarks<sup><a href="#src-53">53</a></sup>, and its docs show how to point Claude Code at Z.ai's endpoint<sup><a href="#src-54">54</a></sup>. MiniMax and Qwen report results in Claude Code as well.
 
 ## my pick
 
-JetBrains surveyed more than 15,000 developers between May and July: 39% use Claude Code at work, up from 18% in January, and 16% use Codex, up from 3%. GitHub Copilot fell to 21% and Cursor to 12%<sup><a href="#src-50">50</a></sup>.
+JetBrains surveyed more than 15,000 developers between May and July: 39% use Claude Code at work, up from 18% in January, and 16% use Codex, up from 3%. GitHub Copilot fell to 21% and Cursor to 12%<sup><a href="#src-55">55</a></sup>.
 
 If I had to pick one harness today it would be Claude Code with Opus 5.5 or Sonnet 5.5, which lead both current boards. Codex with GPT-6.1 Sol scores 6.7 points lower on Terminal-Bench 4.0, and its full run cost $634 against $4.7k for Opus 5.5 in Claude Code<sup><a href="#src-2">2</a></sup>.
 
@@ -182,17 +195,22 @@ If I had to pick one harness today it would be Claude Code with Opus 5.5 or Sonn
 <li id="src-36"><a href="https://github.com/anthropics/claude-agent-sdk-python">Anthropic, claude-agent-sdk-python README (read 12 October 2026)</a></li>
 <li id="src-37"><a href="https://www.npmjs.com/package/@anthropic-ai/claude-agent-sdk">npm and PyPI monthly download counts, 12 September to 11 October 2026</a></li>
 <li id="src-38"><a href="https://techfundingnews.com/opencode-the-background-story-on-the-most-popular-open-source-coding-agent-in-the-world/">Tech Funding News, OpenCode: the background story on the most popular open-source coding agent (13 January 2026)</a></li>
-<li id="src-39"><a href="https://www.anthropic.com/research/building-effective-agents">Anthropic, Building effective agents (19 December 2024)</a></li>
-<li id="src-40"><a href="https://venturebeat.com/ai/anthropic-cracks-down-on-unauthorized-claude-usage-by-third-party-harnesses/">VentureBeat, Anthropic cracks down on unauthorized Claude usage by third-party harnesses (January 2026)</a></li>
-<li id="src-41"><a href="https://techstrong.ai/articles/anthropic-reverses-third-party-agent-ban-introduces-agent-sdk-credit-tier/">Techstrong.ai, Anthropic reverses third-party agent ban, introduces Agent SDK credit tier (May 2026)</a></li>
-<li id="src-42"><a href="https://devops.com/anthropic-hits-pause-on-claude-agent-sdk-billing-change-for-now/">DevOps.com, Anthropic hits pause on Claude Agent SDK billing change, for now (18 June 2026)</a></li>
-<li id="src-43"><a href="https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/">Google for Developers, An important update: transitioning Gemini CLI to Antigravity CLI (19 May 2026)</a></li>
-<li id="src-44"><a href="https://www.theregister.com/ai-ml/2026/05/20/bye-bye-gemini-cli-google-nudges-devs-toward-antigravity/5243605">The Register, Bye bye Gemini CLI: Google nudges devs toward Antigravity (20 May 2026)</a></li>
-<li id="src-45"><a href="https://github.com/anomalyco/opencode/releases/tag/v1.1.11">OpenCode, v1.1.11 release notes (10 January 2026)</a></li>
-<li id="src-46"><a href="https://github.com/anomalyco/opencode/pull/18186">OpenCode, pull request #18186, anthropic legal requests (merged 19 March 2026)</a></li>
-<li id="src-47"><a href="https://thenewstack.io/sign-in-with-chatgpt/">The New Stack, Sign in with ChatGPT (2026)</a></li>
-<li id="src-48"><a href="https://huggingface.co/zai-org/GLM-5.3">Z.ai, GLM-5.3 model card (25 August 2026)</a></li>
-<li id="src-49"><a href="https://docs.z.ai/devpack/tool/claude">Z.ai docs, Claude Code (read 12 October 2026)</a></li>
-<li id="src-50"><a href="https://blog.jetbrains.com/research/2026/08/ai-coding-agent-adoption-2026/">JetBrains Research, AI coding agent adoption in 2026 (August 2026)</a></li>
+<li id="src-39"><a href="https://survey.stackoverflow.co/2025/ai">Stack Overflow, Developer Survey 2025, AI section (July 2025)</a></li>
+<li id="src-40"><a href="https://pypistats.org/packages/langchain">pypistats and pepy.tech download counts and version shares, 30 days to 11 October 2026</a></li>
+<li id="src-41"><a href="https://www.langchain.com/blog/langchain-langgraph-1dot0">LangChain, LangChain and LangGraph 1.0 (October 2025)</a></li>
+<li id="src-42"><a href="https://arxiv.org/abs/2512.04123">Pan et al., Measuring Agents in Production, arXiv 2512.04123, ICML 2026 (v4, 4 June 2026)</a></li>
+<li id="src-43"><a href="https://www.langchain.com/built-with-langgraph">LangChain, Built with LangGraph (read 12 October 2026)</a></li>
+<li id="src-44"><a href="https://www.anthropic.com/research/building-effective-agents">Anthropic, Building effective agents (19 December 2024)</a></li>
+<li id="src-45"><a href="https://venturebeat.com/ai/anthropic-cracks-down-on-unauthorized-claude-usage-by-third-party-harnesses/">VentureBeat, Anthropic cracks down on unauthorized Claude usage by third-party harnesses (January 2026)</a></li>
+<li id="src-46"><a href="https://techstrong.ai/articles/anthropic-reverses-third-party-agent-ban-introduces-agent-sdk-credit-tier/">Techstrong.ai, Anthropic reverses third-party agent ban, introduces Agent SDK credit tier (May 2026)</a></li>
+<li id="src-47"><a href="https://devops.com/anthropic-hits-pause-on-claude-agent-sdk-billing-change-for-now/">DevOps.com, Anthropic hits pause on Claude Agent SDK billing change, for now (18 June 2026)</a></li>
+<li id="src-48"><a href="https://developers.googleblog.com/an-important-update-transitioning-gemini-cli-to-antigravity-cli/">Google for Developers, An important update: transitioning Gemini CLI to Antigravity CLI (19 May 2026)</a></li>
+<li id="src-49"><a href="https://www.theregister.com/ai-ml/2026/05/20/bye-bye-gemini-cli-google-nudges-devs-toward-antigravity/5243605">The Register, Bye bye Gemini CLI: Google nudges devs toward Antigravity (20 May 2026)</a></li>
+<li id="src-50"><a href="https://github.com/anomalyco/opencode/releases/tag/v1.1.11">OpenCode, v1.1.11 release notes (10 January 2026)</a></li>
+<li id="src-51"><a href="https://github.com/anomalyco/opencode/pull/18186">OpenCode, pull request #18186, anthropic legal requests (merged 19 March 2026)</a></li>
+<li id="src-52"><a href="https://thenewstack.io/sign-in-with-chatgpt/">The New Stack, Sign in with ChatGPT (2026)</a></li>
+<li id="src-53"><a href="https://huggingface.co/zai-org/GLM-5.3">Z.ai, GLM-5.3 model card (25 August 2026)</a></li>
+<li id="src-54"><a href="https://docs.z.ai/devpack/tool/claude">Z.ai docs, Claude Code (read 12 October 2026)</a></li>
+<li id="src-55"><a href="https://blog.jetbrains.com/research/2026/08/ai-coding-agent-adoption-2026/">JetBrains Research, AI coding agent adoption in 2026 (August 2026)</a></li>
 </ol>
 </details>
