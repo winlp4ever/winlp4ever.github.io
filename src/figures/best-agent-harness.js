@@ -102,10 +102,10 @@ const TB2 = [
   ['Gemini 3 Flash', 'Gemini CLI', [['Junie CLI', 64.3], ['Terminus 2', 51.7, 1], ['Gemini CLI', 47.4]]],
   ['GPT-5.2', 'Codex CLI', [['Droid', 64.9], ['Codex CLI', 62.9, 1], ['Mux', 60.7], ['Terminus 2', 54, 1]]],
   ['Claude Opus 4.5', 'Claude Code', [['Droid', 63.1], ['Letta Code', 59.1], ['Mux', 58.4], ['Terminus 2', 57.8, 1], ['Goose', 54.3], ['Claude Code', 52.1, 1], ['OpenHands', 51.9, 1], ['OpenCode', 51.7]]],
-  ['GPT-5', 'Codex CLI', [['Codex CLI', 49.6, 1], ['OpenHands', 43.8, 1], ['Terminus 2', 35.2, 1], ['mini-SWE-agent', 33.9, 1]]],
-  ['Claude Sonnet 4.5', 'Claude Code', [['CAMEL-AI', 46.5], ['Goose', 43.1], ['Terminus 2', 42.8, 1], ['OpenHands', 42.6, 1], ['mini-SWE-agent', 42.5, 1], ['Claude Code', 40.1, 1]]],
-  ['Claude Haiku 4.5', 'Claude Code', [['Goose', 35.5], ['mini-SWE-agent', 29.8, 1], ['Terminus 2', 28.3, 1], ['Claude Code', 27.5, 1], ['OpenHands', 13.9, 1]]],
-  ['Gemini 2.5 Pro', 'Gemini CLI', [['Terminus 2', 32.6, 1], ['mini-SWE-agent', 26.1, 1], ['Gemini CLI', 19.6, 1], ['OpenHands', 16.4, 1]]],
+  ['GPT-5', 'Codex CLI', [['Codex CLI', 49.6, 1], ['OpenHands', 43.8, 1], ['Terminus 2', 35.2, 1], ['mini-swe-agent', 33.9, 1]]],
+  ['Claude Sonnet 4.5', 'Claude Code', [['CAMEL-AI', 46.5], ['Goose', 43.1], ['Terminus 2', 42.8, 1], ['OpenHands', 42.6, 1], ['mini-swe-agent', 42.5, 1], ['Claude Code', 40.1, 1]]],
+  ['Claude Haiku 4.5', 'Claude Code', [['Goose', 35.5], ['mini-swe-agent', 29.8, 1], ['Terminus 2', 28.3, 1], ['Claude Code', 27.5, 1], ['OpenHands', 13.9, 1]]],
+  ['Gemini 2.5 Pro', 'Gemini CLI', [['Terminus 2', 32.6, 1], ['mini-swe-agent', 26.1, 1], ['Gemini CLI', 19.6, 1], ['OpenHands', 16.4, 1]]],
 ];
 class AhSpread extends Figure {
   build() {
@@ -120,7 +120,7 @@ class AhSpread extends Figure {
     S('circle', { cx: 154, cy: 0, r: 4, class: 'f-ink' }, key); S('text', { x: 164, y: 4, class: 't2', 'font-size': 10.5, text: 'verified' }, key);
     S('circle', { cx: 244, cy: 0, r: 4, class: 'f-panel s-ink3', 'stroke-width': 1.5 }, key); S('text', { x: 254, y: 4, class: 't2', 'font-size': 10.5, text: 'self-reported' }, key);
     S('text', { x: 578, y: 30, class: 't3', 'font-size': 10, 'text-anchor': 'end', text: 'spread' }, svg);
-    const tip = tooltip(svg);
+    const tip = this.tip = tooltip(svg);
     this.rows = TB2.map(([m, lab, hs], i) => {
       const y = 46 + i * 24;
       S('text', { x: 142, y: y + 4, class: 't2', 'font-size': 11, 'text-anchor': 'end', text: m }, svg);
@@ -137,6 +137,7 @@ class AhSpread extends Figure {
     });
     this.mode = 'all';
     pills(this, [['all', 'every row'], ['ver', 'verified only']], 'all', (m) => {
+      this.tip.hide();
       this.rows.forEach((r) => { r.from = r.cur; r.dots.forEach((d) => { d.from = d.a; }); }); this.mode = m; tween(this, (k) => this.place(k));
     });
     this.place(1);
@@ -144,15 +145,17 @@ class AhSpread extends Figure {
   place(k) {
     const only = this.mode === 'ver';
     this.rows.forEach((r) => {
-      const to = only ? r.ver : r.all, fr = r.from || to;
+      const to = only ? r.ver : r.all;
       r.dots.forEach((d) => {
         const vis = !only || d.ok;
         d.a = lerp(d.from, vis ? 1 : 0, k); op(d.c, d.a);
         d.hh.c.style.pointerEvents = vis ? 'all' : 'none';
       });
       if (!to) { op(r.span, 0); r.gap.textContent = 'none verified'; r.cur = null; return; }
+      // a row with no span before (no verified rows) grows its span from the middle
+      const mid = (to[0] + to[1]) / 2, fr = r.from || [mid, mid];
       const lo = lerp(fr[0], to[0], k), hi = lerp(fr[1], to[1], k);
-      attr(r.span, { x1: this.X(lo), x2: this.X(hi) }); op(r.span, 0.35);
+      attr(r.span, { x1: this.X(lo), x2: this.X(hi) }); op(r.span, r.from ? 0.35 : 0.35 * k);
       r.cur = [lo, hi];
       r.gap.textContent = to[1] > to[0] ? (to[1] - to[0]).toFixed(1) : '–';
     });
@@ -162,9 +165,9 @@ class AhSpread extends Figure {
 // ── fig 3 · what moves the score ───────────────────────────────────────────
 // Percentage points on Terminal-Bench. g: h = harness, e = reasoning effort, s = sampling, m = model generation.
 const LEVERS = [
-  ['h', 'switch harness, median of verified rows (TB 2.0)', 5.4],
+  ['h', 'best − worst verified harness, median model (TB 2.0)', 5.4],
   ['h', 'automated harness search, GPT-5.4 (AHE, TB 2.0)', 7.3],
-  ['h', 'switch harness, median of all rows (TB 2.0)', 11.6],
+  ['h', 'best − worst harness, all rows, median model (TB 2.0)', 11.7],
   ['h', 'Claude Code → Meta-Harness, Opus 4.6 (TB 2.0)', 18.4],
   ['e', 'GPT-6 Astra in Codex, low → max effort (TB 4.0)', 7.6],
   ['e', 'Opus 5 in Claude Code, low → xhigh effort (TB 4.0)', 19.1],
@@ -210,7 +213,7 @@ const NOW = [
   ['Muse Code', 0, [54.3, 'Muse Spark 1.3 max'], [14.55, 'Muse Spark 1.3 xhigh']],
   ['OpenCode', 1, [53.6, 'GLM-5.3 max'], null],
   ['Kimi Code CLI', 0, [51.9, 'Kimi K3'], null],
-  ['mini-SWE-agent', 1, null, [19.09, 'Gemini 3.8 Flash high']],
+  ['mini-swe-agent', 1, null, [19.09, 'Gemini 3.8 Flash high']],
 ];
 class AhBoard extends Figure {
   build() {
@@ -244,7 +247,7 @@ class AhBoard extends Figure {
       r.dp = d && d[0] % 0.1 > 1e-6 && 0.1 - d[0] % 0.1 > 1e-6 ? 2 : 1;
       if (now) { r.v = r.nv; r.y = r.ny; r.a = r.na; }
     });
-    this.rows.forEach((r) => { if (r.ny == null) { r.ny = 38 + i * 25; if (now) r.y = r.ny; } });
+    this.rows.forEach((r) => { if (r.ny == null) { r.ny = 38 + i++ * 25; if (now) r.y = r.ny; } });
   }
   place(k) {
     const gk = this.grow ?? 1;
@@ -279,7 +282,7 @@ class AhPair extends Figure {
     S('circle', { cx: 240, cy: 14, r: 4.5, class: 'f-ink' }, svg); S('text', { x: 250, y: 18, class: 't2', 'font-size': 10.5, text: "vendor's harness" }, svg);
     S('circle', { cx: 390, cy: 14, r: 4.5, class: 'f-panel s-green', 'stroke-width': 2 }, svg); S('text', { x: 400, y: 18, class: 't2', 'font-size': 10.5, text: 'mini-swe-agent' }, svg);
     S('text', { x: 584, y: 30, class: 't3', 'font-size': 10, 'text-anchor': 'end', text: 'mini − vendor' }, svg);
-    const tip = tooltip(svg);
+    const tip = this.tip = tooltip(svg);
     this.groups = {};
     for (const m in PAIR) {
       const g = S('g', { opacity: m === 'tb' ? 1 : 0 }, svg), hs = [];
@@ -290,13 +293,15 @@ class AhPair extends Figure {
         S('circle', { cx: this.X(v), cy: y, r: 4.5, class: 'f-ink' }, g);
         S('circle', { cx: this.X(s), cy: y, r: 4.5, class: 'f-panel s-green', 'stroke-width': 2 }, g);
         S('text', { x: 584, y: y + 4, class: 't', 'font-size': 10.5, 'text-anchor': 'end', text: (d > 0 ? '+' : '') + d.toFixed(1), style: d > 0 ? 'fill:var(--green-t)' : '' }, g);
-        hs.push(hit(g, tip, this.X(v), y, `${n} in ${h}`, v + '%'), hit(g, tip, this.X(s), y, `${n} in mini-swe-agent`, s + '%'));
+        // dots closer than a hit radius share one label, so neither covers the other
+        if (Math.abs(this.X(s) - this.X(v)) < 14) hs.push(hit(g, tip, (this.X(v) + this.X(s)) / 2, y, n, `${h} ${v}% · mini-swe-agent ${s}%`));
+        else hs.push(hit(g, tip, this.X(v), y, `${n} in ${h}`, v + '%'), hit(g, tip, this.X(s), y, `${n} in mini-swe-agent`, s + '%'));
       });
       this.groups[m] = { g, hs };
     }
     this.cur = 'tb'; this.toggle();
     pills(this, [['tb', 'Terminal-Bench 4.0'], ['ds', 'DeepSWE']], 'tb', (m) => {
-      const from = this.cur; this.cur = m; this.toggle();
+      const from = this.cur; this.cur = m; this.toggle(); this.tip.hide();
       tween(this, (k) => { op(this.groups[from].g, from === m ? 1 : 1 - k); op(this.groups[m].g, from === m ? 1 : k); }, 500);
     });
   }
@@ -305,7 +310,7 @@ class AhPair extends Figure {
 
 // ── fig 6 · inside a harness ───────────────────────────────────────────────
 // Read from each project's source (Codex, Gemini CLI, opencode, mini-swe-agent) or docs (Claude Code), 2026-10-12.
-const WHO = ['Claude Code', 'Codex CLI', 'Gemini CLI', 'opencode', 'mini-SWE-agent'];
+const WHO = ['Claude Code', 'Codex CLI', 'Gemini CLI', 'OpenCode', 'mini-swe-agent'];
 const LAYERS = [
   ['extensions', 'what users can plug in', ['MCP, hooks, skills,\nplugins', 'MCP, hooks, skills, plugins,\napp-server', 'MCP, hooks, skills,\nextensions, ACP', 'MCP, plugins, skills, ACP', 'a YAML config file']],
   ['sandbox', 'what runs without asking, and where', ['seatbelt or bubblewrap; auto\nmode asks a classifier', 'seatbelt or landlock; 3 sandbox\nx 4 approval modes', 'docker, podman or seatbelt;\nplan and yolo modes', 'allow / ask / deny rules;\nno sandbox in core', 'docker or local; confirm\nor yolo']],
@@ -335,7 +340,6 @@ class AhAnatomy extends Figure {
       S('text', { x: 262, y, class: 't', 'font-size': 11, text: w }, svg);
       return [0, 1].map((j) => S('text', { x: 370, y: y + j * 16, class: 't2', 'font-size': 11 }, svg));
     });
-    this.idleText = 'interactive';
     pills(this, LAYERS.map(([n], i) => [i, n]), 5, (i) => this.pick(i));
     this.pick(5);
   }
@@ -358,7 +362,7 @@ const TREE = [
   [['Codex CLI', 'Codex SDK', 'l']],
   [['Gemini CLI', 'Qwen Code', 'f']],
   [['Terminus 2', 'Terminus-KIRA', 'f'], ['Terminus-KIRA', 'Meta-Harness', 'a']],
-  [['SWE-agent', 'mini-SWE-agent', 'f']],
+  [['SWE-agent', 'mini-swe-agent', 'f']],
   [['pi', 'OpenClaw', 'c']], [['', 'Letta Code', 'c']], [['', 'Kimi Code', 'c']],
   [['NexAU', 'NexAU-AHE', 'a']],
   [['LangGraph', 'Deep Agents', 'c'], ['Deep Agents', 'Deep Agents Code', 'c']],
@@ -394,7 +398,7 @@ class AhLineage extends Figure {
     const y = 46 + TREE.length * 28 + 8;
     S('line', { x1: 16, x2: 584, y1: y - 14, y2: y - 14, class: 's-rule', 'stroke-width': 1 }, svg);
     S('text', { x: 16, y, class: 'sl', 'font-size': 10, text: 'OWN LOOP, BORROWED MODEL CLIENT ONLY' }, svg);
-    [['LiteLLM', 'Aider, mini-SWE-agent, Terminus 2, OpenHands'], ['AI SDK providers', 'Cline, opencode'], ['pi-ai', 'Letta Code'],
+    [['LiteLLM', 'Aider, mini-swe-agent, Terminus 2, OpenHands'], ['AI SDK providers', 'Cline, OpenCode'], ['pi-ai', 'Letta Code'],
       ['own client', 'Claude Code, Codex, Gemini CLI, Vibe, Kimi Code']].forEach(([a, b], i) => {
       S('text', { x: 16, y: y + 20 + i * 17, class: 't', 'font-size': 11, text: a }, svg);
       S('text', { x: 150, y: y + 20 + i * 17, class: 't2', 'font-size': 11, text: b }, svg);
