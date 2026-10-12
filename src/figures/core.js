@@ -107,6 +107,31 @@ export function pills(fig, items, value, on) {
   return bar;
 }
 
+// ── hover labels ───────────────────────────────────────────────────────────
+// One floating label per figure; any dot can show it on hover or tap.
+export function tooltip(svg) {
+  const W = +svg.getAttribute('viewBox').split(' ')[2];
+  const g = S('g', { 'pointer-events': 'none', opacity: 0 }, svg);
+  const r = S('rect', { rx: 6, class: 'f-panel s-ink3', 'stroke-width': 1 }, g);
+  const t = [0, 1].map((i) => S('text', { class: i ? 't2' : 't', 'font-size': 11.5 }, g));
+  return {
+    show(x, y, a, b) {
+      t[0].textContent = a; t[1].textContent = b;
+      const w = Math.max(a.length, b.length) * 11.5 * CW + 16, left = x + w + 14 > W ? x - w - 12 : x + 12, top = Math.max(2, y - 46);
+      attr(r, { x: left, y: top, width: w, height: 40 }); attr(t[0], { x: left + 8, y: top + 16 }); attr(t[1], { x: left + 8, y: top + 32 });
+      svg.appendChild(g); op(g, 1);
+    },
+    hide() { op(g, 0); },
+  };
+}
+// an invisible, larger hit area around a dot, so small dots are easy to hover or tap
+export function hit(parent, tip, x, y, a, b) {
+  const c = S('circle', { cx: x, cy: y, r: 9, fill: 'none', 'pointer-events': 'all', style: 'cursor:pointer' }, parent);
+  const on = () => tip.show(x, y, a, b);
+  c.addEventListener('pointerenter', on); c.addEventListener('pointerdown', on); c.addEventListener('pointerleave', () => tip.hide());
+  return c;
+}
+
 export const ICON = {
   play: '<svg viewBox="0 0 12 12"><path d="M3 1.5v9l7.5-4.5z"/></svg>',
   pause: '<svg viewBox="0 0 12 12"><path d="M2.5 1.5h2.6v9H2.5zM6.9 1.5h2.6v9H6.9z"/></svg>',
