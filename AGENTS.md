@@ -45,6 +45,7 @@ Semantic versioning, driven by commit types through `commit-and-tag-version` (co
 - `src/styles/global.css`: tokens (light + dark), base, status bar. `src/styles/post.css`: article layout, prose, figure chrome, the svg class vocabulary.
 - `src/lib/site.ts`: site constants (name, author, `now` line, links) and date / reading-time helpers.
 - `public/katex/`: KaTeX css + woff2, linked only by posts with `math: true`.
+- `scripts/indexnow.mjs` and `public/<key>.txt`: after each deploy, posts changed in the push (plus the home page) are submitted to IndexNow for Bing and Yandex. The sitemap's `lastmod` comes from each post's `updated` or `date` (see `astro.config.mjs`). Google reads the sitemap on its own.
 - `docs/AUTHORING.md`: how to write a post and its figures. **Read it before touching a post.**
 - `docs/ai-writing-patterns-to-avoid.md`: the voice checklist. **Run its 60-second check on any prose you write.**
 

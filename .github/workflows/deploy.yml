@@ -36,3 +36,20 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  indexnow:
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Submit changed posts to IndexNow
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          # a manual run or a first push has no previous commit to diff against
+          if [ -z "$BEFORE" ] || ! git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then BEFORE=HEAD~1; fi
+          node scripts/indexnow.mjs $(git diff --name-only --diff-filter=AM "$BEFORE" HEAD)
