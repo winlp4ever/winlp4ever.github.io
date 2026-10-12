@@ -8,15 +8,17 @@ glyph: versus
 figures: 5
 ---
 
+So many models, products and benchmarks have come out since Mistral's last flagship that the wait feels like years. It has been ten months: Large 3 came out in December 2025.
+
 Mistral released Large 4 on 6 October as a public preview<sup><a href="#src-1">1</a></sup>. It's a mixture-of-experts model with about a trillion parameters, of which 49 billion are active for each token (52 billion counting the embedding and output layers)<sup><a href="#src-2">2</a></sup>. It reads text and images, takes up to a million tokens of context and costs $1.36 per million input tokens and $4.18 per million output tokens, at half price for the first two weeks<sup><a href="#src-3">3</a></sup>. Mistral trained it on about 3,800 Grace Blackwell GPUs in its own data centres in Europe. The weights are promised "by the end of the month"<sup><a href="#src-4">4</a></sup>, and no license has been named yet. Large 3 was Apache 2.0.
 
-It's the most interesting model Mistral has shipped in a long time, and it's late. **On Artificial Analysis's index it scores 38, a score the US labs first reached in March.**
+It's the most interesting model Mistral has shipped in a long time, a bit late though. **On Artificial Analysis's index it scores 38, a score the US labs first reached in March.**
 
 The numbers below come from Mistral's launch post and model card, Artificial Analysis, Vals, LMArena, the Terminal-Bench and SWE-bench leaderboards, and press and forum coverage, all read on 12 October 2026.
 
 ## nine to 38
 
-Large 3 came out in December 2025 and, as Simon Willison noted at launch, scored 9 on Artificial Analysis's Intelligence Index<sup><a href="#src-5">5</a></sup>, which combines a dozen evaluations into one number. Large 4 scores 38<sup><a href="#src-6">6</a></sup>. Artificial Analysis calls it "the most intelligent model outside the US and China"<sup><a href="#src-7">7</a></sup>.
+As Simon Willison noted at launch, Large 3 scored 9 on Artificial Analysis's Intelligence Index<sup><a href="#src-5">5</a></sup>, which combines a dozen evaluations into one number. Large 4 scores 38<sup><a href="#src-6">6</a></sup>. Artificial Analysis calls it "the most intelligent model outside the US and China"<sup><a href="#src-7">7</a></sup>.
 
 The model is bigger, from 675 billion parameters to about a trillion and from 41 billion active to 49. Mistral's post says the reinforcement learning run was "still in flight" at launch<sup><a href="#src-1">1</a></sup>, so the preview isn't the final model either, and The Register reports an update hinted at for about two months out<sup><a href="#src-8">8</a></sup>.
 
@@ -44,7 +46,9 @@ Against what ships today, the gap is twenty points. Claude Opus 5.5 scores 57.6,
 
 **When the weights ship, Large 4 will be the best open model from outside China**, and by a lot. On LMArena's text leaderboard, where people vote on answers side by side, it does worse: 115th with 1429 points, below Google's Gemma 4 31B<sup><a href="#src-10">10</a></sup>.
 
-## coding and agents
+## coding & agents
+
+When Mistral released its last flagship, the agentic era was only beginning. Now agents are the main use case, and the benchmarks every lab reports its models against are agent benchmarks.
 
 On Terminal-Bench 4.0, where an agent works through long tasks in a real terminal, Vals measured 22.7% for Large 4<sup><a href="#src-11">11</a></sup>. GLM-5.3 scores 38.9% on the same board, and Claude Opus 5.5 65.2%. On DeepSWE, Mistral's own chart puts Large 4 at 62, next to GLM-5.3 at 61 and behind Kimi K3 at 68<sup><a href="#src-1">1</a></sup>.
 
@@ -71,29 +75,31 @@ My guess is that most of the extra tokens go to reasoning and to longer agent ru
 
 ## the harness moves the score
 
-Mistral's chart says Large 4 scores 28.3% on Terminal-Bench 4.0. A footnote inside the chart image explains that these are "the numbers evaluated privately by Artificial Analysis ahead of the harness' public launch"<sup><a href="#src-1">1</a></sup>. Artificial Analysis's public run gives 26.8%, and Vals' gives 22.7%. Both run the same open-source agent, mini-swe-agent, on the same 66 tasks three times each. The known differences are a 500-step cap on Artificial Analysis's side and the sampling temperature<sup><a href="#src-13">13</a></sup>.
+Not long ago, changing the prompt could make a model's results drift a lot, which is one reason labs' own eval numbers so often differed from independent tests. In December 2023, Google launched Gemini Ultra with 90% on MMLU, ahead of GPT-4's 86.4%. Gemini's number came from 32 sampled chains of thought and a vote, and GPT-4's from five examples in the prompt. In the five-example setup, Gemini Ultra scored 83.7% and came second<sup><a href="#src-13">13</a></sup>.
+
+<figure>
+<ml-prompt data-fig data-label="fig 4 · the old version: prompting">
+<p class="fallback">MMLU scores from the Gemini technical report. With five examples in the prompt, GPT-4 scores 86.4% and Gemini Ultra 83.7%. With 32 sampled chains of thought and a vote, Gemini Ultra scores 90.04% and GPT-4 87.29%. The ranking flips with the method.</p>
+</ml-prompt>
+<figcaption><b>fig 4</b>Same two models, same test, and the prompting method decides which one wins. <span class="m">Gemini technical report v1, table 2<sup><a href="#src-13">13</a></sup>. GPT-4's chain-of-thought score is Google's own run through the API.</span></figcaption>
+</figure>
+
+The Hugging Face team found the same thing in 2023 with LLaMA-65B, which scored 63.7 on MMLU in one standard implementation and 48.8 in another<sup><a href="#src-14">14</a></sup>.
+
+Today's models are trained to keep that sensitivity to prompting to a minimum, but a new, larger factor has come into the equation: the harness, the program that runs the agent loop around the model and hands it tools. For an agent score the questions to ask are which harness ran it, with what step limit and on whose servers, and a lab's own number usually comes from the setup that suits its model best.
+
+Mistral's chart says Large 4 scores 28.3% on Terminal-Bench 4.0. A footnote inside the chart image explains that these are "the numbers evaluated privately by Artificial Analysis ahead of the harness' public launch"<sup><a href="#src-1">1</a></sup>. Artificial Analysis's public run gives 26.8%, and Vals' gives 22.7%. Both run the same open-source agent, mini-swe-agent, on the same 66 tasks three times each. The known differences are a 500-step cap on Artificial Analysis's side and the sampling temperature<sup><a href="#src-15">15</a></sup>.
 
 The other models move as much between boards. On the official Terminal-Bench leaderboard most labs submit their own agent (Claude Code for Anthropic, Codex for OpenAI, Grok Build for xAI; Alibaba's Qwen ran in Claude Code), while Artificial Analysis and Vals use mini-swe-agent for everyone.
 
 <figure class="wide">
-<ml-boards data-fig data-label="fig 4 · one benchmark, three boards">
+<ml-boards data-fig data-label="fig 5 · one benchmark, three boards">
 <p class="fallback">Terminal-Bench 4.0 scores on three leaderboards. Qwen3.8 Max: 27.0% in Claude Code on the official board, 38.9% on Artificial Analysis, 34.3% on Vals, a spread of 11.9 points. Grok 4.7: 37.6% in Grok Build, 25.8% and 28.8%, a spread of 11.8. Claude Fable 5.1: 57.9, 52.0, 58.1. Claude Opus 5.5: 64.9, 59.6, 65.2. GPT-6 Sol: 49.4, 43.9, 44.4. Mistral Large 4: no official entry, 26.8% on Artificial Analysis, 22.7% on Vals and 28.3% in Mistral's chart. GLM-5.3: 41.8, 41.9, 38.9. GPT-6.1 Sol: 58.2, 56.1, 55.1. Claude Sonnet 5.5: 61.8, 63.6, 64.1. GPT-6 Astra: 58.2, 59.1, 59.6. Gemini 3.8 Flash, run with mini-swe-agent on all three boards: 19.1, 19.7, 19.2, a spread of 0.6.</p>
 </ml-boards>
-<figcaption><b>fig 4</b>Qwen3.8 Max and Grok 4.7 move 12 points depending on who runs them. Gemini 3.8 Flash, run with the same agent everywhere, moves 0.6. <span class="m">Official Terminal-Bench 4.0 leaderboard<sup><a href="#src-14">14</a></sup>, Artificial Analysis<sup><a href="#src-6">6</a></sup> and Vals<sup><a href="#src-11">11</a></sup>, max effort where shown. Vals counts some Opus 5.5 and Fable 5.1 requests answered by older Claude models as theirs; without them Opus 5.5 drops to 58.1.</span></figcaption>
+<figcaption><b>fig 5</b>Qwen3.8 Max and Grok 4.7 move 12 points depending on who runs them. Gemini 3.8 Flash, run with the same agent everywhere, moves 0.6. <span class="m">Official Terminal-Bench 4.0 leaderboard<sup><a href="#src-16">16</a></sup>, Artificial Analysis<sup><a href="#src-6">6</a></sup> and Vals<sup><a href="#src-11">11</a></sup>, max effort where shown. Vals counts some Opus 5.5 and Fable 5.1 requests answered by older Claude models as theirs; without them Opus 5.5 drops to 58.1.</span></figcaption>
 </figure>
 
-**Qwen3.8 Max and Grok 4.7 move about 12 points depending on who runs them, while Gemini 3.8 Flash, run with the same agent on all three boards, moves 0.6.** The older Terminal-Bench 2.0 board has many agents per model. Claude Opus 4.6 scores 58.0% in Claude Code and 76.4% in Stanford's Meta-Harness<sup><a href="#src-14">14</a></sup>. On SWE-bench Verified, most frontier models score 4 to 7 points lower in the plain bash-only setup than in their lab's announcement<sup><a href="#src-15">15</a></sup>. The biggest gap belongs to Mistral's own coding model, Devstral 2: 72.2 in Mistral's announcement<sup><a href="#src-16">16</a></sup>, 53.8 bash-only. Epoch AI found that changing the agent alone moves GPT-5 by up to 11% and Kimi K2 Thinking by up to 15% on the same benchmark<sup><a href="#src-17">17</a></sup>.
-
-In December 2023 the same argument was about prompting. Google launched Gemini Ultra with 90% on MMLU, ahead of GPT-4's 86.4%. Gemini's number came from 32 sampled chains of thought and a vote, and GPT-4's from five examples in the prompt. In the five-example setup, Gemini Ultra scored 83.7% and came second<sup><a href="#src-18">18</a></sup>.
-
-<figure>
-<ml-prompt data-fig data-label="fig 5 · the old version: prompting">
-<p class="fallback">MMLU scores from the Gemini technical report. With five examples in the prompt, GPT-4 scores 86.4% and Gemini Ultra 83.7%. With 32 sampled chains of thought and a vote, Gemini Ultra scores 90.04% and GPT-4 87.29%. The ranking flips with the method.</p>
-</ml-prompt>
-<figcaption><b>fig 5</b>Same two models, same test, and the prompting method decides which one wins. <span class="m">Gemini technical report v1, table 2<sup><a href="#src-18">18</a></sup>. GPT-4's chain-of-thought score is Google's own run through the API.</span></figcaption>
-</figure>
-
-The Hugging Face team found the same thing in 2023 with LLaMA-65B, which scored 63.7 on MMLU in one standard implementation and 48.8 in another<sup><a href="#src-19">19</a></sup>. For an agent score today the equivalent questions are which agent ran it, with what step limit and on whose servers, and a lab's own number usually comes from the setup that suits its model best.
+**Qwen3.8 Max and Grok 4.7 move about 12 points depending on who runs them, while Gemini 3.8 Flash, run with the same agent on all three boards, moves 0.6.** The older Terminal-Bench 2.0 board has many agents per model. Claude Opus 4.6 scores 58.0% in Claude Code and 76.4% in Stanford's Meta-Harness<sup><a href="#src-16">16</a></sup>. On SWE-bench Verified, most frontier models score 4 to 7 points lower in the plain bash-only setup than in their lab's announcement<sup><a href="#src-17">17</a></sup>. The biggest gap belongs to Mistral's own coding model, Devstral 2: 72.2 in Mistral's announcement<sup><a href="#src-18">18</a></sup>, 53.8 bash-only. Epoch AI found that changing the agent alone moves GPT-5 by up to 11% and Kimi K2 Thinking by up to 15% on the same benchmark<sup><a href="#src-19">19</a></sup>.
 
 Mistral has its own agent, Vibe CLI, open source since December 2025<sup><a href="#src-20">20</a></sup>. It hasn't published Large 4 scores inside it, and nobody has compared Large 4 in Vibe against Claude Code or Codex yet.
 
@@ -120,13 +126,13 @@ On Hacker News the thread split between people calling it "good enough to use as
 <li id="src-10"><a href="https://arena.ai/leaderboard/text">LMArena, text leaderboard (updated 8 October 2026)</a></li>
 <li id="src-11"><a href="https://www.vals.ai/benchmarks/terminal-bench-4">Vals AI, Terminal-Bench 4.0 (updated 7 October 2026)</a></li>
 <li id="src-12"><a href="https://www.vals.ai/models/mistralai_mistral-large-4">Vals AI, Mistral Large 4 model page and Vals Index (read 12 October 2026)</a></li>
-<li id="src-13"><a href="https://artificialanalysis.ai/methodology/intelligence-benchmarking">Artificial Analysis, intelligence benchmarking methodology (read 12 October 2026)</a></li>
-<li id="src-14"><a href="https://www.tbench.ai/leaderboard">Terminal-Bench leaderboards, versions 2.0 and 4.0 (read 12 October 2026)</a></li>
-<li id="src-15"><a href="https://www.swebench.com/">SWE-bench, Verified leaderboard, bash-only entries (read 12 October 2026)</a></li>
-<li id="src-16"><a href="https://mistral.ai/news/devstral-2-vibe-cli">Mistral, Devstral 2 and Vibe CLI (9 December 2025)</a></li>
-<li id="src-17"><a href="https://epoch.ai/gradient-updates/why-benchmarking-is-hard">Epoch AI, Why benchmarking is hard (23 December 2025)</a></li>
-<li id="src-18"><a href="https://arxiv.org/abs/2312.11805">Gemini Team, Gemini: A Family of Highly Capable Multimodal Models, v1 (19 December 2023)</a></li>
-<li id="src-19"><a href="https://huggingface.co/blog/open-llm-leaderboard-mmlu">Hugging Face, What's going on with the Open LLM Leaderboard? (23 June 2023)</a></li>
+<li id="src-13"><a href="https://arxiv.org/abs/2312.11805">Gemini Team, Gemini: A Family of Highly Capable Multimodal Models, v1 (19 December 2023)</a></li>
+<li id="src-14"><a href="https://huggingface.co/blog/open-llm-leaderboard-mmlu">Hugging Face, What's going on with the Open LLM Leaderboard? (23 June 2023)</a></li>
+<li id="src-15"><a href="https://artificialanalysis.ai/methodology/intelligence-benchmarking">Artificial Analysis, intelligence benchmarking methodology (read 12 October 2026)</a></li>
+<li id="src-16"><a href="https://www.tbench.ai/leaderboard">Terminal-Bench leaderboards, versions 2.0 and 4.0 (read 12 October 2026)</a></li>
+<li id="src-17"><a href="https://www.swebench.com/">SWE-bench, Verified leaderboard, bash-only entries (read 12 October 2026)</a></li>
+<li id="src-18"><a href="https://mistral.ai/news/devstral-2-vibe-cli">Mistral, Devstral 2 and Vibe CLI (9 December 2025)</a></li>
+<li id="src-19"><a href="https://epoch.ai/gradient-updates/why-benchmarking-is-hard">Epoch AI, Why benchmarking is hard (23 December 2025)</a></li>
 <li id="src-20"><a href="https://github.com/mistralai/mistral-vibe">Mistral, mistral-vibe on GitHub (read 12 October 2026)</a></li>
 <li id="src-21"><a href="https://techcrunch.com/2026/09/08/mistral-raises-e3b-as-sovereign-ai-becomes-big-business/">TechCrunch, Mistral raises €3B as sovereign AI becomes big business (8 September 2026)</a></li>
 <li id="src-22"><a href="https://acteurspublics.fr/articles/le-ministere-des-armees-signe-un-accord-cadre-avec-le-champion-francais-de-lia-mistral/">Acteurs publics, Le ministère des Armées signe un accord-cadre avec Mistral (8 January 2026)</a></li>
