@@ -152,7 +152,9 @@ Meanwhile other labs benchmark their models in Claude Code. Z.ai evaluated GLM-5
 
 JetBrains surveyed more than 15,000 developers between May and July: 39% use Claude Code at work, up from 18% in January, and 16% use Codex, up from 3%. GitHub Copilot fell to 21% and Cursor to 12%<sup><a href="#src-56">56</a></sup>.
 
-If I had to pick one harness today it would be Claude Code with Opus 5.5 or Sonnet 5.5, which lead both current boards. Codex with GPT-6.1 Sol scores 6.7 points lower on Terminal-Bench 4.0, and its full run cost $634 against $4.7k for Opus 5.5 in Claude Code<sup><a href="#src-2">2</a></sup>.
+For a closed stack I'd pick Claude Code with Opus 5.5 or Sonnet 5.5, which lead both current boards. Codex with GPT-6.1 Sol scores 6.7 points lower on Terminal-Bench 4.0, and its full run cost $634 against $4.7k for Opus 5.5 in Claude Code<sup><a href="#src-2">2</a></sup>.
+
+For a fully open stack, with an open-source harness and open weights, I'd pick OpenCode with Z.ai's GLM-5.3. It is the best open pair on Artificial Analysis's index at 53.6, ahead of Moonshot's Kimi Code with Kimi K3 at 51.9 and Codex with DeepSeek V4 Pro at 43.1, and 14.8 points behind Claude Code's best<sup><a href="#src-17">17</a></sup>.
 
 <details class="sources">
 <summary>sources</summary>
