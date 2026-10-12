@@ -366,11 +366,12 @@ const TREE = [
   [['pi', 'OpenClaw', 'c']], [['', 'Letta Code', 'c']], [['', 'Kimi Code', 'c']],
   [['NexAU', 'NexAU-AHE', 'a']],
   [['LangGraph', 'Deep Agents', 'c'], ['Deep Agents', 'Deep Agents Code', 'c']],
+  [['OpenCode (Go)', 'Crush', 'f']],
 ];
 const EDGE = { l: ['s-green', null], f: ['s-ink', null], a: ['s-ink', '5 3'], c: ['s-ink3', '2 3'] };
 class AhLineage extends Figure {
   build() {
-    const svg = this.svgRoot(600, 416, 'Which coding harnesses are forks, libraries or components of other harnesses');
+    const svg = this.svgRoot(600, 444, 'Which coding harnesses are forks, libraries or components of other harnesses');
     const COL = [16, 216, 416], BW = 168;
     [['l', 'shipped as SDK'], ['f', 'fork / rewrite'], ['a', 'auto search'], ['c', 'built on']].forEach(([k, n], i) => {
       S('line', { x1: 16 + i * 146, x2: 40 + i * 146, y1: 14, y2: 14, class: EDGE[k][0], 'stroke-width': 2, 'stroke-dasharray': EDGE[k][1] }, svg);
