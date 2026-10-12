@@ -8,7 +8,7 @@ glyph: versus
 figures: 5
 ---
 
-So many models, products and benchmarks have come out since Mistral's last flagship that the wait feels like years. It has been ten months: Large 3 came out in December 2025.
+So many models, products and benchmarks have come out since Mistral's last flagship that the wait feels like years. It has only been ten months: Large 3 came out in December 2025.
 
 Mistral released Large 4 on 6 October as a public preview<sup><a href="#src-1">1</a></sup>. It's a mixture-of-experts model with about a trillion parameters, of which 49 billion are active for each token (52 billion counting the embedding and output layers)<sup><a href="#src-2">2</a></sup>. It reads text and images, takes up to a million tokens of context and costs $1.36 per million input tokens and $4.18 per million output tokens, at half price for the first two weeks<sup><a href="#src-3">3</a></sup>. Mistral trained it on about 3,800 Grace Blackwell GPUs in its own data centres in Europe. The weights are promised "by the end of the month"<sup><a href="#src-4">4</a></sup>, and no license has been named yet. Large 3 was Apache 2.0.
 
@@ -86,7 +86,7 @@ Not long ago, changing the prompt could make a model's results drift a lot, whic
 
 The Hugging Face team found the same thing in 2023 with LLaMA-65B, which scored 63.7 on MMLU in one standard implementation and 48.8 in another<sup><a href="#src-14">14</a></sup>.
 
-Today's models are trained to keep that sensitivity to prompting to a minimum, but a new, larger factor has come into the equation: the harness, the program that runs the agent loop around the model and hands it tools. For an agent score the questions to ask are which harness ran it, with what step limit and on whose servers, and a lab's own number usually comes from the setup that suits its model best.
+Today's models are trained to keep that sensitivity to prompting to a minimum, but a new, larger factor has come into the equation: the harness, the program that runs the agent loop around the model and hands it tools (hence the nonsense "loop engineering" buzzword). For an agent score the questions to ask are which harness ran it, with what step limit and on whose servers, and a lab's own number usually comes from the setup that suits its model best.
 
 Mistral's chart says Large 4 scores 28.3% on Terminal-Bench 4.0. A footnote inside the chart image explains that these are "the numbers evaluated privately by Artificial Analysis ahead of the harness' public launch"<sup><a href="#src-1">1</a></sup>. Artificial Analysis's public run gives 26.8%, and Vals' gives 22.7%. Both run the same open-source agent, mini-swe-agent, on the same 66 tasks three times each. The known differences are a 500-step cap on Artificial Analysis's side and the sampling temperature<sup><a href="#src-15">15</a></sup>.
 
