@@ -136,7 +136,7 @@ Downloads are a noisier signal. LangChain was installed 170 million times from P
 
 Production agents look different again. The Berkeley-led "Measuring Agents in Production" study interviewed 20 teams running agents in production: 17 built "custom in-house implementations with direct API calls", and two more had started on CrewAI and moved to their own code before shipping<sup><a href="#src-42">42</a></sup>. The teams gave three reasons: frameworks didn't fit their own infrastructure, "core agent loops are straightforward to implement directly", and some security rules ban external libraries. The same paper's survey of 29 deployed agents found 61% on a framework, so the split isn't settled, and nobody has compared framework-built and hand-written agents on the same tasks.
 
-**My take: prototype with whatever gets you there fastest, then ship a single agent on a small loop you own, or on a lab's SDK if you're committed to that lab's models.** A graph framework like LangGraph is worth it when the job needs state that survives long runs or steps where a person reviews the work, which is where its published production stories sit<sup><a href="#src-43">43</a></sup>. Anthropic's guide says the same: "the most successful implementations use simple, composable patterns rather than complex frameworks"<sup><a href="#src-44">44</a></sup>.
+**The evidence points to prototyping with whatever gets you there fastest, then shipping a single agent on a small loop you own, or on a lab's SDK if you're committed to that lab's models.** A graph framework like LangGraph is worth it when the job needs state that survives long runs or steps where a person reviews the work, which is where its published production stories sit<sup><a href="#src-43">43</a></sup>. Anthropic's guide says the same: "the most successful implementations use simple, composable patterns rather than complex frameworks"<sup><a href="#src-44">44</a></sup>.
 
 ## subscriptions and access
 
@@ -144,13 +144,13 @@ The labs now fight over which harness may use their models on a subscription. An
 
 OpenCode shows what this means for a harness that runs any model. It is built by Anomaly, the company behind the SST framework<sup><a href="#src-38">38</a></sup>, and many of its users signed in with Claude Pro and Max accounts. The day after Anthropic's January block, OpenCode 1.1.11 added sign-in with ChatGPT and Codex accounts<sup><a href="#src-50">50</a></sup>. In March a pull request titled "anthropic legal requests" removed Claude sign-in from the code<sup><a href="#src-51">51</a></sup>, and Claude models now need an API key there.
 
-OpenAI went the other way. It publishes the Codex CLI, app server and SDK as open source<sup><a href="#src-10">10</a></sup>, and added "Sign in with ChatGPT" so third-party apps can use a ChatGPT plan<sup><a href="#src-52">52</a></sup>.
+Claude Code itself is closed source: its public GitHub repository holds the changelog, issues and plugins, and its license reads "All rights reserved"<sup><a href="#src-52">52</a></sup>. OpenAI went the other way. It publishes the Codex CLI, app server and SDK as open source<sup><a href="#src-10">10</a></sup>, and added "Sign in with ChatGPT" so third-party apps can use a ChatGPT plan<sup><a href="#src-53">53</a></sup>.
 
-Meanwhile other labs benchmark their models in Claude Code. Z.ai evaluated GLM-5.3 "in Claude Code 2.1.207" on most of its agent benchmarks<sup><a href="#src-53">53</a></sup>, and its docs show how to point Claude Code at Z.ai's endpoint<sup><a href="#src-54">54</a></sup>. MiniMax and Qwen report results in Claude Code as well.
+Meanwhile other labs benchmark their models in Claude Code. Z.ai evaluated GLM-5.3 "in Claude Code 2.1.207" on most of its agent benchmarks<sup><a href="#src-54">54</a></sup>, and its docs show how to point Claude Code at Z.ai's endpoint<sup><a href="#src-55">55</a></sup>. MiniMax and Qwen report results in Claude Code as well.
 
 ## my pick
 
-JetBrains surveyed more than 15,000 developers between May and July: 39% use Claude Code at work, up from 18% in January, and 16% use Codex, up from 3%. GitHub Copilot fell to 21% and Cursor to 12%<sup><a href="#src-55">55</a></sup>.
+JetBrains surveyed more than 15,000 developers between May and July: 39% use Claude Code at work, up from 18% in January, and 16% use Codex, up from 3%. GitHub Copilot fell to 21% and Cursor to 12%<sup><a href="#src-56">56</a></sup>.
 
 If I had to pick one harness today it would be Claude Code with Opus 5.5 or Sonnet 5.5, which lead both current boards. Codex with GPT-6.1 Sol scores 6.7 points lower on Terminal-Bench 4.0, and its full run cost $634 against $4.7k for Opus 5.5 in Claude Code<sup><a href="#src-2">2</a></sup>.
 
@@ -208,9 +208,10 @@ If I had to pick one harness today it would be Claude Code with Opus 5.5 or Sonn
 <li id="src-49"><a href="https://www.theregister.com/ai-ml/2026/05/20/bye-bye-gemini-cli-google-nudges-devs-toward-antigravity/5243605">The Register, Bye bye Gemini CLI: Google nudges devs toward Antigravity (20 May 2026)</a></li>
 <li id="src-50"><a href="https://github.com/anomalyco/opencode/releases/tag/v1.1.11">OpenCode, v1.1.11 release notes (10 January 2026)</a></li>
 <li id="src-51"><a href="https://github.com/anomalyco/opencode/pull/18186">OpenCode, pull request #18186, anthropic legal requests (merged 19 March 2026)</a></li>
-<li id="src-52"><a href="https://thenewstack.io/sign-in-with-chatgpt/">The New Stack, Sign in with ChatGPT (2026)</a></li>
-<li id="src-53"><a href="https://huggingface.co/zai-org/GLM-5.3">Z.ai, GLM-5.3 model card (25 August 2026)</a></li>
-<li id="src-54"><a href="https://docs.z.ai/devpack/tool/claude">Z.ai docs, Claude Code (read 12 October 2026)</a></li>
-<li id="src-55"><a href="https://blog.jetbrains.com/research/2026/08/ai-coding-agent-adoption-2026/">JetBrains Research, AI coding agent adoption in 2026 (August 2026)</a></li>
+<li id="src-52"><a href="https://github.com/anthropics/claude-code/blob/main/LICENSE.md">Anthropic, claude-code repository license (read 12 October 2026)</a></li>
+<li id="src-53"><a href="https://thenewstack.io/sign-in-with-chatgpt/">The New Stack, Sign in with ChatGPT (2026)</a></li>
+<li id="src-54"><a href="https://huggingface.co/zai-org/GLM-5.3">Z.ai, GLM-5.3 model card (25 August 2026)</a></li>
+<li id="src-55"><a href="https://docs.z.ai/devpack/tool/claude">Z.ai docs, Claude Code (read 12 October 2026)</a></li>
+<li id="src-56"><a href="https://blog.jetbrains.com/research/2026/08/ai-coding-agent-adoption-2026/">JetBrains Research, AI coding agent adoption in 2026 (August 2026)</a></li>
 </ol>
 </details>
