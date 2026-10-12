@@ -1,11 +1,13 @@
 export const SITE = {
   url: 'https://quanglee.dev',
   name: 'field notes',
-  author: 'Ha-Quang Le',
+  author: 'quanglee',
+  // full name, kept in structured data so search engines can tie the handle to the person
+  fullName: 'Ha-Quang Le',
   role: 'lead ai engineer',
   city: 'paris',
   description:
-    'Interactive, long-form writing on AI systems, infrastructure and algorithms by Ha-Quang Le, lead AI engineer in Paris.',
+    'Interactive, long-form writing on AI systems, infrastructure and algorithms by quanglee, lead AI engineer in Paris.',
   now: 'writing about AI and formal math',
   email: 'quang@dim0.net',
   github: 'https://github.com/winlp4ever',

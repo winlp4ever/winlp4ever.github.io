@@ -25,7 +25,7 @@ const jsonld = {
   datePublished: isoDate(d.date),
   dateModified: isoDate(d.updated ?? d.date),
   image: `${SITE.url}/og-default.png`,
-  author: { '@type': 'Person', name: SITE.author, url: SITE.url },
+  author: { '@type': 'Person', name: SITE.author, alternateName: SITE.fullName, url: SITE.url },
   keywords: d.tags.join(', '),
   url: `${SITE.url}/blog/${post.id}/`,
   inLanguage: 'en',
