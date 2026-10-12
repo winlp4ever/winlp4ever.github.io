@@ -5,7 +5,7 @@ import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
 
 export default defineConfig({
-  site: 'https://winlp4ever.github.io',
+  site: 'https://quanglee.dev',
   // every page is served as /path/ on GitHub Pages; links and canonicals use the same form
   trailingSlash: 'always',
   integrations: [sitemap()],

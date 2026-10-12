@@ -1,5 +1,5 @@
 export const SITE = {
-  url: 'https://winlp4ever.github.io',
+  url: 'https://quanglee.dev',
   name: 'field notes',
   author: 'Ha-Quang Le',
   role: 'lead ai engineer',

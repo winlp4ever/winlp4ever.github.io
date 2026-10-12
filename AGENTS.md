@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Instructions for coding agents (and humans) working on **field notes**, Ha-Quang Le's blog at https://winlp4ever.github.io. Each post is long-form prose with live, interactive figures, and the site stays as light as a plain text page.
+Instructions for coding agents (and humans) working on **field notes**, Ha-Quang Le's blog at https://quanglee.dev. Each post is long-form prose with live, interactive figures, and the site stays as light as a plain text page.
 
 ## Commands
 
