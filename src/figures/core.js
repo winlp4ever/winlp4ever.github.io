@@ -86,7 +86,7 @@ export const keyframes = (t, kf) => {
 
 // static charts: draw at k = 0..1 once, the first time they're on screen
 export function entrance(fig, paint, ms = 900) {
-  fig.idleText = 'static';
+  fig.idleText = fig.idleText || 'static'; // a figure with toggles keeps 'interactive'
   paint(STILL || REDUCED ? 1 : 0);
   fig.onVisible = (v) => {
     if (!v || fig._shown) return; fig._shown = true;
@@ -98,6 +98,7 @@ export function entrance(fig, paint, ms = 900) {
 }
 // a row of toggle pills in the figure's control bar (created on first use)
 export function pills(fig, items, value, on) {
+  fig.idleText = 'interactive';
   const bar = fig.querySelector('.fc') || H('div', { class: 'fc' }, fig);
   const btns = items.map(([v, label]) => {
     const b = H('button', { class: 'pill', type: 'button', text: label, 'aria-pressed': String(v === value) }, bar);
@@ -105,6 +106,47 @@ export function pills(fig, items, value, on) {
     return b;
   });
   return bar;
+}
+
+// ── hover labels ───────────────────────────────────────────────────────────
+// One floating label per figure; any dot can show it on hover or tap.
+export function tooltip(svg) {
+  const W = +svg.getAttribute('viewBox').split(' ')[2];
+  const g = S('g', { 'pointer-events': 'none', opacity: 0 }, svg);
+  const r = S('rect', { rx: 6, class: 'f-panel s-ink3', 'stroke-width': 1 }, g);
+  const t = [0, 1].map((i) => S('text', { class: i ? 't2' : 't', 'font-size': 11.5 }, g));
+  const tip = {
+    show(x, y, a, b) {
+      t[0].textContent = a; t[1].textContent = b;
+      const w = Math.max(a.length, b.length) * 11.5 * CW + 16, left = x + w + 14 > W ? x - w - 12 : x + 12, top = Math.max(2, y - 46);
+      attr(r, { x: left, y: top, width: w, height: 40 }); attr(t[0], { x: left + 8, y: top + 16 }); attr(t[1], { x: left + 8, y: top + 32 });
+      svg.appendChild(g); op(g, 1);
+    },
+    hide() { op(g, 0); },
+  };
+  // a tap on empty space closes a label opened by a tap (touch has no pointerleave to do it)
+  svg.addEventListener('pointerdown', () => tip.hide());
+  return tip;
+}
+// an invisible, larger hit area around a dot, so small dots are easy to hover or tap.
+// Returns a handle; move() repositions it for dots that animate.
+export function hit(parent, tip, x, y, a, b) {
+  const c = S('circle', { cx: x, cy: y, r: 9, fill: 'none', 'pointer-events': 'all', style: 'cursor:pointer' }, parent);
+  const h = { c, x, y, a, b, move(nx, ny) { h.x = nx; h.y = ny; attr(c, { cx: nx, cy: ny }); } };
+  const on = () => tip.show(h.x, h.y, h.a, h.b);
+  c.addEventListener('pointerenter', on);
+  c.addEventListener('pointerdown', (e) => { e.stopPropagation(); on(); });
+  // touch browsers fire pointerleave right after the finger lifts; keep the label until the next tap
+  c.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') tip.hide(); });
+  return h;
+}
+// tween a paint(k) function from 0 to 1, for toggles after the entrance
+export function tween(fig, paint, ms = 600) {
+  if (STILL || REDUCED) return paint(1);
+  cancelAnimationFrame(fig._tw);
+  const t0 = performance.now();
+  const f = (now) => { const k = clamp((now - t0) / ms); paint(ease(k)); if (k < 1) fig._tw = requestAnimationFrame(f); };
+  fig._tw = requestAnimationFrame(f);
 }
 
 export const ICON = {

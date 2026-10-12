@@ -1,6 +1,6 @@
 // Figures for "Messi in numbers".
 // Sources are in each figure's caption; the research notes are in ~/workspace/blog/my-blog/reports.
-import { S, attr, op, seg, inout, ease, clamp, handArrow, CW, REDUCED, STILL, Figure, define, entrance, pills } from './core.js';
+import { S, attr, op, seg, inout, clamp, handArrow, Figure, define, entrance, pills, tooltip, hit, tween } from './core.js';
 
 const bar = (parent, cls, a = {}) => S('rect', { rx: 2, class: cls, ...a }, parent);
 // labelled horizontal bars that grow in; rows are [label, value, highlight]
@@ -58,30 +58,6 @@ class MsAge extends Figure {
   }
 }
 
-// ── hover labels ───────────────────────────────────────────────────────────
-// One floating label per figure; any dot can show it on hover or tap.
-function tooltip(svg) {
-  const W = +svg.getAttribute('viewBox').split(' ')[2];
-  const g = S('g', { 'pointer-events': 'none', opacity: 0 }, svg);
-  const r = S('rect', { rx: 6, class: 'f-panel s-ink3', 'stroke-width': 1 }, g);
-  const t = [0, 1].map((i) => S('text', { class: i ? 't2' : 't', 'font-size': 11.5 }, g));
-  return {
-    show(x, y, a, b) {
-      t[0].textContent = a; t[1].textContent = b;
-      const w = Math.max(a.length, b.length) * 11.5 * CW + 16, left = x + w + 14 > W ? x - w - 12 : x + 12, top = Math.max(2, y - 46);
-      attr(r, { x: left, y: top, width: w, height: 40 }); attr(t[0], { x: left + 8, y: top + 16 }); attr(t[1], { x: left + 8, y: top + 32 });
-      svg.appendChild(g); op(g, 1);
-    },
-    hide() { op(g, 0); },
-  };
-}
-// an invisible, larger hit area around a dot, so small dots are easy to hover or tap
-function hit(parent, tip, x, y, a, b) {
-  const c = S('circle', { cx: x, cy: y, r: 9, fill: 'none', 'pointer-events': 'all', style: 'cursor:pointer' }, parent);
-  const on = () => tip.show(x, y, a, b);
-  c.addEventListener('pointerenter', on); c.addEventListener('pointerdown', on); c.addEventListener('pointerleave', () => tip.hide());
-  return c;
-}
 // shared scatter frame: axes, ticks and lines of equal goals + assists
 function frame(g, c, X, Y, x0, x1, y0, y1) {
   c.iso.forEach((s) => {
@@ -96,11 +72,6 @@ function frame(g, c, X, Y, x0, x1, y0, y1) {
   S('text', { x: x1, y: y0 - 6, class: 't2', 'font-size': 11, 'text-anchor': 'end', text: c.xl }, g);
   S('text', { x: x0 + 4, y: y1 - 6, class: 't2', 'font-size': 11, text: c.yl }, g);
 }
-const tween = (fig, paint, ms) => {
-  if (STILL || REDUCED) return paint(1);
-  const t0 = performance.now(), f = (now) => { const k = clamp((now - t0) / ms); paint(ease(k)); if (k < 1) fig._tw = requestAnimationFrame(f); };
-  cancelAnimationFrame(fig._tw); fig._tw = requestAnimationFrame(f);
-};
 
 // ── fig 1 · scorers and creators, two views ────────────────────────────────
 // top-5 leagues, every season each player played there, FBref (Opta) via Wayback snapshots
