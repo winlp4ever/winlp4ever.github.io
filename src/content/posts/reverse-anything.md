@@ -8,7 +8,7 @@ glyph: search
 figures: 5
 ---
 
-REA, short for "Reverse Engineer Anything", is all over the internet this week. It has 148,000 GitHub stars, most of them collected in a single week<sup><a href="#src-1">1</a></sup>. The quick explainer: it wraps your coding agent around the reverse-engineering tools that already exist, so the agent can open an app without its source code, work out how a feature works and build its own version. Does it really work? Sort of, and also not really.
+[REA](https://github.com/morluto/rea), short for "Reverse Engineer Anything", is all over the internet this week. It has 148,000 GitHub stars, most of them collected in a single week<sup><a href="#src-1">1</a></sup>. The quick explainer: it wraps your coding agent around the reverse-engineering tools that already exist, so the agent can open an app without its source code, work out how a feature works and build its own version. Does it really work? Sort of, and also not really.
 
 If it worked on any app, a lot of software would stop being worth buying. In practice it does reverse some things. **On apps of even moderate complexity it falls short quickly, and for a tool that promises to reverse any binary, the agents using it go looking for the original source, or someone else's decompilation, whenever there is one to find.**
 
