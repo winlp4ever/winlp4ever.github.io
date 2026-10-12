@@ -4,24 +4,25 @@ import { S, attr, op, lerp, ease, seg, keyframes, critter, handArrow, Figure, de
 
 // ── fig 1 · what REA does in the loop ──────────────────────────────────────
 const BOX = {
-  app: [20, 120, 104, 60, 'the app', 'binary, bundle, APK'],
+  app: [20, 120, 104, 60, 'the app', 'exe, APK, JS'],
   rea: [150, 34, 146, 232, 'REA', 'MCP server, no model'],
   ev: [322, 34, 128, 120, 'evidence', ''],
   agent: [322, 192, 128, 74, 'your agent', 'Claude Code, Codex'],
   build: [472, 192, 110, 74, 'your rebuild', ''],
   check: [472, 34, 110, 120, 'the check', 'same output?'],
 };
-const TOOLS = ['Ghidra · IDA · Hopper', 'JADX · apktool · adb', 'DevTools · mitmproxy', 'Frida · Binwalk'];
+const TOOLS = ['Ghidra, IDA, Hopper', 'JADX, apktool, adb', 'DevTools, mitmproxy', 'Frida, Binwalk'];
 const EVID = [['E1', 'observed'], ['E2', 'inferred'], ['E3', 'unknown']];
-const mid = (k) => { const b = BOX[k]; return [b[0] + b[2] / 2, b[1] + b[3] / 2 + 10]; };
+// where the critter stands in each box: the top-right corner, clear of the box's text
+const spot = (k) => { const b = BOX[k]; return [b[0] + b[2] - 34, b[1] + (k === 'check' ? 46 : 10)]; };
 // [time, box the work is in, caption]
 const STEPS = [
-  [0, 'app', 'the target: a binary, an Electron bundle or an APK'],
-  [1.6, 'rea', 'REA runs the existing tools on it; it has no model of its own'],
-  [3.4, 'ev', 'it returns evidence, each item marked observed, inferred or unknown'],
-  [5.2, 'agent', 'your agent reads the evidence and writes code'],
+  [0, 'app', 'the target: a binary, a JS bundle or an APK'],
+  [1.6, 'rea', 'REA runs the existing tools; it has no model'],
+  [3.4, 'ev', 'evidence: observed, inferred or unknown'],
+  [5.2, 'agent', 'your agent reads it and writes code'],
   [6.8, 'build', 'the rebuild'],
-  [8.2, 'check', 'checked against the original: 2 of 54 checks differ'],
+  [8.2, 'check', 'compared with the original: 2 of 54 differ'],
   [9.8, 'agent', 'the agent fixes them'],
   [11.2, 'build', 'the rebuild, again'],
   [12.4, 'check', 'every check matches'],
@@ -30,10 +31,11 @@ class RvLoop extends Figure {
   constructor() { super(); this.duration = 14.5; this.poster = 14.5; }
   build() {
     const svg = this.svgRoot(600, 318, 'How REA sits between an app, the reverse-engineering tools and your coding agent');
-    // arrows between the boxes, drawn first so they pass under the boxes
-    [['app', 'rea'], ['rea', 'ev'], ['ev', 'agent'], ['agent', 'build'], ['build', 'check']].forEach(([a, b]) => {
-      const [x1, y1] = mid(a), [x2, y2] = mid(b);
-      S('line', { x1, y1, x2, y2, class: 's-rule', 'stroke-width': 1.5, 'stroke-dasharray': '3 3' }, svg);
+    // arrows from edge to edge; the last one is the fix loop from the check back to the agent
+    [[124, 150, 148, 150], [296, 94, 320, 94], [386, 154, 386, 190], [450, 229, 470, 229], [527, 192, 527, 156], [472, 146, 452, 200, 'fix']].forEach(([x1, y1, x2, y2, n]) => {
+      const a = Math.atan2(y2 - y1, x2 - x1), h = 6;
+      S('path', { d: `M${x1} ${y1}L${x2} ${y2}M${x2 - h * Math.cos(a - 0.5)} ${y2 - h * Math.sin(a - 0.5)}L${x2} ${y2}L${x2 - h * Math.cos(a + 0.5)} ${y2 - h * Math.sin(a + 0.5)}`, class: 'f-none ' + (n ? 's-ochre' : 's-ink3'), 'stroke-width': 1.5, 'stroke-dasharray': n ? '3 3' : null }, svg);
+      if (n) S('text', { x: 455, y: 184, class: 't3', 'font-size': 10, 'text-anchor': 'end', text: n }, svg);
     });
     this.boxes = {};
     for (const k in BOX) {
@@ -69,15 +71,16 @@ class RvLoop extends Figure {
     let i = 0; STEPS.forEach((s, j) => { if (s[0] <= t) i = j; });
     const [t0, k] = STEPS[i], nx = STEPS[i + 1];
     // the critter walks to the next box during the last 0.6 s of each step
-    const [ax, ay] = mid(k), [bx, by] = nx ? mid(nx[1]) : [ax, ay];
+    const [ax, ay] = spot(k), [bx, by] = nx ? spot(nx[1]) : [ax, ay];
     const m = nx ? ease(seg(t, nx[0] - 0.6, nx[0])) : 0;
-    attr(this.who, { transform: `translate(${(lerp(ax, bx, m) - 13).toFixed(1)} ${(lerp(ay, by, m) + 4).toFixed(1)})` });
+    attr(this.who, { transform: `translate(${lerp(ax, bx, m).toFixed(1)} ${(lerp(ay, by, m) + 7).toFixed(1)})` });
     for (const b in this.boxes) attr(this.boxes[b], { class: b === k ? 'f-panel s-green' : 'f-panel s-rule', 'stroke-width': b === k ? 2 : 1.2 });
-    this.ev.forEach((g, j) => op(g, t < 3.4 ? 0.25 : keyframes(t, [[3.4 + j * 0.3, 0.25], [3.7 + j * 0.3, 1]])));
+    this.ev.forEach((g, j) => op(g, keyframes(t, [[3.4 + j * 0.3, 0.25], [3.7 + j * 0.3, 1]])));
     this.cap.textContent = STEPS[i][2];
     const v = t >= 12.4 ? '✓ match' : t >= 8.2 && t < 9.8 ? '✗ 2 of 54' : t >= 9.8 ? '…' : '';
     if (this.verdict.textContent !== v) this.verdict.textContent = v;
-    this.verdict.style.fill = v.startsWith('✓') ? 'var(--green-t)' : v.startsWith('✗') ? 'var(--ochre-t)' : '';
+    this.verdict.setAttribute('class', v.startsWith('✓') ? 't f-green-t' : 't');
+    this.verdict.style.fill = v.startsWith('✗') ? 'var(--ochre-t)' : ''; // no ochre text class exists
   }
 }
 
@@ -200,17 +203,18 @@ class RvSize extends Figure {
       S('line', { x1: 80, x2: 400, y1: Y(v), y2: Y(v), class: 's-rule', 'stroke-width': 1 }, svg);
       S('text', { x: 72, y: Y(v) + 4, class: 't3', 'font-size': 11, 'text-anchor': 'end', text: v + '%' }, svg);
     });
-    [['small', 'under ~10k lines'], ['medium', '~10k to 1M'], ['large', 'over ~1M']].forEach(([a, b], i) => {
+    // the paper's bins: lines of code × (1 + runtime dependencies)
+    [['small', 'under 10k'], ['medium', '10k to 1M'], ['large', 'over 1M']].forEach(([a, b], i) => {
       S('text', { x: X[i], y: 258, class: 't', 'font-size': 11.5, 'text-anchor': 'middle', text: a }, svg);
       S('text', { x: X[i], y: 272, class: 't3', 'font-size': 10, 'text-anchor': 'middle', text: b }, svg);
     });
     S('rect', { x: X[1] - 40, y: 24, width: 80, height: 218, rx: 6, class: 'f-green', opacity: 0.08 }, svg);
-    S('text', { x: X[1], y: 20, class: 'hand', 'font-size': 13.5, 'text-anchor': 'middle', text: 'most real apps' }, svg);
+    S('text', { x: X[1], y: 20, class: 'hand', 'font-size': 13.5, 'text-anchor': 'middle', text: '143 of 200 programs' }, svg);
     this.lines = PB.map(([n, ...v], i) => {
       const top = i === 0, cls = top ? 's-green' : 's-ink3';
       const p = S('path', { class: 'f-none ' + cls, 'stroke-width': top ? 2.4 : 1.4 }, svg);
       const dots = v.map((_, j) => S('circle', { cx: X[j], r: top ? 4.5 : 3, class: top ? 'f-green' : 'f-ink3' }, svg));
-      const lab = S('text', { x: 394, y: [181, 170, 159, 196, 208][i], class: top ? 't' : 't3', 'font-size': 10.5, text: `${n} ${v[2]}%`, style: top ? 'fill:var(--green-t)' : '' }, svg);
+      const lab = S('text', { x: 394, y: [181, 170, 159, 196, 208][i], class: top ? 't f-green-t' : 't3', 'font-size': 10.5, text: `${n} ${v[2]}%` }, svg);
       return { p, dots, lab, v };
     });
     this.Y = Y; this.X = X;
@@ -242,7 +246,7 @@ class RvCheck extends Figure {
     const svg = this.svgRoot(600, 270, 'Rebuilds that had an exact automatic check, next to rebuilds that did not');
     this.rows = [];
     [[WITH, 16, 'WITH AN EXACT CHECK', 'f-green'], [WITHOUT, 308, 'WITHOUT ONE', 'f-ochre']].forEach(([list, x, title, cls]) => {
-      S('text', { x, y: 22, class: 'sl', 'font-size': 10.5, text: title, style: cls === 'f-green' ? 'fill:var(--green-t)' : 'fill:var(--ochre-t)' }, svg);
+      S('text', { x, y: 22, class: cls === 'f-green' ? 'sl f-green-t' : 'sl', 'font-size': 10.5, text: title, style: cls === 'f-green' ? null : 'fill:var(--ochre-t)' }, svg);
       list.forEach(([a, b, c], i) => {
         const g = S('g', { transform: `translate(${x} ${40 + i * 46})` }, svg);
         S('rect', { width: 276, height: 40, rx: 6, class: 'f-rule' }, g);
