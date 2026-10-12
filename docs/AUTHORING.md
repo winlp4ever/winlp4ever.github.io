@@ -6,7 +6,7 @@ Posts are Markdown in `src/content/posts/<slug>.md`. Live figures are custom ele
 
 ```yaml
 title: Sentence case title, no em-dashes
-date: 2026-04-30
+date: 2026-04-30           # add a UTC time (2026-04-30T18:00:00Z) when two posts share a day, so they sort
 updated: 2026-10-06          # optional, shows "revised"
 description: One or two plain sentences. Used as the dek, meta description, RSS and llms.txt.
 tags: [ai, llm]
@@ -40,7 +40,7 @@ Markup inside the Markdown (raw HTML block, blank lines around it):
 </figure>
 ```
 
-- Element names need a hyphen and must be unique across the site: prefix them with a short post code (`tf-`, `kv-`, `cost-`, `es-`, `lc-`, `site-`, `om-`, `ln-`, `ms-`, `ml-`, `ah-`).
+- Element names need a hyphen and must be unique across the site: prefix them with a short post code (`tf-`, `kv-`, `cost-`, `es-`, `lc-`, `site-`, `om-`, `ln-`, `ms-`, `ml-`, `ah-`, `rv-`).
 - Number figures in order; the label and the caption number must match.
 - Sidenotes: `<span class="sn">…</span>` inside a paragraph (margin note on wide screens, inline on phones).
 - A callout: `<div class="note"><span class="label">rule of thumb</span>…</div>` (use rarely).
