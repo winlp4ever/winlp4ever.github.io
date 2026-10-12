@@ -1,6 +1,6 @@
 ---
 title: Why buy anything if you can reverse anything?
-date: 2026-10-12
+date: 2026-10-12T20:00:00Z
 description: REA, "Reverse Engineer Anything", went from about 4,200 to 148,000 GitHub stars in a week. It connects coding agents to Ghidra, JADX and other reverse-engineering tools. Across 51 public attempts and three benchmarks, agents rebuild small features they can check, and nobody has shown a full rebuild of an app of real size.
 tags: [ai, agents, reverse-engineering]
 category: ai

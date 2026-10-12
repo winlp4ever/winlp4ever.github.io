@@ -6,7 +6,7 @@ Posts are Markdown in `src/content/posts/<slug>.md`. Live figures are custom ele
 
 ```yaml
 title: Sentence case title, no em-dashes
-date: 2026-04-30
+date: 2026-04-30           # add a UTC time (2026-04-30T18:00:00Z) when two posts share a day, so they sort
 updated: 2026-10-06          # optional, shows "revised"
 description: One or two plain sentences. Used as the dek, meta description, RSS and llms.txt.
 tags: [ai, llm]

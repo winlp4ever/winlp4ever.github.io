@@ -1,6 +1,6 @@
 ---
 title: The best agent harness is a while loop and a lot of upkeep
-date: 2026-10-12
+date: 2026-10-12T15:00:00Z
 description: Every coding agent is a model inside a harness, the program that runs the loop, the tools and the context. This post measures how much a harness adds on Terminal-Bench, which ones lead in October 2026, what the top ones share inside and what they are built on. Claude Code and Codex lead every current board, and mini-swe-agent, a 190-line harness, comes within a few points of them.
 tags: [ai, agents, benchmarks]
 category: ai
