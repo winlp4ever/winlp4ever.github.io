@@ -3,6 +3,7 @@ import { defineConfig } from 'astro/config'
 import sitemap from '@astrojs/sitemap'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
+import { unified } from '@astrojs/markdown-remark'
 import { readdirSync, readFileSync } from 'node:fs'
 
 // last change of each post (frontmatter `updated`, else `date`), so crawlers can tell new and edited posts apart
@@ -43,8 +44,10 @@ export default defineConfig({
       themes: { light: 'github-light', dark: 'github-dark' },
       defaultColor: false,
     },
-    // single $ is money on this blog, not math: only $$…$$ is parsed as LaTeX
-    remarkPlugins: [[remarkMath, { singleDollarTextMath: false }]],
-    rehypePlugins: [rehypeKatex],
+    processor: unified({
+      // single $ is money on this blog, not math: only $$…$$ is parsed as LaTeX
+      remarkPlugins: [[remarkMath, { singleDollarTextMath: false }]],
+      rehypePlugins: [rehypeKatex],
+    }),
   },
 })
