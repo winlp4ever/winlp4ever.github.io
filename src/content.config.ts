@@ -1,5 +1,6 @@
 import { defineCollection, z } from 'astro:content'
 import { glob } from 'astro/loaders'
+import { CATEGORY_IDS } from './lib/site'
 
 const posts = defineCollection({
   loader: glob({ pattern: '**/*.md', base: './src/content/posts' }),
@@ -9,7 +10,7 @@ const posts = defineCollection({
     updated: z.date().optional(),
     description: z.string(),
     tags: z.array(z.string()).default([]),
-    category: z.enum(['ai', 'code', 'games', 'notes']).default('notes'),
+    category: z.enum(CATEGORY_IDS).default('notes'),
     // small drawing used in the index; see components/Glyph.astro
     glyph: z.enum(['attention', 'kv', 'cost', 'dp', 'search', 'cursor', 'versus', 'graph', 'proof', 'outlier']).default('cursor'),
     // number of live figures, shown in listings
