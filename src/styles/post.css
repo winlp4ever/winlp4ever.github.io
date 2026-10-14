@@ -143,6 +143,8 @@
 .f-green { fill: var(--green); } .f-green-t { fill: var(--green-t); } .f-ochre { fill: var(--ochre); } .f-red { fill: var(--red); } .f-none { fill: none; }
 .s-ink { stroke: var(--ink); } .s-ink2 { stroke: var(--ink-2); } .s-ink3 { stroke: var(--ink-3); } .s-rule { stroke: var(--rule-2); }
 .s-green { stroke: var(--green); } .s-ochre { stroke: var(--ochre); } .s-red { stroke: var(--red); } .s-bg { stroke: var(--bg); }
+/* figures take the post's colour wherever they use green; ochre and red keep their meaning */
+[data-fig] { --green: var(--accent); --green-t: var(--accent-t); }
 .click { cursor: pointer; }
 
 /* end of article */
