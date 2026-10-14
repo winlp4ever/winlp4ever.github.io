@@ -4,7 +4,7 @@ date: 2025-07-15
 updated: 2026-10-06
 description: What I check first when an Elasticsearch cluster gets slow. Shards, segments, refreshes, and the profiling result that changed how we fetch ids.
 tags: [elasticsearch, infra, performance]
-category: infra
+category: code
 glyph: search
 figures: 6
 ---

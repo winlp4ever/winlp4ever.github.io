@@ -32,7 +32,7 @@ export const minutes = (body = '') => {
 
 export const CATEGORIES: Record<string, string> = {
   ai: 'ai systems',
-  infra: 'infra',
-  algo: 'algorithms',
+  code: 'code',
+  games: 'games',
   notes: 'notes',
 }

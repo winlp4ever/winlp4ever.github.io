@@ -17,6 +17,7 @@
 .back { font: 13px var(--mono); color: var(--ink-2); }
 .back:hover { color: var(--ink); }
 .kicker { font: 12.5px var(--mono); color: var(--ink-2); display: flex; gap: 6px 16px; flex-wrap: wrap; margin: 40px 0 0; }
+.kicker .cat { color: var(--accent-t); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); border-radius: 5px; padding: 0 7px; }
 .post-head h1 {
   font: 650 56px/1.02 var(--display); font-stretch: 78%; letter-spacing: -0.02em;
   margin: 18px 0 18px; text-wrap: balance;
@@ -27,7 +28,7 @@
 
 .toc { list-style: none; margin: 26px 0 8px; padding: 0; font: 13.5px/2 var(--mono); color: var(--ink-2); columns: 2; column-gap: 28px; counter-reset: s; }
 .toc li { counter-increment: s; break-inside: avoid; }
-.toc li::before { content: counter(s, decimal-leading-zero) '  '; color: var(--ink-3); }
+.toc li::before { content: counter(s, decimal-leading-zero) '  '; color: var(--accent-t); }
 .toc a:hover { color: var(--ink); }
 
 /* ── prose ───────────────────────────────────────────────────────────── */

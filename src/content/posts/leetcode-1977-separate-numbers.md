@@ -4,7 +4,7 @@ date: 2026-06-22
 updated: 2026-10-06
 description: A hard DP that's worth knowing, because it stacks three classics in one problem. Partition DP, prefix sums and an LCP table take it from O(n³) to O(n²).
 tags: [leetcode, dynamic-programming, algorithms]
-category: algo
+category: code
 glyph: dp
 figures: 5
 math: true
