@@ -18,14 +18,15 @@
     "release": "commit-and-tag-version"
   },
   "dependencies": {
+    "@astrojs/markdown-remark": "^7.3.2",
     "@astrojs/rss": "^4.0.19",
     "@astrojs/sitemap": "^3.7.4",
     "@fontsource-variable/hanken-grotesk": "^5.3.0",
     "@fontsource-variable/instrument-sans": "^5.3.0",
     "@fontsource-variable/jetbrains-mono": "^5.3.0",
     "@fontsource/architects-daughter": "^5.3.0",
-    "astro": "^6.1.9",
-    "katex": "^0.16.45",
+    "astro": "^7.3.8",
+    "katex": "^0.19.0",
     "rehype-katex": "^7.0.1",
     "remark-math": "^6.0.0"
   },
@@ -77,5 +78,8 @@
     "commitUrlFormat": "https://github.com/winlp4ever/winlp4ever.github.io/commit/{{hash}}",
     "compareUrlFormat": "https://github.com/winlp4ever/winlp4ever.github.io/compare/{{previousTag}}...{{currentTag}}",
     "issueUrlFormat": "https://github.com/winlp4ever/winlp4ever.github.io/issues/{{id}}"
+  },
+  "overrides": {
+    "katex": "$katex"
   }
 }
