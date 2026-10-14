@@ -14,15 +14,17 @@ interface Props {
   jsonld?: object
   reading?: { minutes: number; figures: number }
   noindex?: boolean
+  // post category; sets the accent colour for the whole page
+  cat?: string
 }
-const { title, description = SITE.description, home = false, type = 'website', jsonld, reading, noindex = false } = Astro.props
+const { title, description = SITE.description, home = false, type = 'website', jsonld, reading, noindex = false, cat } = Astro.props
 const fullTitle = title ? `${title} · ${SITE.author}` : `${SITE.author} · ${SITE.name}`
 const canonical = new URL(Astro.url.pathname, Astro.site)
 const nPub = (await published()).length
 const nDraft = await drafts()
 ---
 <!doctype html>
-<html lang="en">
+<html lang="en" data-cat={cat}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />

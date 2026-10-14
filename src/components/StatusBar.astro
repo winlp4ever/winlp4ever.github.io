@@ -9,7 +9,7 @@ const built = new Date().toISOString()
 <div class="bar" aria-hidden="true">
   {reading ? (
     <>
-      <span><i class="dot running"></i>reading</span>
+      <span><i class="dot"></i>reading</span>
       <span><span class="prog"><i id="prog"></i></span><span id="pct">0%</span></span>
       <span class="hide-s">{reading.minutes} min{reading.figures ? ` · ${reading.figures} figures` : ''}</span>
     </>

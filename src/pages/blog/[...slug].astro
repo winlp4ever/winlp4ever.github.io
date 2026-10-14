@@ -2,7 +2,7 @@
 import { render } from 'astro:content'
 import BaseLayout from '../../layouts/BaseLayout.astro'
 import Katex from '../../components/Katex.astro'
-import { SITE, frDate, isoDate, minutes } from '../../lib/site'
+import { SITE, CATEGORIES, frDate, isoDate, minutes } from '../../lib/site'
 import { published, type Post } from '../../lib/posts'
 import '@fontsource/architects-daughter/400.css'
 import '../../styles/post.css'
@@ -31,12 +31,13 @@ const jsonld = {
   inLanguage: 'en',
 }
 ---
-<BaseLayout title={d.title} description={d.description} type="article" jsonld={jsonld} reading={{ minutes: mins, figures: d.figures }}>
+<BaseLayout title={d.title} description={d.description} type="article" jsonld={jsonld} reading={{ minutes: mins, figures: d.figures }} cat={d.category}>
   {d.math && <Katex />}
   <article data-slug={post.id}>
     <header class="post-head measure">
       <a class="back" href="/">← {SITE.name}</a>
       <div class="kicker">
+        <span class="cat">{CATEGORIES[d.category]}</span>
         <time datetime={isoDate(d.date)}>{frDate(d.date)}</time>
         {d.updated && <span>revised {frDate(d.updated)}</span>}
         <span>{mins} min</span>

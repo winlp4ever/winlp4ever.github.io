@@ -30,9 +30,12 @@ export const minutes = (body = '') => {
   return Math.max(1, Math.round(words / 230))
 }
 
-export const CATEGORIES: Record<string, string> = {
+// one list for the schema, the filter chips and the accent colours (global.css [data-cat])
+export const CATEGORY_IDS = ['ai', 'code', 'games', 'notes'] as const
+export type Category = (typeof CATEGORY_IDS)[number]
+export const CATEGORIES: Record<Category, string> = {
   ai: 'ai systems',
-  infra: 'infra',
-  algo: 'algorithms',
+  code: 'code',
+  games: 'games',
   notes: 'notes',
 }

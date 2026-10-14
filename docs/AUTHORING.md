@@ -10,7 +10,7 @@ date: 2026-04-30           # add a UTC time (2026-04-30T18:00:00Z) when two post
 updated: 2026-10-06          # optional, shows "revised"
 description: One or two plain sentences. Used as the dek, meta description, RSS and llms.txt.
 tags: [ai, llm]
-category: ai                 # ai | infra | algo | notes   (home page filter)
+category: ai                 # ai | code | games | notes   (home filter and accent colour)
 glyph: kv                    # attention | kv | cost | dp | search | cursor | versus | graph | proof | outlier
 figures: 5                   # number of live figures
 math: true                   # only if the post uses $...$ (loads KaTeX css)

@@ -49,10 +49,10 @@ const jsonld = {
           <h2><svg viewBox="0 0 16 16"><path d="M2 13 L7 4 L9 8 L14 2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" /></svg>Latest, interactive</h2>
           {featured.data.figures > 0 && <span class="label">{featured.data.figures} figures · all running code</span>}
         </div>
-        <article class="feature">
+        <article class="feature" data-cat={featured.data.category}>
           <a class="stage" href={`/blog/${featured.id}/`} aria-label={`Open: ${featured.data.title}`}>
             <span class="x tl"></span><span class="x tr"></span><span class="x bl"></span><span class="x br"></span>
-            <div class="stage-h"><span>{featured.data.glyph === 'attention' ? 'FIG 5 · ATTENTION' : 'PREVIEW'}</span><span><i class="dot"></i>running</span></div>
+            <div class="stage-h"><span>{featured.data.glyph === 'attention' ? 'FIG 5 · ATTENTION' : 'PREVIEW'}</span><span><i class="dot running"></i>running</span></div>
             {featured.data.glyph === 'attention' ? <AttentionTeaser /> : <div class="big-glyph"><Glyph name={featured.data.glyph} size={140} /></div>}
           </a>
           <div class="copy">
@@ -68,15 +68,15 @@ const jsonld = {
     <div class="sect" id="writing">
       <h2><svg viewBox="0 0 16 16"><path d="M3 3h10M3 7h10M3 11h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" /></svg>Writing</h2>
       <div class="chips" role="group" aria-label="Filter posts">
-        <button class="chip" aria-pressed="true" data-f="all">all<span>{posts.length}</span></button>
+        <button class="chip" aria-pressed="true">all<span>{posts.length}</span></button>
         {Object.entries(CATEGORIES).filter(([c]) => counts[c] > 0).map(([c, label]) => (
-          <button class="chip" aria-pressed="false" data-f={c}>{label}<span>{counts[c]}</span></button>
+          <button class="chip" aria-pressed="false" data-cat={c}><i class="dot"></i>{label}<span>{counts[c]}</span></button>
         ))}
       </div>
     </div>
     <ol class="index">
       {posts.map((p, i) => (
-        <li class="row" data-t={p.data.category}>
+        <li class="row" data-cat={p.data.category}>
           <span class="n">{String(posts.length - i).padStart(2, '0')}</span>
           <span class="glyph"><Glyph name={p.data.glyph} /></span>
           <div>
@@ -189,7 +189,7 @@ const jsonld = {
   const chips = document.querySelectorAll<HTMLButtonElement>('.chip')
   chips.forEach((c) => c.addEventListener('click', () => {
     chips.forEach((o) => o.setAttribute('aria-pressed', String(o === c)))
-    document.querySelectorAll<HTMLElement>('.row').forEach((r) => { r.hidden = !(c.dataset.f === 'all' || r.dataset.t === c.dataset.f) })
+    document.querySelectorAll<HTMLElement>('.row').forEach((r) => { r.hidden = !(!c.dataset.cat || r.dataset.cat === c.dataset.cat) })
   }))
 </script>
 
@@ -232,6 +232,7 @@ const jsonld = {
   .chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .chip { font: 12px var(--mono); color: var(--ink-2); background: transparent; border: 1px solid var(--rule-2); border-radius: 999px; padding: 4px 11px; cursor: pointer; }
   .chip span { color: var(--ink-3); margin-left: 5px; }
+  .chip .dot { width: 6px; height: 6px; margin-right: 6px; }
   .chip[aria-pressed='true'] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
   .chip[aria-pressed='true'] span { color: inherit; opacity: 0.6; }
 
@@ -248,7 +249,7 @@ const jsonld = {
   .dek { color: var(--ink-2); font-size: 15.5px; line-height: 1.5; margin: 0; }
   .tags { display: flex; gap: 6px; margin-top: 9px; flex-wrap: wrap; }
   .tags .tag { position: static; font: 11px var(--mono); color: var(--ink-2); border: 1px solid var(--rule); border-radius: 5px; padding: 1px 6px; }
-  .tags .tag.live { color: var(--green-t); border-color: color-mix(in srgb, var(--green) 40%, transparent); }
+  .tags .tag.live { color: var(--accent-t); border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
   .tags .tag .dot { width: 5px; height: 5px; margin-right: 5px; }
   .meta { text-align: right; font: 12px/1.7 var(--mono); color: var(--ink-2); }
   .meta b { display: block; color: var(--ink); font-weight: 500; }
