@@ -10,7 +10,7 @@ figures: 3
 
 Today I read Anthropic's report on how employment is changing inside the company<sup><a href="#src-1">1</a></sup>. It's both interesting and a bit weird. Commits per engineer are at 5x their level of six months earlier, and in interactive sessions its agents log six times as many hours as the people running them. So I did some research on whether the rest of the industry is converging on this promise of xN productivity, which, by the way, frontier companies have made every six months or so, along with AGI.
 
-Make no mistake, I'm a tech and AI enthusiast and I truly believe AI is useful. But reality is often messier than the picture we paint in our heads, so let's take a look. **Coding agents make people write a lot more code. Finished work, shipped software and company results move much less, and review is where the extra code piles up.**
+I'm a tech and AI enthusiast, and I truly believe AI is useful. But reality is often messier than the picture we paint in our heads. **Coding agents let us write much more code. But what ships grows far less, and the review pile keeps getting bigger.**
 
 The numbers below come from two METR trials, three field experiments at large companies, telemetry from 725,938 engineers at 718 firms, a study of more than 500,000 GitHub developers, four 2026 papers on pull requests written by agents, and for the wider economy a survey of nearly 6,000 executives, Danish register data and a St. Louis Fed note, all read on 19 October 2026.
 
