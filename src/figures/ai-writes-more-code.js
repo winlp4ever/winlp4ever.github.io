@@ -186,7 +186,8 @@ class PdReview extends Figure {
       const bars = [[a, 'f-ink3', 0], [b, 'f-green', 1]].map(([v, cls, j]) => {
         const r = S('rect', { x: 20, y: y + 8 + j * 15, height: 12, rx: 2, class: cls }, svg);
         const t = S('text', { y: y + 18 + j * 15, class: j ? 't' : 't2', 'font-size': 11 }, svg);
-        return { r, t, w: W(v), s: fmt(v, u) };
+        t.textContent = fmt(v, u);
+        return { r, t, w: W(v) };
       });
       return bars;
     });
@@ -194,7 +195,7 @@ class PdReview extends Figure {
     S('path', { d: handArrow(208, 256, 20 + 32.7 / 84.4 * 300 + 58, 48 + 3 * 52 + 30, -0.2), class: 'f-none s-ink2', 'stroke-width': 1.3, 'stroke-linecap': 'round' }, svg);
     entrance(this, (k) => this.rows.forEach((bars, i) => bars.forEach((b, j) => {
       const kk = ease(seg(k, i * 0.1 + j * 0.15, i * 0.1 + j * 0.15 + 0.5));
-      b.r.setAttribute('width', lerp(0, b.w, kk)); b.t.setAttribute('x', 26 + lerp(0, b.w, kk)); b.t.textContent = b.s; op(b.t, kk);
+      b.r.setAttribute('width', lerp(0, b.w, kk)); b.t.setAttribute('x', 26 + lerp(0, b.w, kk)); op(b.t, kk);
     })));
   }
 }
@@ -258,20 +259,21 @@ class PdHiring extends Figure {
     });
     const step = d.step || 1, [y0, m0] = d.start;
     this.paths = d.rows.map(([n, cls, vals]) => {
-      const pts = vals.map((v, i) => [this.X(d.last && i === vals.length - 1 ? d.last : y0 + (m0 - 1 + i * step) / 12), Y(v)]);
+      const pts = vals.map((v, i) => [this.X(d.last && i === vals.length - 1 ? d.last : y0 + (m0 - 1 + i * step) / 12), Y(v)].map((c) => c.toFixed(1)));
       const path = S('path', { class: 'f-none s-' + cls.replace('f-', ''), 'stroke-width': cls === 'f-green' ? 2.6 : 1.6, 'stroke-linejoin': 'round' }, this.lines);
-      const [lx, ly] = pts[pts.length - 1];
+      const [lx, ly] = pts[pts.length - 1].map(Number);
       const lab = S('text', { x: lx + 6, y: ly + 4, class: cls === 'f-green' ? 't' : 't2', 'font-size': 10.5, text: n }, this.lines);
-      return { path, pts, lab };
+      return { path, pts, lab, n: -1 };
     });
     this.hand.textContent = this.mode === 'age' ? 'aged 22–25: about −20%' : 'back up 24% since early 2025';
     this.hand.setAttribute('x', this.mode === 'age' ? 150 : 300); this.hand.setAttribute('y', this.mode === 'age' ? Y(81) : 120);
   }
   paint(k) {
-    this.paths.forEach(({ path, pts, lab }) => {
-      const n = Math.max(2, Math.round(pts.length * k));
-      path.setAttribute('d', 'M' + pts.slice(0, n).map((p) => p.join(' ')).join('L'));
-      op(lab, seg(k, 0.85, 1));
+    this.paths.forEach((p) => {
+      // only rewrite the path when another point becomes visible
+      const n = Math.round(p.pts.length * k);
+      if (n !== p.n) { p.n = n; p.path.setAttribute('d', n < 2 ? '' : 'M' + p.pts.slice(0, n).map((q) => q.join(' ')).join('L')); }
+      op(p.lab, seg(k, 0.85, 1));
     });
     op(this.hand, seg(k, 0.85, 1));
   }
