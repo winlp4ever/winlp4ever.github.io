@@ -139,7 +139,7 @@ Outside software the clear gains are on narrow tasks. Customer-support agents wi
 
 For the benefit of shipping faster, we may lose our next generation of engineers while wearing down the capacity of the current one. The juniors who would have learned by writing and debugging code aren't being hired, and the seniors who review the agents' work are starting to trust it more.
 
-So here is my final question: in five or ten years, who will Anthropic rely on to build its next generation of models? Will it be a company of a few humans and an army of AI agents, the way it describes the future, or will it still need the engineers it has stopped hiring today?
+So here is my final question: in five or ten years, who will Anthropic rely on to build its next generation of models (or whatever technologies it works on)? Will it be a company of a few humans and an army of AI agents, the way it describes the future, or will it still need the engineers it has stopped hiring today?
 
 <details class="sources">
 <summary>sources</summary>
