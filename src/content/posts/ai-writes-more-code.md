@@ -12,7 +12,7 @@ Anthropic published a report on its own workforce last week. Commits per enginee
 
 I like AI, and I still wanted to see what the studies say outside a company that sells it. **Coding agents make people write a lot more code. Finished work, shipped software and company results move much less, and review is where the extra code piles up.**
 
-The numbers below come from two METR trials, three field experiments at large companies, telemetry from 725,938 engineers at 718 firms, a study of more than 500,000 GitHub developers, half a dozen 2026 papers on pull requests written by agents, and the firm surveys and Fed notes on the wider economy, all read on 19 October 2026.
+The numbers below come from two METR trials, three field experiments at large companies, telemetry from 725,938 engineers at 718 firms, a study of more than 500,000 GitHub developers, four 2026 papers on pull requests written by agents, and for the wider economy a survey of nearly 6,000 executives, Danish register data and a St. Louis Fed note, all read on 19 October 2026.
 
 ## commits go up, releases much less
 
@@ -24,7 +24,7 @@ A Harvard job-market paper gets to the same place from inside companies<sup><a h
 <pd-funnel data-fig data-label="fig 1 · written vs shipped">
 <p class="fallback">Two bar charts of the change after developers adopt coding agents. In the NBER study of more than 500,000 GitHub developers using autonomous agents, commits rise 240%, projects 80% and releases 30%. In the Harvard study of 725,938 engineers at 718 firms, lines of code rise 30%, pull requests 23% and commits 20%, while Jira issues resolved rise 3.3%, with a 95% interval from −5.8% to +12.3% that includes zero.</p>
 </pd-funnel>
-<figcaption><b>fig 1</b>Agents raise the code people write a lot more than the work that gets finished. <span class="m">NBER w35275, autonomous-agent estimates<sup><a href="#src-2">2</a></sup>. Chen and Stratton, agent estimates<sup><a href="#src-3">3</a></sup>; I computed the issues-resolved percentage from their coefficient (0.12, s.e. 0.17) and baseline (3.67). Both studies compare adopters with non-adopters over time; neither is randomized.</span></figcaption>
+<figcaption><b>fig 1</b>Agents raise the code people write and the projects they start a lot more than the work that gets finished. <span class="m">NBER w35275, autonomous-agent estimates<sup><a href="#src-2">2</a></sup>. Chen and Stratton, agent estimates<sup><a href="#src-3">3</a></sup>; I computed the issues-resolved percentage from their coefficient (0.12, s.e. 0.17) and baseline (3.67). Both studies compare adopters with non-adopters over time; neither is randomized.</span></figcaption>
 </figure>
 
 ## the careful studies
@@ -59,7 +59,7 @@ The quality cost lasts longer than the speed-up. Open-source projects that adopt
 
 ## inside Anthropic
 
-Anthropic's report shows the same bottleneck once you read past the headline<sup><a href="#src-1">1</a></sup>. About 80% of the time in interactive Claude sessions is the agent waiting for a person. Reading everything the agents write would take more than half a work week. Median meeting time went up 20% in a year, and "meta-work", building tools for agents and supervising them, went from 10% to 22% of sessions. The authors write that "more code does not necessarily mean better code or business impact", and that the 192 engineers who adopted agents were already on a steeper path than the 74 who didn't. The company also tripled its headcount during a revenue boom, so the output numbers can't be separated from the business taking off.
+Anthropic's report shows the same bottleneck once you read past the headline<sup><a href="#src-1">1</a></sup>. Those agent hours include a lot of waiting: about 80% of the time in interactive Claude sessions is the agent waiting for a person. Reading everything the agents write would take more than half a work week. Median meeting time went up 20% in a year, and "meta-work", building tools for agents and supervising them, went from 10% to 22% of sessions. The authors write that "more code does not necessarily mean better code or business impact", and that the 192 engineers who adopted agents were already on a steeper path than the 74 who didn't. The company also tripled its headcount during a revenue boom, so the output numbers can't be separated from the business taking off.
 
 The hiring numbers are the solid part. The junior share of technical hires fell from 27% to 9%, and the junior share of technical staff from 21% to 14% since early 2025. That matches the payroll data: employment of 22 to 25 year olds in AI-exposed occupations is now 19% below where it would be if it had kept pace with less-exposed peers, up from 13% in the August 2025 version of the study<sup><a href="#src-15">15</a></sup>.
 
@@ -67,7 +67,7 @@ The hiring numbers are the solid part. The junior share of technical hires fell 
 
 Outside software the clear gains are on narrow tasks. Customer-support agents with an AI assistant resolved 14% more issues per hour, and novices 34% more<sup><a href="#src-16">16</a></sup>. At the level of whole firms it mostly disappears. In a survey of nearly 6,000 executives in the US, UK, Germany and Australia, 89% report no impact on labour productivity so far, and they expect about 1.4% over the next three years<sup><a href="#src-17">17</a></sup>. Danish register data find precise null effects on earnings and hours, ruling out anything above 2%<sup><a href="#src-18">18</a></sup>. On earnings calls, about 95% of the sentences linking AI to productivity talk about gains in the future<sup><a href="#src-19">19</a></sup>.
 
-The writing part of the job really did get faster, and for juniors and new projects the gain is large. Releases, resolved issues and firm results have barely moved, and the cost shows up in review, follow-up fixes and fewer junior jobs. If I were measuring a team I would count releases and resolved issues, and I'd want both numbers before believing a 5x claim from anyone, Anthropic included.
+If I were measuring a team, I would count releases and resolved issues, the two numbers that barely moved in these studies, and leave commits and agent hours out of it.
 
 <details class="sources">
 <summary>sources</summary>
