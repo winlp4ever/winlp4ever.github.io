@@ -1,7 +1,7 @@
 ---
 title: AI writes a lot more code, and... that's it?
 date: 2026-10-19T18:00:00Z
-description: Anthropic's report on its own workforce shows 5x the commits per engineer. Checked against outside studies, the extra code turns into far less shipped software, the speed-up fades as projects grow, review and security problems pile up, and junior developers are being hired less. Human judgement looks more needed than ever.
+description: Anthropic's report on its own workforce shows 5x the commits per engineer. In this article I look at whether the rest of the industry sees the same, and whether more code really turns into more productivity. So far the picture is less epic and a lot dimmer.
 tags: [ai, agents, productivity, jobs]
 category: ai
 glyph: versus
