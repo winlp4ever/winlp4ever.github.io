@@ -22,7 +22,7 @@ const CLAIMS = {
     ['10 → 22%', 'sessions on meta-work', 'building and supervising agents'],
     ['8,500', 'standing instructions', 'for agents, up from a few hundred'],
     ['27 → 9%', 'junior share of hires', 'technical hires; junior staff 21% → 14%'],
-    ['~½', 'staff not writing code', 'in technical teams, down by almost half'],
+    ['halved', 'non-coding tech staff', 'share fell by almost half in a year'],
   ],
 };
 class PdClaims extends Figure {
@@ -39,9 +39,9 @@ class PdClaims extends Figure {
     });
     this.mode = 'gain';
     this.fill();
-    entrance(this, (k) => this.tiles.forEach((t, i) => op(t.g, ease(seg(k, i * 0.08, i * 0.08 + 0.5)))));
+    entrance(this, (k) => { if (!this.toggled) this.tiles.forEach((t, i) => op(t.g, ease(seg(k, i * 0.08, i * 0.08 + 0.5)))); });
     pills(this, [['gain', 'what it gains'], ['cost', 'what it costs']], 'gain', (m) => {
-      this.mode = m; this.fill(); tween(this, (k) => this.tiles.forEach((t, i) => op(t.g, ease(seg(k, i * 0.06, i * 0.06 + 0.5)))));
+      this.mode = m; this.toggled = true; this.fill(); tween(this, (k) => this.tiles.forEach((t, i) => op(t.g, ease(seg(k, i * 0.06, i * 0.06 + 0.5)))));
     });
   }
   fill() {
@@ -155,17 +155,17 @@ class PdTrials extends Figure {
       const y = 56 + i * 38, g = S('g', {}, svg);
       S('text', { x: 16, y: y - 2, class: 't', 'font-size': 11.5, text: n }, g);
       S('text', { x: 16, y: y + 12, class: 't3', 'font-size': 10, text: sub }, g);
-      const ci = S('path', { d: `M${X(lo)} ${y}H${X(hi)}M${X(lo)} ${y - 5}V${y + 5}M${X(hi)} ${y - 5}V${y + 5}`, class: 'f-none s-ink2', 'stroke-width': 1.4 }, g);
-      const dot = S('circle', { cx: X(v), cy: y, r: 5.5, class: rct ? 'f-green' : 'f-ochre' }, g);
+      S('path', { d: `M${X(lo)} ${y}H${X(hi)}M${X(lo)} ${y - 5}V${y + 5}M${X(hi)} ${y - 5}V${y + 5}`, class: 'f-none s-ink2', 'stroke-width': 1.4 }, g);
+      S('circle', { cx: X(v), cy: y, r: 5.5, class: rct ? 'f-green' : 'f-ochre' }, g);
       hit(svg, tip, X(v), y, n, `${out}: ${sp(v)} (${sp(lo)} to ${sp(hi)})`);
-      return { g, ci, dot };
+      return { g };
     });
     S('text', { x: 584, y: 20, class: 'hand', 'font-size': 13.5, 'text-anchor': 'end', text: 'no randomized trial of agents at a company yet' }, svg);
     entrance(this, (k) => this.rows.forEach((r, i) => op(r.g, ease(seg(k, i * 0.1, i * 0.1 + 0.5)))));
   }
 }
 
-// ── fig 4 · the review queue ───────────────────────────────────────────────
+// ── fig 5 · the review queue ───────────────────────────────────────────────
 // [measure, without, with, unit, source note]
 const REVIEW = [
   ['days from pull request to merge', 7.03, 10.48, 'd', 'before and after agents, 718 firms'],
@@ -199,7 +199,7 @@ class PdReview extends Figure {
   }
 }
 
-// ── fig 5 · who gets hired ─────────────────────────────────────────────────
+// ── fig 6 · who gets hired ─────────────────────────────────────────────────
 // age: Stanford Digital Economy Lab "Canaries" software developers, ADP payroll headcount, Nov 2022 = 100,
 // monthly Sep 2021 to Aug 2026 (vintage 2026-09-17).
 // post: Indeed Hiring Lab postings indexes on FRED (IHLIDXUSTPSOFTDEVE, IHLIDXUS), Feb 2020 = 100, every third month.
@@ -213,27 +213,28 @@ const AGE = {
   ],
 };
 const POST = {
-  start: [2020, 2], step: 3,
+  start: [2020, 2], step: 3, last: 2026 + 9.3 / 12, // the last reading is 9 Oct 2026, not a quarter step
   rows: [
-    ['software jobs', 'f-green', [100, 64.9, 70.9, 87.8, 107.6, 134, 169.7, 209.9, 233.8, 225.4, 180.8, 142.5, 106.8, 94.6, 78.6, 72.5, 70.8, 70.2, 68.3, 67.3, 62.8, 64, 65.2, 66.6, 70.9, 73.5, 74.8, 78.1]],
+    ['software', 'f-green', [100, 64.9, 70.9, 87.8, 107.6, 134, 169.7, 209.9, 233.8, 225.4, 180.8, 142.5, 106.8, 94.6, 78.6, 72.5, 70.8, 70.2, 68.3, 67.3, 62.8, 64, 65.2, 66.6, 70.9, 73.5, 74.8, 78.1]],
     ['all jobs', 'ink3', [99.9, 65, 84.1, 94.4, 105.9, 131.3, 141.6, 154.9, 160.4, 160.2, 152, 146.7, 134.8, 133.9, 127.8, 121.9, 118, 114.8, 112.3, 110.3, 109, 105.5, 104.1, 102.3, 105.4, 100.4, 101.9, 104.1]],
   ],
 };
-const T0 = 2020 + 1 / 12, T1 = 2026 + 10 / 12; // the x axis runs Feb 2020 to Oct 2026 in both views
+const T0 = 2020 + 1 / 12, T1 = 2026 + 9.3 / 12; // the x axis runs Feb 2020 to 9 Oct 2026 in both views
 class PdHiring extends Figure {
   build() {
     const svg = this.svgRoot(600, 300, 'Software developer employment by age since 2021, and software job postings since 2020');
     this.X = (t) => 44 + (t - T0) / (T1 - T0) * 476;
     this.note = S('text', { x: 20, y: 20, class: 't3', 'font-size': 10.5 }, svg);
+    const under = S('g', {}, svg); // static rules sit under the data lines
     this.grid = S('g', {}, svg);
     this.lines = S('g', {}, svg);
     [2021, 2022, 2023, 2024, 2025, 2026].forEach((y) => {
-      S('line', { x1: this.X(y), x2: this.X(y), y1: 34, y2: 262, class: 's-rule', 'stroke-width': 1 }, svg);
+      S('line', { x1: this.X(y), x2: this.X(y), y1: 34, y2: 262, class: 's-rule', 'stroke-width': 1 }, under);
       S('text', { x: this.X(y), y: 278, class: 't3', 'font-size': 10.5, 'text-anchor': 'middle', text: y }, svg);
     });
     // ChatGPT, 30 Nov 2022; Claude Code research preview, 24 Feb 2025
     [[2022 + 10.97 / 12, 'ChatGPT'], [2025 + 1.8 / 12, 'coding agents']].forEach(([t, n]) => {
-      S('line', { x1: this.X(t), x2: this.X(t), y1: 34, y2: 262, class: 's-ink3', 'stroke-width': 1, 'stroke-dasharray': '3 3' }, svg);
+      S('line', { x1: this.X(t), x2: this.X(t), y1: 34, y2: 262, class: 's-ink3', 'stroke-width': 1, 'stroke-dasharray': '3 3' }, under);
       S('text', { x: this.X(t) + 4, y: 44, class: 't3', 'font-size': 10, text: n }, svg);
     });
     this.hand = S('text', { class: 'hand', 'font-size': 13.5 }, svg);
@@ -257,7 +258,7 @@ class PdHiring extends Figure {
     });
     const step = d.step || 1, [y0, m0] = d.start;
     this.paths = d.rows.map(([n, cls, vals]) => {
-      const pts = vals.map((v, i) => [this.X(y0 + (m0 - 1 + i * step) / 12), Y(v)]);
+      const pts = vals.map((v, i) => [this.X(d.last && i === vals.length - 1 ? d.last : y0 + (m0 - 1 + i * step) / 12), Y(v)]);
       const path = S('path', { class: 'f-none s-' + cls.replace('f-', ''), 'stroke-width': cls === 'f-green' ? 2.6 : 1.6, 'stroke-linejoin': 'round' }, this.lines);
       const [lx, ly] = pts[pts.length - 1];
       const lab = S('text', { x: lx + 6, y: ly + 4, class: cls === 'f-green' ? 't' : 't2', 'font-size': 10.5, text: n }, this.lines);
@@ -276,7 +277,7 @@ class PdHiring extends Figure {
   }
 }
 
-// ── fig 6 · which jobs grew ────────────────────────────────────────────────
+// ── fig 7 · which jobs grew ────────────────────────────────────────────────
 // BLS OEWS national estimates, US employment by occupation, May 2022 and May 2025.
 const OCC = [
   ['data scientists', 159630, 262440], ['information security analysts', 163690, 190650], ['software developers', 1534790, 1687890],
@@ -307,7 +308,7 @@ class PdDomains extends Figure {
   }
 }
 
-// ── fig 7 · the speed-up fades, the complexity stays ───────────────────────
+// ── fig 4 · the speed-up fades, the complexity stays ───────────────────────
 // He et al. (CMU, MSR '26), 806 open-source repositories that adopted Cursor against matched controls.
 // Month-by-month velocity effects are reported for months 1 and 2 only; later months are not significant.
 // The quality effects are averages over the post-adoption period, which the paper says persist.
@@ -331,7 +332,7 @@ class PdFade extends Figure {
     });
   }
   draw() {
-    const d = FADE[this.mode], Y = (v) => 228 - v / d.max * 180;
+    const d = FADE[this.mode], Y = this.Y = (v) => 228 - v / d.max * 180;
     this.grid.replaceChildren(); this.body.replaceChildren();
     d.ticks.forEach((v) => {
       S('line', { x1: 40, x2: 580, y1: Y(v), y2: Y(v), class: v ? 's-rule' : 's-ink3', 'stroke-width': 1 }, this.grid);
@@ -341,21 +342,21 @@ class PdFade extends Figure {
       const x = this.X(i + 1) - 22;
       const r = S('rect', { x, width: 44, rx: 2, class: 'f-green' }, this.body);
       const t = S('text', { x: x + 22, class: 't', 'font-size': 11.5, 'text-anchor': 'middle' }, this.body);
-      return { r, t, v, Y };
+      return { r, t, v };
     });
-    for (let m = 3; m <= 6; m++) {
-      S('rect', { x: this.X(m) - 22, y: Y(0) - 1, width: 44, height: 2, class: 'f-ink3' }, this.body);
-      S('text', { x: this.X(m), y: Y(0) - 8, class: 't3', 'font-size': 10, 'text-anchor': 'middle', text: 'no gain' }, this.body);
-    }
+    for (let m = 3; m <= 6; m++) S('rect', { x: this.X(m) - 22, y: Y(0) - 1, width: 44, height: 2, class: 'f-ink3' }, this.body);
+    S('text', { x: this.X(3) - 22, y: Y(0) - 8, class: 't3', 'font-size': 10, text: 'no significant gain from month 3' }, this.body);
     // the two quality effects as lasting levels, drawn on the same % scale
-    this.q = [[30.3, 'warnings +30%'], [41.6, 'complexity +42%']].map(([v, n]) => {
+    // complexity is labelled above its line, warnings below, so the two never collide when the lines sit close
+    this.q = [[30.3, 'warnings +30%', 15], [41.6, 'complexity +42%', -6]].map(([v, n, dy]) => {
       const l = S('line', { x1: this.X(1) - 30, x2: this.X(6) + 30, y1: Y(v), y2: Y(v), class: 's-ochre', 'stroke-width': 2.4, 'stroke-dasharray': '6 4' }, this.body);
-      const t = S('text', { x: this.X(6) + 30, y: Y(v) - 6, class: 't2', 'font-size': 10.5, 'text-anchor': 'end', text: n }, this.body);
+      const t = S('text', { x: this.X(6) + 30, y: Y(v) + dy, class: 't2', 'font-size': 10.5, 'text-anchor': 'end', text: n }, this.body);
       return [l, t];
     });
   }
   paint(k) {
-    this.bars.forEach(({ r, t, v, Y }, i) => {
+    const Y = this.Y;
+    this.bars.forEach(({ r, t, v }, i) => {
       const kk = ease(seg(k, i * 0.15, i * 0.15 + 0.5)), y = Y(v * kk);
       r.setAttribute('y', y); r.setAttribute('height', Y(0) - y);
       t.setAttribute('y', y - 6); t.textContent = sp(Math.round(v * kk * 10) / 10);
