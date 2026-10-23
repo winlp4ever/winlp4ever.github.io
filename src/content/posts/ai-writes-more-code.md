@@ -8,7 +8,7 @@ glyph: versus
 figures: 7
 ---
 
-Today I read Anthropic's report on how employment is changing inside the company<sup><a href="#src-1">1</a></sup>. It's both interesting and a bit weird, so I took its claims one at a time and checked them against what outside studies measure: whether more code means more software, how long the speed-up lasts, what happens to review and security, and who gets hired, using data read on 19 October 2026.
+Today I read Anthropic's report on how employment is changing inside the company<sup><a href="#src-1">1</a></sup>. It's both interesting and a bit weird, so I iterated over its claims and checked each one against what outside studies say: whether more code means more software, how long the speed-up lasts, what happens to review and security, and who gets hired, using data read on 19 October 2026.
 
 For the record, I'm a tech and AI enthusiast and I truly believe AI is useful. Still, reality is often messier than the picture we paint in our heads. **Coding agents let us write much more code. But what ships grows far less, and the review pile keeps getting bigger.**
 
