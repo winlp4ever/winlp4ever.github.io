@@ -5,12 +5,21 @@ description: Claude writes about 90% of Claude Code's own code, so its team rebu
 tags: [ai, agents, code-review, claude-code]
 category: ai
 glyph: graph
-figures: 2
+figures: 3
 ---
 
 In this article I summarize and discuss how the Claude Code team reviews code. With code cheaper to produce, it's more important than ever to understand and maintain the code we ship. Last week I wrote that coding agents produce far more code than teams can ship, and that review is where it piles up<sup><a href="#src-1">1</a></sup>.
 
 The team's post is by Addy Osmani, Morgan Westlee Lunt and Qing Wang<sup><a href="#src-2">2</a></sup>. Claude writes about 90% of Claude Code's own code, so they had to deal with this before most teams. Their goal fits in one sentence: "we started optimizing for the minimum amount of human review time that doesn't raise reverts or incidents." At the end I add the version for one person working alone, from lesson 7 of Anthropic's Claude Code 101 course<sup><a href="#src-3">3</a></sup>. Both were read on 27 October 2026.
+
+Here is the whole workflow on one page before the details. A change goes from a plan to an agent's implementation, through automated review, checks and a human approval, and then into a release that someone on call watches. What makes it work is the loops that send work back.
+
+<figure class="wide">
+<cr-flow data-fig data-label="fig 1 · the loops">
+<p class="fallback">The Claude Code team's workflow as seven steps: plan (a person), implement (an agent), AI review (an agent), checks (CI), approve (a person), release (a system) and on-call (a person). Within a pull request, three loops send work back: the implementing agent proves its change works with tests, a build and screenshots; review findings go back to the agent, which fixes them, and later passes review only the new diff; and after three rounds the reviewer asks the author to step back and rethink the approach. After the merge, three more: the on-call engineer fixes forward or rolls back a release, every incident and revert becomes an eval case for the reviewer, and findings that keep coming back become a rule or a lint.</p>
+</cr-flow>
+<figcaption><b>fig 1</b>The steps a change goes through, and the loops that send it back. <span class="m">My drawing of the Claude Code team's post<sup><a href="#src-2">2</a></sup>. Pick a group to highlight the loops inside one pull request or the ones that run after the merge.</span></figcaption>
+</figure>
 
 ## what review is for
 
@@ -25,10 +34,10 @@ The results they report: from June to September, merged pull requests to Claude 
 A change goes through seven layers, and most of them are machines. Before a pull request exists, the author's agent has to show its work: tests, a build, screenshots, whatever proves the change does what it claims. Boris Cherny, who created Claude Code, estimates that verification makes results two to three times better. A second agent then reads the diff in a fresh context. On the pull request, Claude Code Review runs parallel bug-hunting agents whose findings are voted on and tagged Important, Nit or Pre-existing, and a security review runs alongside it. A pull request can't merge while a finding from either one is still open: you fix it or close the thread with a short reason. CI runs lint, types, cross-platform tests, the build and packaging. After that comes human approval, scaled by risk, then a merge queue, feature flags and a release that goes to a `latest` channel before `stable`, and finally a weekly on-call engineer who watches for problems and fixes forward or rolls back.
 
 <figure class="wide">
-<cr-layers data-fig data-label="fig 1 · seven layers">
+<cr-layers data-fig data-label="fig 2 · seven layers">
 <p class="fallback">Seven layers a change passes through on the Claude Code team. 1, verified before review: tests, build and screenshots, and a fresh-context agent reads the diff. 2, AI review on every pull request: parallel bug hunters and a verifier vote, with findings tagged Important, Nit or Pre-existing; open findings block a merge. 3, security review, whose open findings also block a merge. 4, automated checks: lint, types, cross-platform tests, build and packaging, which block a merge. 5, human approval by risk tier: none for low-risk changes such as docs or additive changes behind a flag once the checks are green, if the author is on the repo's trusted list, one person for ordinary product changes and sensitive areas such as caching, the auto-updater and system prompts, and two people for the highest-risk code. 6, merge queue, feature flags and a latest-then-stable release. 7, a weekly on-call engineer who fixes forward or rolls back.</p>
 </cr-layers>
-<figcaption><b>fig 1</b>Five of the seven layers are machines; how many people approve depends on the risk of the change. <span class="m">From the Claude Code team's post<sup><a href="#src-2">2</a></sup>. Pick a tier to see the approval rule; the lighter tiers apply only to trusted authors. The person directing an agent counts as a required reviewer, and an agent's approval never counts as a person's.</span></figcaption>
+<figcaption><b>fig 2</b>Five of the seven layers are machines; how many people approve depends on the risk of the change. <span class="m">From the Claude Code team's post<sup><a href="#src-2">2</a></sup>. Pick a tier to see the approval rule; the lighter tiers apply only to trusted authors. The person directing an agent counts as a required reviewer, and an agent's approval never counts as a person's.</span></figcaption>
 </figure>
 
 The risk tiers are the part I'd copy first. A classifier picks the tier from the change. Docs, copy, internal-only features and additive changes behind a flag need no human approval once automated review and security are green. Ordinary product changes need one person, and that person can be the author. The highest-risk paths need two. These lighter paths are only for authors on the repo's trusted list, mostly the team that owns it; everyone else needs a second person, and some paths, anything owners mark as sensitive and any CI workflow file, always need one. A few rules keep it honest: "the change sets the tier, not the author", "an agent's approval never counts as a person's", and an approval covers one specific commit, so a new commit needs a new one.
@@ -42,10 +51,10 @@ An automated reviewer that complains too much is worse than one that says nothin
 So they made it converge. After three rounds the reviewer asks the author to step back and reconsider the approach, later passes look only at the new diff, it stops repeating findings, and a nightly run deals with the old code separately. They measure noise by what authors do with each comment: fixed it, said it was wrong, said it was intentional, or said it doesn't matter. Every incident and revert becomes an eval case, and the reviewer runs against that set daily and again whenever its prompt, tools or model change.
 
 <figure class="wide">
-<cr-converge data-fig data-label="fig 2 · a reviewer that converges">
+<cr-converge data-fig data-label="fig 3 · a reviewer that converges">
 <p class="fallback">Paired bars for the Claude Code team's automated reviewer. When the Code Review research preview launched, the share of internal pull requests getting substantive review comments went from 16% to 54%. Before and after the convergence changes, the share passing after one review-and-fix round went from 65% to 78%, the share needing five or more rounds from 8.9% to 1.5%, and the mean number of reviews to pass from 2.08 to 1.32.</p>
 </cr-converge>
-<figcaption><b>fig 2</b>More useful comments, and far fewer pull requests stuck in review loops. <span class="m">From the Claude Code team's post<sup><a href="#src-2">2</a></sup>; the first row compares before and after the research preview launched, the other three before and after the convergence changes. The percentages share one scale. These are Anthropic's internal numbers.</span></figcaption>
+<figcaption><b>fig 3</b>More useful comments, and far fewer pull requests stuck in review loops. <span class="m">From the Claude Code team's post<sup><a href="#src-2">2</a></sup>; the first row compares before and after the research preview launched, the other three before and after the convergence changes. The percentages share one scale. These are Anthropic's internal numbers.</span></figcaption>
 </figure>
 
 Each repository also gets a `REVIEW.md` written by its code owners, next to the usual `CLAUDE.md`. The good ones are short. They say what failure looks like there ("for docs it's 'it lies,' for config it's 'it misroutes'"), cap the nits, list paths to skip, and ask for a file and line as evidence. When the reviewer keeps flagging the same kind of thing, the fix goes into a skill, a lint rule or an instruction file, so it stops coming back.
