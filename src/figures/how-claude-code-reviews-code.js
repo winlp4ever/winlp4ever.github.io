@@ -3,48 +3,51 @@
 import { S, op, ease, seg, lerp, fmt, drawOn, Figure, define, entrance, pills, tween } from './core.js';
 
 // ── fig 1 · the workflow and its loops ─────────────────────────────────────
-// [step, who does it]; boxes sit on one row, 72 wide, every 84px
+// [step, who does it]; boxes stack top to bottom, 120 wide, every 54px
 const STEPS = [['plan', 'person'], ['implement', 'agent'], ['AI review', 'agent'], ['checks', 'CI'], ['approve', 'person'], ['release', 'system'], ['on-call', 'person']];
-const BX = (i) => 12 + i * 84, TOP = 130, BOT = 170;
-// [x1, x2, depth (negative = above the row), group, label lines, label x, label y, anchor, box]
-// x1 can instead be a ready-made path; box is [x, y, width, text] for a node the loop passes through
+const L = 240, R = 360, BY = (i) => 44 + i * 54;
+// [side, from y, to y, depth, group, label lines, label x, label y, anchor]; a side arc leaves one box and comes back into another
+// the rules loop is a ready-made path through a box instead: it doesn't send this change back, it changes files every later change reads
 const LOOPS = [
-  [104, 128, -28, 'pr', ['prove it works'], 116, 88, 'middle'],
-  [206, 150, -44, 'pr', ['fix, then re-review only the new diff'], 236, 108, 'start'],
-  [226, 48, -100, 'pr', ['after 3 rounds:', 'step back, rethink'], 236, 58, 'start'],
-  // not a loop back into this change: the lesson goes into files every later change reads
-  ['M208 170 V202 M204 195 L208 202 L212 195 M140 202 V170 M136 177 L140 170 L144 177', 0, 0, 'merge', ['repeated findings', 'become rules'], 64, 240, 'start', [64, 202, 154, 'CLAUDE.md, REVIEW.md, lint']],
-  [552, 476, 36, 'merge', ['fix forward or roll back'], 528, 216, 'end'],
-  [566, 226, 110, 'merge', ['incidents and reverts', 'become eval cases'], 396, 248, 'middle'],
+  ['R', 101, 113, 22, 'pr', ['prove it works'], 390, 111, 'start'],
+  ['L', 160, 126, 50, 'pr', ['fix, re-review', 'only new diff'], 182, 140, 'end'],
+  ['L', 170, 61, 200, 'pr', ['after 3 rounds:', 'step back, rethink'], 226, 100, 'end'],
+  ['M360 176 H392 V169 M388 176 L392 169 L396 176 M392 136 V125 H360 M367 121 L360 125 L367 129', 0, 0, 0, 'merge', [], 0, 0, 'start', [376, 136, 204, 'repeated findings become rules', 'CLAUDE.md, REVIEW.md, lint']],
+  ['R', 385, 331, 36, 'merge', ['fix forward or roll back'], 404, 362, 'start'],
+  ['L', 392, 180, 90, 'merge', ['incidents and reverts', 'become eval cases', 'for the reviewer'], 140, 280, 'end'],
 ];
 class CrFlow extends Figure {
   build() {
-    const svg = this.svgRoot(600, 290, 'The Claude Code team’s workflow from plan to on-call, with the loops that send work back: verification, the review-and-fix loop, stepping back, and the lessons that feed the reviewer');
+    const svg = this.svgRoot(600, 420, 'The Claude Code team’s workflow from plan to on-call, with the loops that send work back: verification, the review-and-fix loop, stepping back, and the lessons that feed the reviewer');
     S('rect', { x: 20, y: 12, width: 10, height: 10, rx: 2, class: 'f-green' }, svg); S('text', { x: 36, y: 21, class: 't2', 'font-size': 11, text: 'a person' }, svg);
     S('rect', { x: 110, y: 12, width: 10, height: 10, rx: 2, class: 'f-ink3' }, svg); S('text', { x: 126, y: 21, class: 't2', 'font-size': 11, text: 'a machine' }, svg);
     S('line', { x1: 200, x2: 222, y1: 17, y2: 17, class: 's-ochre', 'stroke-width': 1.8 }, svg); S('text', { x: 228, y: 21, class: 't2', 'font-size': 11, text: 'a loop back' }, svg);
     this.boxes = STEPS.map(([n, who], i) => {
-      const x = BX(i), g = S('g', {}, svg), person = who === 'person';
-      S('rect', { x, y: TOP, width: 72, height: BOT - TOP, rx: 7, class: 'f-panel ' + (person ? 's-green' : 's-ink3'), 'stroke-width': 1.6 }, g);
-      S('text', { x: x + 36, y: TOP + 18, class: 't', 'font-size': 12, 'text-anchor': 'middle', text: n }, g);
-      S('text', { x: x + 36, y: TOP + 32, class: person ? 't2' : 't3', 'font-size': 9.5, 'text-anchor': 'middle', text: who }, g);
-      if (i < STEPS.length - 1) S('path', { d: `M${x + 74} 150 H${x + 82} M${x + 78} 146 L${x + 82} 150 L${x + 78} 154`, class: 'f-none s-ink3', 'stroke-width': 1.4 }, g);
+      const y = BY(i), g = S('g', {}, svg), person = who === 'person';
+      S('rect', { x: L, y, width: R - L, height: 34, rx: 7, class: 'f-panel ' + (person ? 's-green' : 's-ink3'), 'stroke-width': 1.6 }, g);
+      S('text', { x: 300, y: y + 15, class: 't', 'font-size': 12, 'text-anchor': 'middle', text: n }, g);
+      S('text', { x: 300, y: y + 28, class: person ? 't2' : 't3', 'font-size': 9.5, 'text-anchor': 'middle', text: who }, g);
+      if (i < STEPS.length - 1) S('path', { d: `M300 ${y + 36} V${y + 52} M296 ${y + 47} L300 ${y + 52} L304 ${y + 47}`, class: 'f-none s-ink3', 'stroke-width': 1.4 }, g);
       return g;
     });
-    this.loops = LOOPS.map(([x1, x2, d, grp, lines, lx, ly, anchor, box]) => {
-      const y = d < 0 ? TOP : BOT, c = y + d * 4 / 3, s = Math.sign(d), g = S('g', {}, svg);
-      // cubic arc out of one box and back into another, with an arrowhead pointing into the row
-      const path = typeof x1 === 'string' ? x1 : `M${x1} ${y} C${x1} ${c} ${x2} ${c} ${x2} ${y} M${x2 - 4} ${y + 7 * s} L${x2} ${y} L${x2 + 4} ${y + 7 * s}`;
+    this.loops = LOOPS.map(([side, y1, y2, d, grp, lines, lx, ly, anchor, box]) => {
+      const g = S('g', {}, svg);
+      let path = side;
+      if (side.length === 1) {
+        // cubic arc out of one box's side and back into another, with an arrowhead pointing into the box
+        const s = side === 'L' ? -1 : 1, x = side === 'L' ? L : R, c = x + s * d * 4 / 3;
+        path = `M${x} ${y1} C${c} ${y1} ${c} ${y2} ${x} ${y2} M${x + 7 * s} ${y2 - 4} L${x} ${y2} L${x + 7 * s} ${y2 + 4}`;
+      }
       const p = S('path', { d: path, class: 'f-none s-ochre', 'stroke-width': 1.8 }, g);
       const t = lines.map((l, j) => S('text', { x: lx, y: ly + j * 13, class: 't2', 'font-size': 10.5, 'text-anchor': anchor, text: l }, g));
       if (box) {
-        const [bx, by, bw, bt] = box;
-        t.push(S('rect', { x: bx, y: by, width: bw, height: 20, rx: 5, class: 'f-panel s-ochre', 'stroke-width': 1.2 }, g));
-        t.push(S('text', { x: bx + bw / 2, y: by + 14, class: 't', 'font-size': 9.5, 'text-anchor': 'middle', text: bt }, g));
+        const [bx, by, bw, ...bt] = box;
+        t.push(S('rect', { x: bx, y: by, width: bw, height: 32, rx: 5, class: 'f-panel s-ochre', 'stroke-width': 1.2 }, g));
+        bt.forEach((l, j) => t.push(S('text', { x: bx + bw / 2, y: by + 13 + j * 13, class: j ? 't' : 't2', 'font-size': j ? 9.5 : 10, 'text-anchor': 'middle', text: l }, g)));
       }
       return { g, p, t, grp };
     });
-    S('text', { x: 476, y: 52, class: 'hand', 'font-size': 14, 'text-anchor': 'middle', text: 'most loops close without a person' }, svg);
+    S('text', { x: 478, y: 252, class: 'hand', 'font-size': 14, 'text-anchor': 'middle', text: 'most loops close without a person' }, svg);
     entrance(this, (k) => {
       this.boxes.forEach((g, i) => op(g, ease(seg(k, i * 0.06, i * 0.06 + 0.3))));
       this.loops.forEach((l, i) => { const kk = seg(k, 0.35 + i * 0.07, 0.35 + i * 0.07 + 0.25); drawOn(l.p, kk); l.t.forEach((t) => op(t, kk)); });
