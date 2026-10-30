@@ -1,7 +1,7 @@
 ---
 title: How the Claude Code team reviews code
 date: 2026-10-27T18:00:00Z
-description: Claude writes about 90% of Claude Code's own code, so its team rebuilt code review around scarce human attention. A summary of their seven review layers, risk tiers and reviewer tuning, plus the solo version from Anthropic's Claude Code 101 course.
+description: Claude writes about 90% of Claude Code's own code, so its team rebuilt code review around scarce human attention. A summary of their seven review layers, risk tiers and reviewer tuning, plus how one person can automate the same layers.
 tags: [ai, agents, code-review, claude-code]
 category: ai
 glyph: graph
@@ -10,7 +10,7 @@ figures: 3
 
 In this article I summarize and discuss how the Claude Code team reviews code. With code cheaper to produce, it's more important than ever to understand and maintain the code we ship. Last week I wrote that coding agents produce far more code than teams can ship, and that review is where it piles up<sup><a href="#src-1">1</a></sup>.
 
-The team's post is by Addy Osmani, Morgan Westlee Lunt and Qing Wang<sup><a href="#src-2">2</a></sup>. Claude writes about 90% of Claude Code's own code, so they had to deal with this before most teams. Their goal fits in one sentence: "we started optimizing for the minimum amount of human review time that doesn't raise reverts or incidents." At the end I add the version for one person working alone, from lesson 7 of Anthropic's Claude Code 101 course<sup><a href="#src-3">3</a></sup>. Both were read on 27 October 2026.
+The team's post is by Addy Osmani, Morgan Westlee Lunt and Qing Wang<sup><a href="#src-2">2</a></sup>. Claude writes about 90% of Claude Code's own code, so they had to deal with this before most teams. Their goal fits in one sentence: "we started optimizing for the minimum amount of human review time that doesn't raise reverts or incidents." At the end I work out how one person can set up the same layers, starting from lesson 7 of Anthropic's Claude Code 101 course<sup><a href="#src-3">3</a></sup>. The post and the course were read on 27 October 2026.
 
 Here is the whole workflow on one page before the details. A change goes from a plan to an agent's implementation, through automated review, checks and a human approval, and then into a release that someone on call watches. What makes it work is the loops that send work back.
 
@@ -69,13 +69,72 @@ The post is also frank about what it gave up: "Nobody on the team keeps a comple
 
 ## the solo version
 
-Most of us don't have a merge queue or an on-call rotation. Lesson 7 of Claude Code 101 covers the same ideas for one person in a terminal<sup><a href="#src-3">3</a></sup>. First, read the diff yourself with `/diff` instead of trusting Claude's summary, and look for changes you didn't ask for, weakened or deleted tests, new packages added for one function, and hard-coded URLs or keys. If the whole change is wrong, `/rewind` (or Esc twice) restores the code and the conversation, though not what shell commands changed.
+The team's post ends with an adoption checklist in four groups: before the pull request, on every pull request, approval, and after the merge. Lesson 7 of Claude Code 101 covers the part one person does in a terminal<sup><a href="#src-3">3</a></sup>: read the diff with `/diff`, run `/code-review`, and sort what comes back. That's a good habit, but it leaves you doing by hand what the team hands to machines. Most of the checklist can be set up by one person on a Pro or Max plan. This is how I'd map it, using what I could check in the Claude Code and GitHub docs on 30 October 2026.
 
-Then get a second opinion with `/code-review`, which reviews the change "in a clean context, with none of your session's history" and edits nothing unless you ask. `/code-review low` reports only high-confidence findings; `/code-review high` casts a wider net. Sort what comes back into three piles: fix now, ask why, and leave for later, and when you ask for a fix, ask for evidence such as the test output. When the same problem keeps coming up, write a rule in `CLAUDE.md`, which is the next lesson in the course. On this blog every pull request gets `/code-review high`, and I only run another round when the first one finds something serious.
+| the team's layer | for one person |
+|---|---|
+| verified before review | test commands in `CLAUDE.md`, hooks that format, lint and run the tests, evidence for UI changes |
+| AI review on every pull request | `/code-review` locally, then `claude-code-action` on GitHub |
+| security review | `/security-review` locally, the security review action on GitHub |
+| automated checks | CI as a required status check |
+| human approval by risk | a written list of paths you always read line by line |
+| merge queue, flags, release | small pull requests, flags, a one-step revert |
+| on-call | every bug becomes a test, every repeated finding becomes a rule |
 
-<div class="note"><span class="label">take-home</span>Read the diff, get a clean-context review, sort the findings, and move repeated findings into a rule.</div>
+### before the pull request: make the agent prove it
 
-The team's post ends with an adoption checklist in four groups, and it's the best place to start. Before the pull request: give the agent checks it can run, run `/code-review` and `/security-review`, and keep a `REVIEW.md`. On every pull request: require CI, ask for testing, risk and how to revert in the template, add an AI reviewer and a security review whose threads must be resolved, match the depth of review to the risk, and cap the rounds. For approval: write down risk tiers set by the change, keep the lighter paths for authors you trust, use CODEOWNERS and branch protection, and never let a bot's approval replace a person's. After the merge: flags, staged releases, one-step rollback, and incidents turned into tests for the reviewer.
+Claude Code's best-practices page puts it bluntly: if the agent has nothing to run that tells it whether the work is done, you become the test suite<sup><a href="#src-4">4</a></sup>. So the first job is to give it something to run. Put the test, build and lint commands in `CLAUDE.md`, then turn the ones that must always run into hooks. The docs draw the line clearly: `CLAUDE.md` is guidance the model can ignore, while a hook runs every time<sup><a href="#src-5">5</a></sup>. Three hooks cover most of it:
+
+- a `PostToolUse` hook on `Edit|Write` that formats and lints the file Claude just changed;
+- a `Stop` hook that runs the tests and exits with code 2 while they fail, which stops Claude from ending its turn. Claude Code lets the turn end anyway after eight blocks in a row, so it can't loop forever;
+- a `PreToolUse` hook that refuses edits to files the agent shouldn't touch, such as `.env`, `.github/workflows/` and the tests themselves. Kent Beck has described agents deleting or changing tests to make them pass<sup><a href="#src-6">6</a></sup>, and weakened tests are the first thing the course tells you to look for in a diff.
+
+In `.claude/settings.json` that looks like this; the two scripts are a few lines of shell each.
+
+```json
+{
+  "hooks": {
+    "PostToolUse": [{ "matcher": "Edit|Write", "hooks": [
+      { "type": "command", "command": "jq -r '.tool_input.file_path' | xargs npx prettier --write" }] }],
+    "PreToolUse": [{ "matcher": "Edit|Write", "hooks": [
+      { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-files.sh" }] }],
+    "Stop": [{ "hooks": [
+      { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/tests-pass.sh" }] }]
+  }
+}
+```
+
+```sh
+#!/bin/sh
+# .claude/hooks/tests-pass.sh: keep Claude working while the tests fail
+npm test > /tmp/claude-tests.log 2>&1 || { tail -30 /tmp/claude-tests.log >&2; exit 2; }
+```
+
+Tests don't cover everything, so for anything visible ask for evidence: the command Claude ran and its output, or a screenshot. `/verify` runs the app to check a change that tests can't. Simon Willison's version of the rule is that your job is to deliver code you have proven to work, and if you haven't seen it do the right thing yourself, it doesn't work yet<sup><a href="#src-7">7</a></sup>. For anything bigger than a small fix, start in plan mode and keep the plan as a short spec. The reviewer can then check the change against what you meant to build, which works better than asking it to find problems in general.
+
+### a second opinion in a clean context
+
+Before reading the diff yourself, run `/code-review`. It reviews in a separate subagent with none of your session's history, and it doesn't edit anything unless you add `--fix`<sup><a href="#src-8">8</a></sup>. The separate context is the point. In Self-Correction Bench, a 2025 study of 14 models, the models on average failed to correct 64.5% of the errors in their own output, while correcting the same errors when they were presented as coming from somewhere else<sup><a href="#src-9">9</a></sup>. The docs add a fair caveat: by default the reviewer is the same model, so you get a fresh pair of eyes, not a smarter one. Some people send the diff to a model from another lab as well. That sounds reasonable, but I haven't found a study showing it beats a fresh context with the same model.
+
+It also helps to know how good these reviewers are. The benchmarks I found were all run by vendors, and the best tools in them sit around half precision and half recall. Augment's benchmark measured Claude Code at about 22% precision and 50% recall on its dataset<sup><a href="#src-10">10</a></sup>, and Kodus found that pushing its own reviewer's recall from 53% to 62% nearly doubled the false positives<sup><a href="#src-11">11</a></sup>. So the course's three piles (fix now, ask why, leave for later) matter more than they look. Cap the rounds at three, as the team does, and then rethink the approach instead of asking for a fourth pass. The local command reads `CLAUDE.md` but not `REVIEW.md`, so put the "don't report" lines (style, generated files) in `CLAUDE.md`. Run `/security-review` on the branch as well; it reviews the diff against your default branch. On this blog every pull request gets `/code-review high`, and I only run another round when the first one finds something serious.
+
+### on the pull request: CI is the second person
+
+Local checks are easy to skip on a tired evening, so the same checks should run on the pull request too. `/install-github-app` sets up `anthropics/claude-code-action`, and the docs include a workflow that runs the official `code-review` plugin on every pull request and posts inline comments. With a token from `claude setup-token`, it runs on a Pro or Max subscription instead of an API key<sup><a href="#src-12">12</a></sup>. The managed Claude Code Review that the team uses, with `REVIEW.md`, severity tags and re-reviews of only the new diff, is for Team and Enterprise plans<sup><a href="#src-13">13</a></sup>. For security there is `anthropics/claude-code-security-review`, but its README warns that it isn't hardened against prompt injection, so run it only on your own pull requests<sup><a href="#src-14">14</a></sup>.
+
+Then protect the main branch. GitHub's required approvals don't help when you work alone, because you can't approve your own pull request, and neither Claude's app nor Code Review ever approves one. Three settings do work with one person: require status checks to pass, require conversation resolution before merging, and don't allow bypassing the rules<sup><a href="#src-15">15</a></sup>. Together they give you the team's rule that nothing merges while CI is red or a review thread is open, and the last setting applies it to you too. Even the managed reviewer's own check always ends as neutral, so the blocking has to come from rules like these.
+
+The risk tiers carry over as well. Write down the paths you always read line by line yourself: auth, payments, data migrations, CI and release workflows, anything that deletes data. A pull request that touches none of them can merge on green checks and resolved threads. One that touches any of them waits for your own reading of the diff with `/diff`, and if it's wrong, `/rewind` restores the code and the conversation, though not what shell commands changed.
+
+### after the merge
+
+Keep pull requests small and keep a one-step revert. Google's DORA 2025 report on AI-assisted development lists working in small batches and strong version control, including rollback, among the capabilities that decide whether AI helps a team or hurts it<sup><a href="#src-16">16</a></sup>. Put new behaviour behind a flag when you can. Every bug that reaches production becomes a test, which is the solo version of the team's eval set. When the reviewer keeps flagging the same thing, add a line to `CLAUDE.md`, and if Claude still misses it, move it into a hook or a lint rule. The docs give the same advice: when you keep adding emphasis to a `CLAUDE.md` line, it belongs in a hook.
+
+### keeping the code in your head
+
+Automating review leaves one job that nobody else can do for you: understanding the code. Anthropic's own trial on this, published in January 2026, had 52 mostly junior engineers learn a new library with or without AI. The AI group scored 50% on a quiz afterwards against 67% for the group that coded by hand. The engineers who only delegated code generation scored below 40%, while those who used AI to ask conceptual questions or to explain the code it wrote kept their scores at 65% or more<sup><a href="#src-17">17</a></sup>. The groups were small, but the advice is easy to follow: ask Claude to explain a change before you accept it, and ask why, not only what. METR's 2025 trial is a reason not to trust your own impression here: experienced developers were 19% slower with AI while believing they were 20% faster<sup><a href="#src-18">18</a></sup>.
+
+<div class="note"><span class="label">take-home</span>Automate what a machine can check: hooks before the pull request, a reviewer and CI on it, and branch rules that bind you too. Spend your own reading on the risky paths and on understanding the code.</div>
 
 <details class="sources">
 <summary>sources</summary>
@@ -83,5 +142,20 @@ The team's post ends with an adoption checklist in four groups, and it's the bes
 <li id="src-1"><a href="/blog/ai-writes-more-code/">AI writes a lot more code, and... that's it? (this blog, 19 October 2026)</a></li>
 <li id="src-2"><a href="https://claude.dev/blog/solving-code-review-at-anthropic/">Osmani, Westlee Lunt and Wang, How the Claude Code team does code review, claude.dev (15 October 2026)</a></li>
 <li id="src-3"><a href="https://academy.claude.com/courses/claude-code-101/code-review">Anthropic Academy, Claude Code 101, lesson 7: code review</a></li>
+<li id="src-4"><a href="https://code.claude.com/docs/en/best-practices">Claude Code docs, best practices</a></li>
+<li id="src-5"><a href="https://code.claude.com/docs/en/hooks-guide">Claude Code docs, hooks guide</a></li>
+<li id="src-6"><a href="https://newsletter.pragmaticengineer.com/p/tdd-ai-agents-and-coding-with-kent">Gergely Orosz, TDD, AI agents and coding with Kent Beck, The Pragmatic Engineer (June 2025)</a></li>
+<li id="src-7"><a href="https://simonwillison.net/2025/Dec/18/code-proven-to-work/">Simon Willison, Your job is to deliver code you have proven to work (18 December 2025)</a></li>
+<li id="src-8"><a href="https://code.claude.com/docs/en/code-review-local">Claude Code docs, review code locally</a></li>
+<li id="src-9"><a href="https://arxiv.org/abs/2507.02778">Tsui, Self-Correction Bench, arXiv 2507.02778 (2025)</a></li>
+<li id="src-10"><a href="https://augmentcode.com/blog/we-benchmarked-7-ai-code-review-tools-on-real-world-prs-here-are-the-results">Augment Code, We benchmarked 7 AI code review tools on real-world PRs (December 2025), a vendor benchmark</a></li>
+<li id="src-11"><a href="https://kodus.io/en/ai-code-review-recall/">Kodus, on recall and false positives in AI code review, a vendor report</a></li>
+<li id="src-12"><a href="https://code.claude.com/docs/en/github-actions">Claude Code docs, GitHub Actions</a></li>
+<li id="src-13"><a href="https://code.claude.com/docs/en/code-review">Claude Code docs, Code Review</a></li>
+<li id="src-14"><a href="https://github.com/anthropics/claude-code-security-review">anthropics/claude-code-security-review on GitHub</a></li>
+<li id="src-15"><a href="https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches">GitHub docs, about protected branches</a></li>
+<li id="src-16"><a href="https://cloud.google.com/resources/content/2025-dora-ai-capabilities-model-report">Google Cloud, DORA AI Capabilities Model report (2025)</a></li>
+<li id="src-17"><a href="https://www.anthropic.com/research/AI-assistance-coding-skills">Anthropic, How AI assistance impacts the formation of coding skills (January 2026)</a></li>
+<li id="src-18"><a href="https://arxiv.org/abs/2507.09089">Becker et al., METR, Measuring the impact of early-2025 AI on experienced open-source developer productivity, arXiv 2507.09089 (July 2025)</a></li>
 </ol>
 </details>
