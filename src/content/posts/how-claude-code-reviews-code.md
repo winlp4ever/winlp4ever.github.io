@@ -4,7 +4,7 @@ date: 2026-10-27T18:00:00Z
 description: Claude writes about 90% of Claude Code's own code, so its team rebuilt code review around scarce human attention. A summary of their seven review layers, risk tiers and reviewer tuning, plus how one person can automate the same layers.
 tags: [ai, agents, code-review, claude-code]
 category: ai
-glyph: graph
+glyph: review
 figures: 4
 ---
 

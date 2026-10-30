@@ -75,6 +75,13 @@ const { name, size = 52 } = Astro.props
       <path class="ka" d="M40 16 Q38 28 32 34" />
     </g>
   )}
+  {name === 'review' && (
+    <g>
+      <path class="k3" d="M8 10h22 M8 18h16 M8 34h18 M8 42h12" />
+      <rect class="fo mv" x="6" y="23.5" width="26" height="5" rx="1.5" />
+      <path class="ka" d="M37 38 Q48 26 37 13 M37 13 l5.5 0.5 M37 13 l1 5.2" />
+    </g>
+  )}
   {name === 'cursor' && (
     <g><path class="k" d="M15 15 L6 26 L15 37 M37 15 L46 26 L37 37" /><rect class="fa mv" x="21" y="17" width="10" height="18" /></g>
   )}

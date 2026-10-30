@@ -11,7 +11,7 @@ updated: 2026-10-06          # optional, shows "revised"
 description: One or two plain sentences. Used as the dek, meta description, RSS and llms.txt.
 tags: [ai, llm]
 category: ai                 # ai | code | games | notes   (home filter and accent colour)
-glyph: kv                    # attention | kv | cost | dp | search | cursor | versus | graph | proof | outlier
+glyph: kv                    # attention | kv | cost | dp | search | cursor | versus | graph | proof | outlier | review
 figures: 5                   # number of live figures
 math: true                   # only if the post uses $...$ (loads KaTeX css)
 featured: false              # newest featured post is the home page hero
