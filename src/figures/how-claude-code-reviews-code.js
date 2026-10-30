@@ -6,12 +6,14 @@ import { S, op, ease, seg, lerp, fmt, drawOn, Figure, define, entrance, pills, t
 // [step, who does it]; boxes sit on one row, 72 wide, every 84px
 const STEPS = [['plan', 'person'], ['implement', 'agent'], ['AI review', 'agent'], ['checks', 'CI'], ['approve', 'person'], ['release', 'system'], ['on-call', 'person']];
 const BX = (i) => 12 + i * 84, TOP = 130, BOT = 170;
-// [x1, x2, depth (negative = above the row), group, label lines, label x, label y, anchor]
+// [x1, x2, depth (negative = above the row), group, label lines, label x, label y, anchor, box]
+// x1 can instead be a ready-made path; box is [x, y, width, text] for a node the loop passes through
 const LOOPS = [
   [104, 128, -28, 'pr', ['prove it works'], 116, 88, 'middle'],
   [206, 150, -44, 'pr', ['fix, then re-review only the new diff'], 236, 108, 'start'],
   [226, 48, -100, 'pr', ['after 3 rounds:', 'step back, rethink'], 236, 58, 'start'],
-  [208, 140, 40, 'merge', ['repeated findings', 'become a rule or lint'], 16, 214, 'start'],
+  // not a loop back into this change: the lesson goes into files every later change reads
+  ['M208 170 V202 M204 195 L208 202 L212 195 M140 202 V170 M136 177 L140 170 L144 177', 0, 0, 'merge', ['repeated findings', 'become rules'], 64, 240, 'start', [64, 202, 154, 'CLAUDE.md, REVIEW.md, lint']],
   [552, 476, 36, 'merge', ['fix forward or roll back'], 528, 216, 'end'],
   [566, 226, 110, 'merge', ['incidents and reverts', 'become eval cases'], 396, 248, 'middle'],
 ];
@@ -29,11 +31,17 @@ class CrFlow extends Figure {
       if (i < STEPS.length - 1) S('path', { d: `M${x + 74} 150 H${x + 82} M${x + 78} 146 L${x + 82} 150 L${x + 78} 154`, class: 'f-none s-ink3', 'stroke-width': 1.4 }, g);
       return g;
     });
-    this.loops = LOOPS.map(([x1, x2, d, grp, lines, lx, ly, anchor]) => {
+    this.loops = LOOPS.map(([x1, x2, d, grp, lines, lx, ly, anchor, box]) => {
       const y = d < 0 ? TOP : BOT, c = y + d * 4 / 3, s = Math.sign(d), g = S('g', {}, svg);
       // cubic arc out of one box and back into another, with an arrowhead pointing into the row
-      const p = S('path', { d: `M${x1} ${y} C${x1} ${c} ${x2} ${c} ${x2} ${y} M${x2 - 4} ${y + 7 * s} L${x2} ${y} L${x2 + 4} ${y + 7 * s}`, class: 'f-none s-ochre', 'stroke-width': 1.8 }, g);
+      const path = typeof x1 === 'string' ? x1 : `M${x1} ${y} C${x1} ${c} ${x2} ${c} ${x2} ${y} M${x2 - 4} ${y + 7 * s} L${x2} ${y} L${x2 + 4} ${y + 7 * s}`;
+      const p = S('path', { d: path, class: 'f-none s-ochre', 'stroke-width': 1.8 }, g);
       const t = lines.map((l, j) => S('text', { x: lx, y: ly + j * 13, class: 't2', 'font-size': 10.5, 'text-anchor': anchor, text: l }, g));
+      if (box) {
+        const [bx, by, bw, bt] = box;
+        t.push(S('rect', { x: bx, y: by, width: bw, height: 20, rx: 5, class: 'f-panel s-ochre', 'stroke-width': 1.2 }, g));
+        t.push(S('text', { x: bx + bw / 2, y: by + 14, class: 't', 'font-size': 9.5, 'text-anchor': 'middle', text: bt }, g));
+      }
       return { g, p, t, grp };
     });
     S('text', { x: 476, y: 52, class: 'hand', 'font-size': 14, 'text-anchor': 'middle', text: 'most loops close without a person' }, svg);
