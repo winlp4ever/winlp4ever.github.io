@@ -8,11 +8,11 @@ const STEPS = [['plan', 'person'], ['implement', 'agent'], ['AI review', 'agent'
 const BX = (i) => 12 + i * 84, TOP = 130, BOT = 170;
 // [x1, x2, depth (negative = above the row), group, label lines, label x, label y, anchor]
 const LOOPS = [
-  [104, 128, -40, 'pr', ['prove it works'], 116, 88, 'middle'],
+  [104, 128, -28, 'pr', ['prove it works'], 116, 88, 'middle'],
   [206, 150, -44, 'pr', ['fix, then re-review only the new diff'], 236, 108, 'start'],
   [226, 48, -100, 'pr', ['after 3 rounds:', 'step back, rethink'], 236, 58, 'start'],
   [208, 140, 40, 'merge', ['repeated findings', 'become a rule or lint'], 16, 214, 'start'],
-  [552, 476, 36, 'merge', ['fix forward or roll back'], 548, 214, 'end'],
+  [552, 476, 36, 'merge', ['fix forward or roll back'], 528, 216, 'end'],
   [566, 226, 110, 'merge', ['incidents and reverts', 'become eval cases'], 396, 248, 'middle'],
 ];
 class CrFlow extends Figure {
@@ -39,7 +39,7 @@ class CrFlow extends Figure {
     S('text', { x: 476, y: 52, class: 'hand', 'font-size': 14, 'text-anchor': 'middle', text: 'most loops close without a person' }, svg);
     entrance(this, (k) => {
       this.boxes.forEach((g, i) => op(g, ease(seg(k, i * 0.06, i * 0.06 + 0.3))));
-      this.loops.forEach((l, i) => { const kk = seg(k, 0.4 + i * 0.08, 0.4 + i * 0.08 + 0.35); drawOn(l.p, kk); l.t.forEach((t) => op(t, kk)); });
+      this.loops.forEach((l, i) => { const kk = seg(k, 0.35 + i * 0.07, 0.35 + i * 0.07 + 0.25); drawOn(l.p, kk); l.t.forEach((t) => op(t, kk)); });
     }, 1600);
     // the highlight dims the outer group, so it never fights the entrance
     pills(this, [['all', 'all loops'], ['pr', 'within a PR'], ['merge', 'after the merge']], 'all', (v) => {
