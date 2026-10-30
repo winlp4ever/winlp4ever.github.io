@@ -11,7 +11,7 @@ updated: 2026-10-06          # optional, shows "revised"
 description: One or two plain sentences. Used as the dek, meta description, RSS and llms.txt.
 tags: [ai, llm]
 category: ai                 # ai | code | games | notes   (home filter and accent colour)
-glyph: kv                    # attention | kv | cost | dp | search | cursor | versus | graph | proof | outlier
+glyph: kv                    # attention | kv | cost | dp | search | cursor | versus | graph | proof | outlier | review
 figures: 5                   # number of live figures
 math: true                   # only if the post uses $...$ (loads KaTeX css)
 featured: false              # newest featured post is the home page hero
@@ -40,7 +40,7 @@ Markup inside the Markdown (raw HTML block, blank lines around it):
 </figure>
 ```
 
-- Element names need a hyphen and must be unique across the site: prefix them with a short post code (`tf-`, `kv-`, `cost-`, `es-`, `lc-`, `site-`, `om-`, `ln-`, `ms-`, `ml-`, `ah-`, `rv-`, `pd-`).
+- Element names need a hyphen and must be unique across the site: prefix them with a short post code (`tf-`, `kv-`, `cost-`, `es-`, `lc-`, `site-`, `om-`, `ln-`, `ms-`, `ml-`, `ah-`, `rv-`, `pd-`, `cr-`).
 - Number figures in order; the label and the caption number must match.
 - Sidenotes: `<span class="sn">…</span>` inside a paragraph (margin note on wide screens, inline on phones).
 - A callout: `<div class="note"><span class="label">rule of thumb</span>…</div>` (use rarely).
