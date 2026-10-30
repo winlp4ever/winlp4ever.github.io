@@ -2,35 +2,58 @@
 // Green = a person, ink = a machine. Data from the Claude Code team's post of 15 Oct 2026.
 import { S, op, ease, seg, lerp, fmt, drawOn, Figure, define, entrance, pills, tween } from './core.js';
 
-// ── fig 1 · the workflow and its loops ─────────────────────────────────────
-// [step, who does it]; boxes stack top to bottom, 120 wide, every 54px
-const STEPS = [['plan', 'person'], ['implement', 'agent'], ['AI review', 'agent'], ['checks', 'CI'], ['approve', 'person'], ['release', 'system'], ['on-call', 'person']];
-const L = 240, R = 360, BY = (i) => 44 + i * 54;
-// [side, from y, to y, depth, group, label lines, label x, label y, anchor]; a side arc leaves one box and comes back into another
-// the rules loop is a ready-made path through a box instead: it doesn't send this change back, it changes files every later change reads
-const LOOPS = [
-  ['R', 101, 113, 22, 'pr', ['prove it works'], 390, 111, 'start'],
-  ['L', 160, 126, 50, 'pr', ['fix, re-review', 'only new diff'], 182, 140, 'end'],
-  ['L', 170, 61, 200, 'pr', ['after 3 rounds:', 'step back, rethink'], 226, 100, 'end'],
-  ['M360 176 H392 V169 M388 176 L392 169 L396 176 M392 136 V125 H360 M367 121 L360 125 L367 129', 0, 0, 0, 'merge', [], 0, 0, 'start', [376, 136, 204, 'repeated findings become rules', 'CLAUDE.md, REVIEW.md, lint']],
-  ['R', 385, 331, 36, 'merge', ['fix forward or roll back'], 404, 362, 'start'],
-  ['L', 392, 180, 90, 'merge', ['incidents and reverts', 'become eval cases', 'for the reviewer'], 140, 280, 'end'],
-];
+// ── fig 1 · the workflow and its loops (fig 4 reuses it for one person) ──────
+// steps: [name, sub-label, a person?, only for risky changes?]; boxes stack top to bottom
+// loops: [side, from y, to y, depth, group, label lines, label x, label y, anchor, box]; a side arc leaves one box and comes back into another
+// a loop can instead be a ready-made path through a box: the rules loop doesn't send this change back, it changes files every later change reads
+const TEAM = {
+  label: 'The Claude Code team’s workflow from plan to on-call, with the loops that send work back: verification, the review-and-fix loop, stepping back, and the lessons that feed the reviewer',
+  height: 420, L: 240, R: 360, gap: 54,
+  steps: [['plan', 'person', 1], ['implement', 'agent'], ['AI review', 'agent'], ['checks', 'CI'], ['approve', 'person', 1], ['release', 'system'], ['on-call', 'person', 1]],
+  loops: [
+    ['R', 101, 113, 22, 'pr', ['prove it works'], 390, 111, 'start'],
+    ['L', 160, 126, 50, 'pr', ['fix, re-review', 'only new diff'], 182, 140, 'end'],
+    ['L', 170, 61, 200, 'pr', ['after 3 rounds:', 'step back, rethink'], 226, 100, 'end'],
+    ['M360 176 H392 V169 M388 176 L392 169 L396 176 M392 136 V125 H360 M367 121 L360 125 L367 129', 0, 0, 0, 'merge', [], 0, 0, 'start', [376, 136, 204, 'repeated findings become rules', 'CLAUDE.md, REVIEW.md, lint']],
+    ['R', 385, 331, 36, 'merge', ['fix forward or roll back'], 404, 362, 'start'],
+    ['L', 392, 180, 90, 'merge', ['incidents and reverts', 'become eval cases', 'for the reviewer'], 140, 280, 'end'],
+  ],
+  hand: [478, 252, 'most loops close without a person'],
+};
+const SOLO = {
+  label: 'One developer’s review workflow: plan, an agent held to its tests by hooks, a fresh-context review loop capped at three rounds, a security review for risky changes, CI and branch rules on the pull request, and their own reading of the risky paths',
+  height: 450, L: 234, R: 366, gap: 50,
+  steps: [['plan', 'you · plan mode', 1], ['implement', 'agent + hooks'], ['/code-review', 'fresh context'], ['/security-review', 'risky changes', 0, 1], ['pull request', 'CI + AI review'], ['branch rules', 'green + resolved'], ['your read', 'risky paths', 1, 1], ['merge', 'flag, one-step revert']],
+  loops: [
+    ['R', 98, 110, 22, 'pr', ['Stop hook: tests pass'], 396, 108, 'start'],
+    ['L', 156, 120, 50, 'pr', ['serious finding:', 'fix and re-run'], 176, 130, 'end'],
+    ['L', 168, 61, 200, 'pr', ['still serious', 'after 3 rounds:', 'redesign'], 220, 84, 'end'],
+    ['M366 170 H398 V163 M394 170 L398 163 L402 170 M398 131 V120 H366 M373 116 L366 120 L373 124', 0, 0, 0, 'merge', [], 0, 0, 'start', [382, 131, 198, 'a repeated finding becomes', 'a CLAUDE.md line, then a hook']],
+    ['L', 411, 261, 80, 'merge', ['every bug', 'becomes a test'], 146, 330, 'end'],
+  ],
+  hand: [484, 366, 'you read only what’s risky'],
+};
 class CrFlow extends Figure {
+  get spec() { return TEAM; }
   build() {
-    const svg = this.svgRoot(600, 420, 'The Claude Code team’s workflow from plan to on-call, with the loops that send work back: verification, the review-and-fix loop, stepping back, and the lessons that feed the reviewer');
+    const { label, height, L, R, gap, steps, loops, hand } = this.spec, cx = (L + R) / 2;
+    const svg = this.svgRoot(600, height, label);
     S('rect', { x: 20, y: 12, width: 10, height: 10, rx: 2, class: 'f-green' }, svg); S('text', { x: 36, y: 21, class: 't2', 'font-size': 11, text: 'a person' }, svg);
     S('rect', { x: 110, y: 12, width: 10, height: 10, rx: 2, class: 'f-ink3' }, svg); S('text', { x: 126, y: 21, class: 't2', 'font-size': 11, text: 'a machine' }, svg);
     S('line', { x1: 200, x2: 222, y1: 17, y2: 17, class: 's-ochre', 'stroke-width': 1.8 }, svg); S('text', { x: 228, y: 21, class: 't2', 'font-size': 11, text: 'a loop back' }, svg);
-    this.boxes = STEPS.map(([n, who], i) => {
-      const y = BY(i), g = S('g', {}, svg), person = who === 'person';
-      S('rect', { x: L, y, width: R - L, height: 34, rx: 7, class: 'f-panel ' + (person ? 's-green' : 's-ink3'), 'stroke-width': 1.6 }, g);
-      S('text', { x: 300, y: y + 15, class: 't', 'font-size': 12, 'text-anchor': 'middle', text: n }, g);
-      S('text', { x: 300, y: y + 28, class: person ? 't2' : 't3', 'font-size': 9.5, 'text-anchor': 'middle', text: who }, g);
-      if (i < STEPS.length - 1) S('path', { d: `M300 ${y + 36} V${y + 52} M296 ${y + 47} L300 ${y + 52} L304 ${y + 47}`, class: 'f-none s-ink3', 'stroke-width': 1.4 }, g);
+    if (steps.some((st) => st[3])) {
+      S('rect', { x: 330, y: 12, width: 18, height: 10, rx: 2, class: 'f-none s-ink3', 'stroke-width': 1.2, 'stroke-dasharray': '3 2' }, svg);
+      S('text', { x: 354, y: 21, class: 't2', 'font-size': 11, text: 'only for risky changes' }, svg);
+    }
+    this.boxes = steps.map(([n, sub, person, risky], i) => {
+      const y = 44 + i * gap, g = S('g', {}, svg);
+      S('rect', { x: L, y, width: R - L, height: 34, rx: 7, class: 'f-panel ' + (person ? 's-green' : 's-ink3'), 'stroke-width': 1.6, ...(risky && { 'stroke-dasharray': '5 3' }) }, g);
+      S('text', { x: cx, y: y + 15, class: 't', 'font-size': 12, 'text-anchor': 'middle', text: n }, g);
+      S('text', { x: cx, y: y + 28, class: person ? 't2' : 't3', 'font-size': 9.5, 'text-anchor': 'middle', text: sub }, g);
+      if (i < steps.length - 1) S('path', { d: `M${cx} ${y + 36} V${y + gap - 2} M${cx - 4} ${y + gap - 7} L${cx} ${y + gap - 2} L${cx + 4} ${y + gap - 7}`, class: 'f-none s-ink3', 'stroke-width': 1.4 }, g);
       return g;
     });
-    this.loops = LOOPS.map(([side, y1, y2, d, grp, lines, lx, ly, anchor, box]) => {
+    this.loops = loops.map(([side, y1, y2, d, grp, lines, lx, ly, anchor, box]) => {
       const g = S('g', {}, svg);
       let path = side;
       if (side.length === 1) {
@@ -47,10 +70,12 @@ class CrFlow extends Figure {
       }
       return { g, p, t, grp };
     });
-    S('text', { x: 478, y: 252, class: 'hand', 'font-size': 14, 'text-anchor': 'middle', text: 'most loops close without a person' }, svg);
+    S('text', { x: hand[0], y: hand[1], class: 'hand', 'font-size': 14, 'text-anchor': 'middle', text: hand[2] }, svg);
+    const n = this.loops.length;
     entrance(this, (k) => {
-      this.boxes.forEach((g, i) => op(g, ease(seg(k, i * 0.06, i * 0.06 + 0.3))));
-      this.loops.forEach((l, i) => { const kk = seg(k, 0.35 + i * 0.07, 0.35 + i * 0.07 + 0.25); drawOn(l.p, kk); l.t.forEach((t) => op(t, kk)); });
+      this.boxes.forEach((g, i) => op(g, ease(seg(k, i * 0.05, i * 0.05 + 0.3))));
+      // loops draw in turn and all finish before k = 0.95
+      this.loops.forEach((l, i) => { const a = 0.35 + i * 0.35 / n, kk = seg(k, a, a + 0.25); drawOn(l.p, kk); l.t.forEach((t) => op(t, kk)); });
     }, 1600);
     // the highlight dims the outer group, so it never fights the entrance
     pills(this, [['all', 'all loops'], ['pr', 'within a PR'], ['merge', 'after the merge']], 'all', (v) => {
@@ -58,6 +83,9 @@ class CrFlow extends Figure {
       tween(this, (k) => this.loops.forEach((l, i) => op(l.g, lerp(from[i], v === 'all' || v === l.grp ? 1 : 0.15, k))), 400);
     });
   }
+}
+class CrSolo extends CrFlow {
+  get spec() { return SOLO; }
 }
 
 // ── fig 1 · the seven layers ───────────────────────────────────────────────
@@ -147,4 +175,4 @@ class CrConverge extends Figure {
   }
 }
 
-define({ 'cr-flow': CrFlow, 'cr-layers': CrLayers, 'cr-converge': CrConverge });
+define({ 'cr-flow': CrFlow, 'cr-solo': CrSolo, 'cr-layers': CrLayers, 'cr-converge': CrConverge });

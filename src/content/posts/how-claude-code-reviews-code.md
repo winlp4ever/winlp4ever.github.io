@@ -5,7 +5,7 @@ description: Claude writes about 90% of Claude Code's own code, so its team rebu
 tags: [ai, agents, code-review, claude-code]
 category: ai
 glyph: graph
-figures: 3
+figures: 4
 ---
 
 In this article I summarize and discuss how the Claude Code team reviews code. With code cheaper to produce, it's more important than ever to understand and maintain the code we ship. Last week I wrote that coding agents produce far more code than teams can ship, and that review is where it piles up<sup><a href="#src-1">1</a></sup>.
@@ -81,6 +81,15 @@ The team's post ends with an adoption checklist in four groups: before the pull 
 | merge queue, flags, release | small pull requests, flags, a one-step revert |
 | on-call | every bug becomes a test, every repeated finding becomes a rule |
 
+Put together, the workflow for one person looks like this. The rest of this section goes through it step by step.
+
+<figure class="wide">
+<cr-solo data-fig data-label="fig 4 · the solo loops">
+<p class="fallback">One developer's review workflow, top to bottom: plan (you, in plan mode), implement (the agent, with hooks), /code-review (in a fresh context), /security-review (only for risky changes), pull request (CI and an AI reviewer), branch rules (checks green and threads resolved), your own read (only for risky paths), and merge (behind a flag, with a one-step revert). Inside a pull request, a Stop hook keeps the agent working until the tests pass; a serious review finding goes back to the agent to fix and the review runs again; and if a serious finding is still there after three rounds, the change goes back to the plan for a redesign. After the merge, a repeated finding becomes a line in CLAUDE.md and then a hook, and every bug becomes a test that CI runs.</p>
+</cr-solo>
+<figcaption><b>fig 4</b>The same loops as fig 1, run by one person and their tools. <span class="m">Dashed steps run only for risky changes. Pick a group to highlight the loops inside one pull request or the ones that run after the merge.</span></figcaption>
+</figure>
+
 ### before the pull request: make the agent prove it
 
 Claude Code's best-practices page puts it bluntly: if the agent has nothing to run that tells it whether the work is done, you become the test suite<sup><a href="#src-4">4</a></sup>. So the first job is to give it something to run. Put the test, build and lint commands in `CLAUDE.md`, then turn the ones that must always run into hooks. The docs draw the line clearly: `CLAUDE.md` is guidance the model can ignore, while a hook runs every time<sup><a href="#src-5">5</a></sup>. Three hooks cover most of it:
@@ -118,7 +127,7 @@ Before reading the diff yourself, run `/code-review`. It reviews in a separate s
 
 It also helps to know how good these reviewers are. The benchmarks I found were all run by vendors, and the best tools in them sit around half precision and half recall. Augment's benchmark measured Claude Code at about 22% precision and 50% recall on its dataset<sup><a href="#src-10">10</a></sup>, and Kodus found that pushing its own reviewer's recall from 53% to 62% nearly doubled the false positives<sup><a href="#src-11">11</a></sup>. So the course's three piles (fix now, ask why, leave for later) matter more than they look. The local command reads `CLAUDE.md` but not `REVIEW.md`, so put the "don't report" lines (style, generated files) in `CLAUDE.md`.
 
-Knowing when to stop matters as much. On this blog every pull request gets `/code-review high`. I run another round only when the first one found something serious, and if a third round still finds something serious, I stop fixing and rethink the design. I checked whether that's a good habit or just mine, and the evidence supports it, for three reasons:
+Knowing when to stop matters as much. On this blog every pull request gets `/code-review high`. I run another round only when the first one found something serious, and if a third round still finds something serious, I stop fixing and rethink the design. People who write about agent review seem to converge on the same habit, a small cap on rounds and a step back when it's reached, for three reasons:
 
 - **A fix is new code.** It can break something else, so a serious fix earns one more pass. One pass is usually enough: after the team's convergence changes, 78% of their pull requests passed after a single round of review and fixes.
 - **Each extra round finds less and invents more.** A reviewer asked to find problems will always find something, and the Claude Code docs warn that fixing every finding leaves you with extra layers of abstraction and tests for cases that can't happen<sup><a href="#src-4">4</a></sup>. With precision around half, the later rounds are mostly noise, and an agent left alone will keep going: the team's worst pull request went through more than fifty rounds overnight.
