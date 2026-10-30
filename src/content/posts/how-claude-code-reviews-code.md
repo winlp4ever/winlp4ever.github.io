@@ -8,9 +8,9 @@ glyph: graph
 figures: 2
 ---
 
-Last week I wrote that coding agents produce far more code than teams can ship, and that review is where it piles up<sup><a href="#src-1">1</a></sup>. A few days earlier the Claude Code team had published how they deal with exactly that problem, in a post by Addy Osmani, Morgan Westlee Lunt and Qing Wang that Addy shared on X<sup><a href="#src-2">2</a></sup>. Claude writes about 90% of Claude Code's own code, so they had to solve it before anyone else.
+In this article I summarize and discuss how the Claude Code team reviews code. With code cheaper to produce, it's more important than ever to understand and maintain the code we ship. Last week I wrote that coding agents produce far more code than teams can ship, and that review is where it piles up<sup><a href="#src-1">1</a></sup>.
 
-Their goal fits in one sentence: "we started optimizing for the minimum amount of human review time that doesn't raise reverts or incidents." Below is my summary of how they do it, and at the end the version for one person working alone, from lesson 7 of Anthropic's Claude Code 101 course<sup><a href="#src-3">3</a></sup>. Both were read on 27 October 2026.
+The team's post is by Addy Osmani, Morgan Westlee Lunt and Qing Wang<sup><a href="#src-2">2</a></sup>. Claude writes about 90% of Claude Code's own code, so they had to deal with this before most teams. Their goal fits in one sentence: "we started optimizing for the minimum amount of human review time that doesn't raise reverts or incidents." At the end I add the version for one person working alone, from lesson 7 of Anthropic's Claude Code 101 course<sup><a href="#src-3">3</a></sup>. Both were read on 27 October 2026.
 
 ## what review is for
 
