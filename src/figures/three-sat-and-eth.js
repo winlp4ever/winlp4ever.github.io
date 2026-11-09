@@ -109,7 +109,7 @@ const RECORDS = [
   [2011, '1.30704', 0, 'Hertli'],
   [2011, '1.334', 1, 'Moser–Scheder'],
   [2018, '1.32793', 1, 'Liu'],
-  [2021, '1.307031594', 0, 'Scheder, lifted to general formulas'],
+  [2021, '1.307031594', 0, 'Scheder 2021, lifted (computed 2026)'],
   [2026, '1.307031578', 0, 'Jiang–Cai'],
 ];
 class SatRecords extends Figure {
