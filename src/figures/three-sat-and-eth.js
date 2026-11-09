@@ -112,7 +112,7 @@ const RECORDS = [
   [1999, '1.334', 0, 'Schöning'],
   [2004, '1.324', 0, 'Iwama–Tamaki'],
   [2011, '1.30704', 0, 'Hertli'],
-  [2011, '1.334', 1, 'Moser–Scheder'],
+  [2011, '1.33334', 1, 'Moser–Scheder', '(4/3 + ε)'],
   [2018, '1.32793', 1, 'Liu'],
   [2026, '1.307031578', 0, 'Jiang–Cai'],
 ];
@@ -134,10 +134,11 @@ class SatRecords extends Figure {
     this.stair = S('path', { d, class: 'f-none s-ink3', 'stroke-width': 1.5 }, svg);
     S('text', { x: X(2005), y: Y(0.405) - 12, class: 't3', 'font-size': 12, text: 'best record so far' }, svg);
     const tip = tooltip(svg);
-    this.dots = RECORDS.map(([y, c, det, who]) => {
-      const x = X(y), yy = Y(Math.log2(+c));
+    this.dots = RECORDS.map(([y, c, det, who, shown], i) => {
+      // two 2011 records sit 7 px apart; nudge the second so both hover targets are reachable
+      const x = X(y) + (i && RECORDS[i - 1][0] === y ? 10 : 0), yy = Y(Math.log2(+c));
       const dot = S('circle', { cx: x, cy: yy, r: 4.5, class: det ? 'f-panel s-ink' : 'f-ink', 'stroke-width': 1.6 }, svg);
-      hit(svg, tip, x, yy, `${who}, ${y}`, `${c}^n · ${det ? 'deterministic' : 'randomized'}`);
+      hit(svg, tip, x, yy, `${who}, ${y}`, `${shown || c}^n · ${det ? 'deterministic' : 'randomized'}`);
       return dot;
     });
     const key = S('g', { transform: 'translate(330 56)' }, svg);
@@ -343,7 +344,7 @@ const CROSS = [
   ['Anthropic, counting, m = n', 33858, 420, 'clauses', 'Tulsyan, 29 Oct', 'Majdoddin, 30 Oct'],
   ['Anthropic, any 3-CNF', 2.2e12, 8.6e9, 'variables', 'Majdoddin, 30 Oct', 'Majdoddin, 30 Oct'],
   ['OpenAI, density 4.27', 8.2e11, 2.45e5, 'variables', 'Vandebroek, Nov', 'Vandebroek, Nov'],
-  ['OpenAI, any 3-CNF', 2.5e16, 2.18e8, 'variables', 'Vandebroek, Nov', 'Vandebroek, Nov'],
+  ['OpenAI, any 3-CNF, counting', 2.5e16, 2.18e8, 'variables', 'Vandebroek, Nov', 'Vandebroek, Nov'],
 ];
 const sup = (e) => String(e).split('').map((c) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[+c]).join('');
 const big = (v) => (v < 1e5 ? '2^' + Math.round(v) : '2^(' + (v / 10 ** Math.floor(Math.log10(v))).toFixed(2).replace(/\.?0+$/, '') + '·10' + sup(Math.floor(Math.log10(v))) + ')');
@@ -361,9 +362,10 @@ class SatCross extends Figure {
     S('line', { x1: xa, x2: xa, y1: 40, y2: 290, class: 's-ink3', 'stroke-width': 1.2, 'stroke-dasharray': '3 4' }, svg);
     S('text', { x: xa + 6, y: 38, class: 't3', 'font-size': 11, text: 'atoms in the universe ≈ 2^266' }, svg);
     // Majdoddin's floor for grid algorithms like Anthropic's, general 3-SAT
-    const xf = X(6000);
-    S('line', { x1: xf, x2: xf, y1: 56, y2: 290, class: 's-green', 'stroke-width': 1.2, 'stroke-dasharray': '3 4' }, svg);
-    S('text', { x: xf + 6, y: 54, class: 't3', 'font-size': 11, text: 'floor for algorithms built like Anthropic\'s ≈ 2^6000 variables' }, svg);
+    // drawn on its row only: it bounds general 3-SAT, not the m = n counting case
+    const xf = X(6000), yf = row(1);
+    S('line', { x1: xf, x2: xf, y1: yf - 10, y2: yf + 10, class: 's-green', 'stroke-width': 2 }, svg);
+    S('text', { x: xf + 6, y: yf + 22, class: 't3', 'font-size': 11, text: 'floor ≈ 2^6000' }, svg);
     const tip = tooltip(svg);
     this.rows = CROSS.map(([lab, a, b, unit, sa, sb], i) => {
       const y = row(i), xo = X(a), xn = X(b);

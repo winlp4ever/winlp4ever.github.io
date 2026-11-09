@@ -1,12 +1,12 @@
 # Random 3-SAT phase transition: fraction satisfiable and DPLL branch count vs m/n.
-# Usage: python3 scripts/three-sat-phase.py <n> <trials>  (fig 2 of the 3-SAT post used n = 20, 40, 60 and 200 trials)
+# Usage: python3 scripts/three-sat-phase.py <n> <trials> > phase-<n>.json  (fig 2 of the 3-SAT post used n = 20, 40, 60 and 200 trials)
 import random, sys, json, statistics
 sys.setrecursionlimit(10000)
 
 def gen(n, m, rnd):
     return [tuple(v if rnd.random() < .5 else -v for v in rnd.sample(range(1, n + 1), 3)) for _ in range(m)]
 
-def dpll(clauses, n):
+def dpll(clauses):
     stats = [0]
     def solve(cls, assign):
         # unit propagation
@@ -39,9 +39,9 @@ out = []
 for i in range(0, 51):
     a = 2.0 + i * 0.1
     m = round(a * n)
-    res = [dpll(gen(n, m, rnd), n) for _ in range(trials)]
+    res = [dpll(gen(n, m, rnd)) for _ in range(trials)]
     sat = sum(r for r, _ in res) / trials
     med = statistics.median(b for _, b in res)
     out.append([round(a, 2), round(sat, 3), med])
-    print(a, sat, med, flush=True)
-json.dump(out, open(f'phase-{n}.json', 'w'))
+    print(round(a, 2), sat, med, file=sys.stderr, flush=True)
+json.dump(out, sys.stdout)
