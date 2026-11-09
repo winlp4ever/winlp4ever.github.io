@@ -109,7 +109,7 @@ const RECORDS = [
   [2011, '1.30704', 0, 'Hertli'],
   [2011, '1.334', 1, 'Moser–Scheder'],
   [2018, '1.32793', 1, 'Liu'],
-  [2021, '1.307031594', 0, 'Scheder'],
+  [2021, '1.307031594', 0, 'Scheder, lifted to general formulas'],
   [2026, '1.307031578', 0, 'Jiang–Cai'],
 ];
 class SatRecords extends Figure {
@@ -128,6 +128,7 @@ class SatRecords extends Figure {
     RECORDS.filter((r) => !r[2]).forEach(([y, c]) => { const e = Math.log2(+c); if (e < best) { d += `H${X(y)}V${Y(e)}`; best = e; } });
     d += `H${X(2026.8)}`;
     this.stair = S('path', { d, class: 'f-none s-ink3', 'stroke-width': 1.5 }, svg);
+    S('text', { x: X(2005), y: Y(0.405) - 12, class: 't3', 'font-size': 12, text: 'best randomized record' }, svg);
     const tip = tooltip(svg);
     this.dots = RECORDS.map(([y, c, det, who]) => {
       const x = X(y), yy = Y(Math.log2(+c));
@@ -183,8 +184,8 @@ class SatSplit extends Figure {
     });
     this.l1 = S('text', { x: 22, y: 250, class: 't', 'font-size': 13 }, svg);
     this.l2 = S('text', { x: 22, y: 274, class: 't2', 'font-size': 12 }, svg);
-    pills(this, [['w', 'wishful case'], ['r', 'a real formula']], 'w', (m) => { this.from = this.mode; this.mode = m; tween(this, (k) => this.draw(k)); });
-    this.mode = 'w'; this.from = 'w'; this.draw(1);
+    pills(this, [['w', 'wishful case'], ['r', 'a real formula']], 'w', (m) => { this.mode = m; tween(this, (k) => this.draw(k)); });
+    this.mode = 'w'; this.draw(1);
   }
   draw(k) {
     const cls = this.mode === 'w' ? WISH : REAL;
@@ -300,11 +301,11 @@ class SatRect extends Figure {
     } else if (this.mode === 'r') {
       hyper(); ln(a, a2, 'σ(x, y)', 0, -12); ln(b, b2, 'σ(v, u)', 0, 24);
       this.ttl.textContent = 'row choice'; this.sub.textContent = '[x⊕y⊕u⊕v = 0] · σ(x,y) σ(v,u)';
-      cost = rows ? 3 : 6; why = rows ? 'only x⊕y has to equal u⊕v' : 'the row edges now cross the columns: 6 bits';
+      cost = rows ? 3 : 6; why = rows ? 'only x⊕y has to equal u⊕v' : 'row edges cross columns: 6 bits';
     } else {
       hyper(); ln(a, b, 'σ(x, u)', -42, 4); ln(a2, b2, 'σ(v, y)', 42, 4);
       this.ttl.textContent = 'column choice'; this.sub.textContent = '[x⊕y⊕u⊕v = 0] · σ(x,u) σ(v,y)';
-      cost = rows ? 6 : 3; why = rows ? 'the column edges cross the rows: 6 bits' : 'only x⊕u has to equal y⊕v';
+      cost = rows ? 6 : 3; why = rows ? 'column edges cross rows: 6 bits' : 'only x⊕u has to equal y⊕v';
     }
     this.cost.textContent = cost; this.why.textContent = why;
     attr(this.cost, { class: cost === 3 ? 't' : 't3' });
