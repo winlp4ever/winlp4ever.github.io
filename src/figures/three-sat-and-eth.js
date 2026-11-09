@@ -1,7 +1,7 @@
 // Figures for "3-SAT and the exponential time hypothesis".
-import { S, attr, op, seg, ease, inout, lerp, CW, Figure, define, entrance, pills, tooltip, hit, tween, handArrow, drawOn } from './core.js';
+import { S, attr, op, seg, inout, Figure, define, entrance, pills, tooltip, hit, tween, handArrow, drawOn } from './core.js';
 
-const lit = (l) => (l < 0 ? '¬' : '') + 'xyz'[Math.abs(l) - 1];
+const lit = (l, name = (v) => 'xyz'[v - 1]) => (l < 0 ? '¬' : '') + name(Math.abs(l));
 
 // ── fig 1 · each clause rules out one assignment ───────────────────────────
 // A clause is a list of signed variable numbers (1 = x, 2 = y, 3 = z). It is false
@@ -31,12 +31,13 @@ class SatCube extends Figure {
       return { g, mark, t, k };
     });
     this.corners = [0, 1, 2, 3, 4, 5, 6, 7].map((k) => {
-      const b = bits(k), [x, y] = this.P(b), g = S('g', { style: 'cursor:pointer' }, svg);
+      const b = bits(k), [x, y] = this.P(b), g = S('g', { class: 'click', role: 'button', tabindex: 0, 'aria-label': `assignment x=${b[0]} y=${b[1]} z=${b[2]}` }, svg);
       const ring = S('circle', { cx: x, cy: y, r: 21, class: 'f-none s-ink', 'stroke-width': 2 }, g);
       const c = S('circle', { cx: x, cy: y, r: 15, 'stroke-width': 1.2 }, g);
       const cross = S('path', { d: `M${x - 6} ${y - 6}l12 12M${x + 6} ${y - 6}l-12 12`, class: 's-ink3', 'stroke-width': 1.6 }, g);
       S('text', { x, y: y + (b[2] ? 40 : -26), class: 't2', 'font-size': 12, 'text-anchor': 'middle', text: b.join('') }, g);
-      g.addEventListener('click', () => { this.sel = k; this.draw(); });
+      g.onclick = () => { this.sel = k; this.draw(); };
+      g.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); g.onclick(); } };
       return { ring, c, cross };
     });
     this.note = S('text', { x: 20, y: 316, class: 't2', 'font-size': 12.5 }, svg);
@@ -48,7 +49,7 @@ class SatCube extends Figure {
     const cls = this.mode, a = bits(this.sel), dead = new Set(cls.map(killed));
     this.rows.forEach((r, i) => {
       const c = cls[i]; op(r.g, c ? 1 : 0); if (!c) return;
-      r.t.textContent = '(' + c.map(lit).join(' ∨ ') + ')';
+      r.t.textContent = '(' + c.map((l) => lit(l)).join(' ∨ ') + ')';
       r.k.textContent = 'rules out ' + killed(c);
       attr(r.mark, { class: sat(a, c) ? 'f-green' : 'f-ochre' });
     });
@@ -109,7 +110,6 @@ const RECORDS = [
   [2011, '1.30704', 0, 'Hertli'],
   [2011, '1.334', 1, 'Moser–Scheder'],
   [2018, '1.32793', 1, 'Liu'],
-  [2021, '1.307031594', 0, 'Scheder 2021, lifted (computed 2026)'],
   [2026, '1.307031578', 0, 'Jiang–Cai'],
 ];
 class SatRecords extends Figure {
@@ -125,10 +125,10 @@ class SatRecords extends Figure {
     S('text', { x: 90, y: Y(1) - 8, class: 't2', 'font-size': 11.5, text: 'brute force, 2^n' }, svg);
     // the best randomized record as a staircase
     let best = 1, d = `M${X(1980)} ${Y(1)}`;
-    RECORDS.filter((r) => !r[2]).forEach(([y, c]) => { const e = Math.log2(+c); if (e < best) { d += `H${X(y)}V${Y(e)}`; best = e; } });
+    RECORDS.forEach(([y, c]) => { const e = Math.log2(+c); if (e < best) { d += `H${X(y)}V${Y(e)}`; best = e; } });
     d += `H${X(2026.8)}`;
     this.stair = S('path', { d, class: 'f-none s-ink3', 'stroke-width': 1.5 }, svg);
-    S('text', { x: X(2005), y: Y(0.405) - 12, class: 't3', 'font-size': 12, text: 'best randomized record' }, svg);
+    S('text', { x: X(2005), y: Y(0.405) - 12, class: 't3', 'font-size': 12, text: 'best record so far' }, svg);
     const tip = tooltip(svg);
     this.dots = RECORDS.map(([y, c, det, who]) => {
       const x = X(y), yy = Y(Math.log2(+c));
@@ -159,8 +159,8 @@ const REAL = [[1, -2, 3], [-3, 4, -5], [2, 4, -3], [5, -6, 7], [-2, 7, -8], [-5,
 const count = (cls, vars) => {
   let n = 0;
   for (let m = 0; m < 1 << vars.length; m++) {
-    const v = {}; vars.forEach((x, i) => { v[x] = m >> i & 1; });
-    if (cls.every((c) => c.some((l) => (v[Math.abs(l)] === 1) === l > 0))) n++;
+    const a = []; vars.forEach((x, i) => { a[x - 1] = m >> i & 1; });
+    if (cls.every((c) => sat(a, c))) n++;
   }
   return n;
 };
@@ -189,25 +189,29 @@ class SatSplit extends Figure {
   }
   draw(k) {
     const cls = this.mode === 'w' ? WISH : REAL;
-    this.edges.replaceChildren();
-    cls.forEach((c, i) => {
-      const b = this.boxes[i], cross = new Set(c.map((l) => grp(Math.abs(l)))).size > 1;
-      b.t.textContent = c.map((l) => (l < 0 ? '¬' : '') + 'x' + Math.abs(l)).join('∨');
-      attr(b.r, { class: cross ? 'f-panel s-ink' : 'f-panel s-ink3', 'stroke-width': cross ? 2.2 : 1.2, 'stroke-dasharray': cross ? '4 3' : 'none' });
-      c.forEach((l) => {
-        const v = Math.abs(l);
-        S('line', { x1: b.x, y1: 178, x2: this.VX(v), y2: 77, class: cross ? 's-ink' : grp(v) ? 's-ochre' : 's-green', 'stroke-width': cross ? 1.6 : 1.2, opacity: cross ? k : 0.7 }, this.edges);
+    if (this.built !== this.mode) {
+      this.built = this.mode; this.edges.replaceChildren(); this.cross = [];
+      cls.forEach((c, i) => {
+        const b = this.boxes[i], cross = new Set(c.map((l) => grp(Math.abs(l)))).size > 1;
+        b.t.textContent = c.map((l) => lit(l, (v) => 'x' + v)).join('∨');
+        attr(b.r, { class: cross ? 'f-panel s-ink' : 'f-panel s-ink3', 'stroke-width': cross ? 2.2 : 1.2, 'stroke-dasharray': cross ? '4 3' : 'none' });
+        c.forEach((l) => {
+          const v = Math.abs(l);
+          const e = S('line', { x1: b.x, y1: 178, x2: this.VX(v), y2: 77, class: cross ? 's-ink' : grp(v) ? 's-ochre' : 's-green', 'stroke-width': cross ? 1.6 : 1.2, opacity: 0.7 }, this.edges);
+          if (cross) this.cross.push(e);
+        });
       });
-    });
-    const c1 = cls.filter((c) => c.every((l) => grp(Math.abs(l)) === 0)), c2 = cls.filter((c) => c.every((l) => grp(Math.abs(l)) === 1));
-    const a = count(c1, [1, 2, 3, 4]), b = count(c2, [5, 6, 7, 8]), all = count(cls, [1, 2, 3, 4, 5, 6, 7, 8]);
-    if (this.mode === 'w') {
-      this.l1.textContent = `#F = ${a} × ${b} = ${all}: two counts over 2^4 assignments each`;
-      this.l2.textContent = 'every clause stays inside one group, so the groups are independent';
-    } else {
-      this.l1.textContent = `#F = ${all}, and the two groups can no longer be counted apart`;
-      this.l2.textContent = 'the dashed clauses read variables from both groups';
+      const c1 = cls.filter((c) => c.every((l) => grp(Math.abs(l)) === 0)), c2 = cls.filter((c) => c.every((l) => grp(Math.abs(l)) === 1));
+      const a = count(c1, [1, 2, 3, 4]), b = count(c2, [5, 6, 7, 8]), all = count(cls, [1, 2, 3, 4, 5, 6, 7, 8]);
+      if (this.mode === 'w') {
+        this.l1.textContent = `#F = ${a} × ${b} = ${all}: two counts over 2^4 assignments each`;
+        this.l2.textContent = 'every clause stays inside one group, so the groups are independent';
+      } else {
+        this.l1.textContent = `#F = ${all}, and the two groups can no longer be counted apart`;
+        this.l2.textContent = 'the dashed clauses read variables from both groups';
+      }
     }
+    this.cross.forEach((e) => op(e, k));
   }
 }
 
@@ -242,7 +246,7 @@ class SatInterp extends Figure {
     this.note = S('text', { x: 300, y: 26, class: 't2', 'font-size': 12.5, 'text-anchor': 'middle' }, svg);
     this.hand = S('text', { x: this.X(2.55), y: this.Y(3.35), class: 'hand', 'font-size': 17, text: 'value + derivatives' }, svg);
   }
-  label(t) { return t < 1 ? 'unknown' : t < 1 + 4 * STEP5 ? `easy point ${Math.min(4, Math.floor((t - 1) / STEP5) + 1)}/4` : t < 8.6 ? 'interpolate' : 'read H(0)'; }
+  label(t) { return t < 1 ? 'unknown' : t < 6 ? `easy point ${Math.min(4, Math.floor((t - 1) / STEP5) + 1)}/4` : t < 8.6 ? 'interpolate' : 'read H(0)'; }
   render(t) {
     this.jets.forEach((j, i) => { const k = seg(t, 1 + i * STEP5, 1.6 + i * STEP5); op(j.c, k); op(j.p, k); });
     op(this.hand, seg(t, 2, 2.6));

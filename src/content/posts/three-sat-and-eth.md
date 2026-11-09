@@ -36,7 +36,7 @@ With $$n$$ variables there are $$2^n$$ assignments, and checking one takes time 
 
 Stephen Cook proved in 1971 that every problem a nondeterministic machine solves in polynomial time reduces to checking tautologies, and that the case with three literals per term is already as hard as the general one<sup><a href="#src-3">3</a></sup>. That case is the complement of 3-SAT. He also noted that two literals per term is easy. 2-SAT is solvable in linear time<sup><a href="#src-4">4</a></sup>. Leonid Levin found the same kind of result independently in the USSR, published in 1973<sup><a href="#src-5">5</a></sup>. Richard Karp's 1972 paper listed 21 NP-complete problems, among them 3-SAT, graph colouring, clique and the knapsack problem<sup><a href="#src-6">6</a></sup>.
 
-The reduction from SAT to 3-SAT splits a long clause with a fresh variable. $$(a \lor b \lor c \lor d)$$ becomes $$(a \lor b \lor y) \land (\neg y \lor c \lor d)$$, which can be satisfied whenever the original clause can, and only then. A problem with this property, where every problem whose answers can be checked quickly reduces to it, is **NP-complete**. A polynomial-time algorithm for 3-SAT would give one for all of NP, which would mean P = NP.
+The reduction from SAT to 3-SAT splits a long clause with a fresh variable. $$(a \lor b \lor c \lor d)$$ becomes $$(a \lor b \lor y) \land (\neg y \lor c \lor d)$$, which can be satisfied whenever the original clause can, and only then. A problem is **NP-complete** when its answers can be checked quickly (it is in NP) and every other problem in NP reduces to it in polynomial time. A polynomial-time algorithm for 3-SAT would give one for all of NP, which would mean P = NP.
 
 ## hard formulas and easy ones
 
@@ -63,7 +63,7 @@ Theory asks for a running time that holds on every formula, including the worst 
 
 <figure class="wide">
 <sat-records data-fig data-label="fig 3 · the best guaranteed running time">
-<p class="fallback">The record running time for 3-SAT written as 2 to the power y times n, with y on the vertical axis. Brute force has y = 1. Monien and Speckenmeyer, 1985, deterministic: 1.619^n, y = 0.695. Paturi, Pudlák and Zane, 1997, randomized: 1.587^n, y = 0.667. PPSZ, 1998: 1.364^n, y = 0.448. Schöning, 1999: 1.334^n, y = 0.415. Iwama and Tamaki, 2004: 1.324^n, y = 0.405. Hertli, 2011: 1.30704^n, y = 0.386. Moser and Scheder, 2011, deterministic: (4/3 + ε)^n. Liu, 2018, deterministic: 1.32793^n, y = 0.409. Scheder's 2021 analysis, lifted to general formulas, and Jiang and Cai, 2026, randomized: 1.3070316^n. The October 2026 algorithms are deterministic and have y going to 0 as n grows.</p>
+<p class="fallback">The record running time for 3-SAT written as 2 to the power y times n, with y on the vertical axis. Brute force has y = 1. Monien and Speckenmeyer, 1985, deterministic: 1.619^n, y = 0.695. Paturi, Pudlák and Zane, 1997, randomized: 1.587^n, y = 0.667. PPSZ, 1998: 1.364^n, y = 0.448. Schöning, 1999: 1.334^n, y = 0.415. Iwama and Tamaki, 2004: 1.324^n, y = 0.405. Hertli, 2011: 1.30704^n, y = 0.386. Moser and Scheder, 2011, deterministic: (4/3 + ε)^n. Liu, 2018, deterministic: 1.32793^n, y = 0.409. Jiang and Cai, 2026, randomized: 1.307031578^n. The October 2026 algorithms are deterministic and have y going to 0 as n grows.</p>
 </sat-records>
 <figcaption><b>fig 3</b>Forty years of records cut the exponent from n to about 0.386 n. The new algorithms are the first whose exponent shrinks toward zero. <span class="m">Bases from the papers and from the history sections of Hansen, Kaplan, Zamir and Zwick<sup><a href="#src-21">21</a></sup> and Jiang and Cai<sup><a href="#src-23">23</a></sup>. Hover a point for the paper.</span></figcaption>
 </figure>
@@ -100,7 +100,7 @@ The Lean proofs check different things. Anthropic's proves its main theorem with
 
 ## openai's algorithm
 
-Counting solutions can be written as a sum of polynomials. A clause $$(x \lor y \lor z)$$ becomes $$1 - (1-x)(1-y)(1-z)$$, which is 1 when the clause is true and 0 when it is false, and a negated literal uses $$1 - x$$ in place of $$x$$. The product of these clause polynomials is 1 on solutions and 0 everywhere else, so summing it over all $$2^n$$ assignments gives the count. After sparsification every variable appears in only a few clauses.
+Counting solutions can be written as a sum of polynomials. A clause $$(x \lor y \lor z)$$ becomes $$1 - (1-x)(1-y)(1-z)$$, which is 1 when the clause is true and 0 when it is false, and a negated literal uses $$1 - x$$ in place of $$x$$. The product of these clause polynomials is 1 on solutions and 0 everywhere else, so summing it over all $$2^n$$ assignments gives the count. A count-preserving version of sparsification, which splits the formula into pieces whose solutions don't overlap, first makes every variable appear in only a few clauses<sup><a href="#src-1">1</a></sup>.
 
 Sellke calls the starting point "wishful thinking"<sup><a href="#src-33">33</a></sup>. Suppose the variables could be split into $$r$$ groups so that every clause uses variables from only one group. Then the formula falls apart into $$r$$ independent formulas, the count is the product of their counts, and each takes $$2^{n/r}$$ time. Hard formulas don't split like that: some clauses cross between groups.
 
