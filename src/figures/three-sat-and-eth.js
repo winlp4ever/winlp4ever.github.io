@@ -63,7 +63,7 @@ class SatCube extends Figure {
 }
 
 // ── fig 2 · the hard region ────────────────────────────────────────────────
-// My run (phase.py): [m/n, share satisfiable, median DPLL branches], 200 random formulas per point.
+// From scripts/three-sat-phase.py: [m/n, share satisfiable, median DPLL branches], 200 random formulas per point.
 const PHASE = {
   20: [[2.0,1.0,7],[2.1,1.0,7],[2.2,1.0,7],[2.3,1.0,7],[2.4,1.0,7],[2.5,1.0,7],[2.6,1.0,7],[2.7,1.0,6.5],[2.8,1.0,6],[2.9,1.0,6],[3.0,1.0,6],[3.1,1.0,6],[3.2,1.0,6],[3.3,0.995,6],[3.4,0.98,6],[3.5,0.98,7],[3.6,0.985,6],[3.7,0.965,6],[3.8,0.925,6],[3.9,0.85,7],[4.0,0.885,7],[4.1,0.84,7],[4.2,0.73,7],[4.3,0.735,8],[4.4,0.63,8],[4.5,0.56,8],[4.6,0.415,8],[4.7,0.43,8],[4.8,0.42,7],[4.9,0.345,7],[5.0,0.265,8],[5.1,0.305,7],[5.2,0.175,7],[5.3,0.165,7],[5.4,0.13,7],[5.5,0.11,7],[5.6,0.115,7],[5.7,0.09,7],[5.8,0.04,7],[5.9,0.025,6],[6.0,0.035,6],[6.1,0.015,6],[6.2,0.035,6],[6.3,0.04,6],[6.4,0.005,6],[6.5,0.01,6],[6.6,0.035,6],[6.7,0.005,6],[6.8,0.0,6],[6.9,0.01,5],[7.0,0.005,6]],
   40: [[2.0,1.0,14],[2.1,1.0,14],[2.2,1.0,14],[2.3,1.0,13],[2.4,1.0,13],[2.5,1.0,12],[2.6,1.0,12],[2.7,1.0,11],[2.8,1.0,11],[2.9,1.0,12],[3.0,1.0,11],[3.1,1.0,11],[3.2,1.0,11],[3.3,1.0,11],[3.4,1.0,11],[3.5,1.0,11],[3.6,0.99,11],[3.7,0.935,12],[3.8,0.965,13],[3.9,0.895,16],[4.0,0.865,17],[4.1,0.79,18],[4.2,0.675,24],[4.3,0.575,23],[4.4,0.57,24],[4.5,0.44,26],[4.6,0.335,24.5],[4.7,0.3,24],[4.8,0.2,25],[4.9,0.12,25],[5.0,0.115,23],[5.1,0.07,21],[5.2,0.04,21],[5.3,0.035,20],[5.4,0.015,20.5],[5.5,0.025,20],[5.6,0.01,18],[5.7,0.005,18],[5.8,0.02,17],[5.9,0.0,17],[6.0,0.0,16.5],[6.1,0.0,16],[6.2,0.0,15.5],[6.3,0.0,15.5],[6.4,0.0,15],[6.5,0.0,14],[6.6,0.005,13],[6.7,0.0,13],[6.8,0.0,13],[6.9,0.0,13],[7.0,0.0,13]],
@@ -79,6 +79,10 @@ class SatPhase extends Figure {
     [1, 10, 100].forEach((b) => { S('line', { x1: 70, x2: 560, y1: B(b), y2: B(b), class: 's-rule', 'stroke-width': 1 }, svg); S('text', { x: 62, y: B(b) + 4, class: 't3', 'font-size': 11, 'text-anchor': 'end', text: b }, svg); });
     [2, 3, 4, 5, 6, 7].forEach((a) => S('text', { x: X(a), y: 392, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: a }, svg));
     S('text', { x: 560, y: 410, class: 't3', 'font-size': 11, 'text-anchor': 'end', text: 'clauses per variable →' }, svg);
+    [['20', 's-ink3'], ['40', 's-ink2'], ['60', 's-green']].forEach(([n, c], i) => {
+      S('line', { x1: 452, x2: 474, y1: 96 + i * 18, y2: 96 + i * 18, class: c, 'stroke-width': 2 }, svg);
+      S('text', { x: 482, y: 100 + i * 18, class: 't2', 'font-size': 11.5, text: 'n = ' + n }, svg);
+    });
     const xc = X(4.267);
     S('line', { x1: xc, x2: xc, y1: 34, y2: 372, class: 's-ink3', 'stroke-width': 1, 'stroke-dasharray': '3 4' }, svg);
     S('text', { x: xc + 6, y: 44, class: 't3', 'font-size': 11, text: '4.267, the predicted threshold' }, svg);
@@ -123,7 +127,7 @@ class SatRecords extends Figure {
     [1980, 1990, 2000, 2010, 2020].forEach((y) => S('text', { x: X(y), y: 322, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: y }, svg));
     S('text', { x: 70, y: 22, class: 'sl', 'font-size': 11, text: 'TIME 2^(y) ON THE WORST FORMULA' }, svg);
     S('text', { x: 90, y: Y(1) - 8, class: 't2', 'font-size': 11.5, text: 'brute force, 2^n' }, svg);
-    // the best randomized record as a staircase
+    // the best record so far, randomized or not, as a staircase
     let best = 1, d = `M${X(1980)} ${Y(1)}`;
     RECORDS.forEach(([y, c]) => { const e = Math.log2(+c); if (e < best) { d += `H${X(y)}V${Y(e)}`; best = e; } });
     d += `H${X(2026.8)}`;
@@ -184,7 +188,7 @@ class SatSplit extends Figure {
     });
     this.l1 = S('text', { x: 22, y: 250, class: 't', 'font-size': 13 }, svg);
     this.l2 = S('text', { x: 22, y: 274, class: 't2', 'font-size': 12 }, svg);
-    pills(this, [['w', 'wishful case'], ['r', 'a real formula']], 'w', (m) => { this.mode = m; tween(this, (k) => this.draw(k)); });
+    pills(this, [['w', 'wishful case'], ['r', 'a real formula']], 'w', (m) => { if (m === this.mode) return; this.mode = m; tween(this, (k) => this.draw(k)); });
     this.mode = 'w'; this.draw(1);
   }
   draw(k) {
@@ -201,9 +205,10 @@ class SatSplit extends Figure {
           if (cross) this.cross.push(e);
         });
       });
-      const c1 = cls.filter((c) => c.every((l) => grp(Math.abs(l)) === 0)), c2 = cls.filter((c) => c.every((l) => grp(Math.abs(l)) === 1));
-      const a = count(c1, [1, 2, 3, 4]), b = count(c2, [5, 6, 7, 8]), all = count(cls, [1, 2, 3, 4, 5, 6, 7, 8]);
+      const all = count(cls, [1, 2, 3, 4, 5, 6, 7, 8]);
       if (this.mode === 'w') {
+        const a = count(cls.filter((c) => c.every((l) => grp(Math.abs(l)) === 0)), [1, 2, 3, 4]);
+        const b = count(cls.filter((c) => c.every((l) => grp(Math.abs(l)) === 1)), [5, 6, 7, 8]);
         this.l1.textContent = `#F = ${a} × ${b} = ${all}: two counts over 2^4 assignments each`;
         this.l2.textContent = 'every clause stays inside one group, so the groups are independent';
       } else {
@@ -211,7 +216,7 @@ class SatSplit extends Figure {
         this.l2.textContent = 'the dashed clauses read variables from both groups';
       }
     }
-    this.cross.forEach((e) => op(e, k));
+    this.cross.forEach((e) => op(e, 0.7 * k));
   }
 }
 
@@ -223,6 +228,22 @@ const Hf = (t, d = 0) => HC.reduce((s, c, i) => {
   return s + c * f * Math.pow(t, i - d);
 }, 0);
 const taylor = (t0, t) => { let s = 0, f = 1; for (let d = 0; d <= 3; d++) { if (d) f *= d; s += Hf(t0, d) / f * Math.pow(t - t0, d); } return s; };
+// Hermite fit: the degree-7 polynomial that matches H and H' at T = 1..4, solved by Gaussian elimination.
+// The figure reads H(0) from this fit, never from HC directly.
+const FIT = (() => {
+  const rows = [];
+  [1, 2, 3, 4].forEach((t) => {
+    rows.push([...Array(8)].map((_, i) => Math.pow(t, i)).concat(Hf(t)));
+    rows.push([...Array(8)].map((_, i) => (i ? i * Math.pow(t, i - 1) : 0)).concat(Hf(t, 1)));
+  });
+  for (let c = 0; c < 8; c++) {
+    let p = c; for (let r = c + 1; r < 8; r++) if (Math.abs(rows[r][c]) > Math.abs(rows[p][c])) p = r;
+    [rows[c], rows[p]] = [rows[p], rows[c]];
+    for (let r = 0; r < 8; r++) if (r !== c) { const f = rows[r][c] / rows[c][c]; for (let j = c; j <= 8; j++) rows[r][j] -= f * rows[c][j]; }
+  }
+  return rows.map((r, i) => r[8] / r[i]);
+})();
+const fit = (t) => FIT.reduce((s, c, i) => s + c * Math.pow(t, i), 0);
 const STEP5 = 1.1;
 class SatInterp extends Figure {
   constructor() { super(); this.duration = 10; this.poster = 10; }
@@ -232,7 +253,7 @@ class SatInterp extends Figure {
     S('line', { x1: 70, x2: 580, y1: 262, y2: 262, class: 's-rule', 'stroke-width': 1 }, svg);
     S('line', { x1: this.X(0), x2: this.X(0), y1: 20, y2: 270, class: 's-rule', 'stroke-width': 1 }, svg);
     [0, 1, 2, 3, 4].forEach((t) => S('text', { x: this.X(t), y: 288, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: 'T = ' + t }, svg));
-    const pts = []; for (let t = 4.4; t >= -0.001; t -= 0.02) pts.push(`${this.X(t).toFixed(1)} ${this.Y(Hf(t)).toFixed(1)}`);
+    const pts = []; for (let t = 4.4; t >= -0.001; t -= 0.02) pts.push(`${this.X(t).toFixed(1)} ${this.Y(fit(t)).toFixed(1)}`);
     this.curve = S('path', { d: 'M' + pts.join('L'), class: 'f-none s-ink', 'stroke-width': 1.3 }, svg);
     this.jets = [1, 2, 3, 4].map((t0) => {
       const pts = []; for (let t = t0 - 0.38; t <= t0 + 0.381; t += 0.02) pts.push(`${this.X(t).toFixed(1)} ${this.Y(taylor(t0, t)).toFixed(1)}`);
@@ -240,9 +261,9 @@ class SatInterp extends Figure {
       const c = S('circle', { cx: this.X(t0), cy: this.Y(Hf(t0)), r: 5, class: 'f-green', opacity: 0 }, svg);
       return { p, c };
     });
-    this.q = S('text', { x: this.X(0) + 12, y: this.Y(Hf(0)) + 5, class: 't', 'font-size': 16, text: '?' }, svg);
-    this.zero = S('circle', { cx: this.X(0), cy: this.Y(Hf(0)), r: 6, class: 'f-ink' }, svg);
-    this.zt = S('text', { x: this.X(0) + 14, y: this.Y(Hf(0)) + 5, class: 't', 'font-size': 13, text: 'H(0) = #F, the number of solutions' }, svg);
+    this.q = S('text', { x: this.X(0) + 12, y: this.Y(3.4) + 5, class: 't', 'font-size': 16, text: '?' }, svg);
+    this.zero = S('circle', { cx: this.X(0), cy: this.Y(fit(0)), r: 6, class: 'f-ink' }, svg);
+    this.zt = S('text', { x: this.X(0) + 14, y: this.Y(fit(0)) + 5, class: 't', 'font-size': 13, text: 'H(0) = #F, the number of solutions' }, svg);
     this.note = S('text', { x: 300, y: 26, class: 't2', 'font-size': 12.5, 'text-anchor': 'middle' }, svg);
     this.hand = S('text', { x: this.X(2.55), y: this.Y(3.35), class: 'hand', 'font-size': 17, text: 'value + derivatives' }, svg);
   }
