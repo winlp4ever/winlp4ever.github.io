@@ -82,6 +82,14 @@ const { name, size = 52 } = Astro.props
       <path class="ka" d="M37 38 Q48 26 37 13 M37 13 l5.5 0.5 M37 13 l1 5.2" />
     </g>
   )}
+  {name === 'sat' && (
+    <g>
+      <path class="k3" d="M8 18h24v24h-24z M20 8h24v24h-24z M8 18L20 8 M32 18L44 8 M32 42L44 32 M8 42L20 32" />
+      <circle class="f3" cx="8" cy="18" r="2.2" /><circle class="f3" cx="20" cy="8" r="2.2" /><circle class="f3" cx="44" cy="8" r="2.2" />
+      <circle class="f3" cx="8" cy="42" r="2.2" /><circle class="f3" cx="44" cy="32" r="2.2" /><circle class="f3" cx="20" cy="32" r="2.2" />
+      <circle class="f3" cx="32" cy="18" r="2.2" /><circle class="fa mv" cx="32" cy="42" r="3.4" />
+    </g>
+  )}
   {name === 'cursor' && (
     <g><path class="k" d="M15 15 L6 26 L15 37 M37 15 L46 26 L37 37" /><rect class="fa mv" x="21" y="17" width="10" height="18" /></g>
   )}
