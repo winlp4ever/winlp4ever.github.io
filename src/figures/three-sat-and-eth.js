@@ -337,4 +337,51 @@ class SatRect extends Figure {
   }
 }
 
-define({ 'sat-cube': SatCube, 'sat-phase': SatPhase, 'sat-records': SatRecords, 'sat-split': SatSplit, 'sat-interp': SatInterp, 'sat-rect': SatRect });
+// ── fig 7 · the crossover points come down ─────────────────────────────────
+// [label, old log2 size, new log2 size, unit, old source, new source]. Axis is log10(log2 size).
+const CROSS = [
+  ['Anthropic, counting, m = n', 33858, 420, 'clauses', 'Tulsyan, 29 Oct', 'Majdoddin, 30 Oct'],
+  ['Anthropic, any 3-CNF', 2.2e12, 8.6e9, 'variables', 'Majdoddin, 30 Oct', 'Majdoddin, 30 Oct'],
+  ['OpenAI, density 4.27', 8.2e11, 2.45e5, 'variables', 'Vandebroek, Nov', 'Vandebroek, Nov'],
+  ['OpenAI, any 3-CNF', 2.5e16, 2.18e8, 'variables', 'Vandebroek, Nov', 'Vandebroek, Nov'],
+];
+const sup = (e) => String(e).split('').map((c) => '⁰¹²³⁴⁵⁶⁷⁸⁹'[+c]).join('');
+const big = (v) => (v < 1e5 ? '2^' + Math.round(v) : '2^(' + (v / 10 ** Math.floor(Math.log10(v))).toFixed(2).replace(/\.?0+$/, '') + '·10' + sup(Math.floor(Math.log10(v))) + ')');
+class SatCross extends Figure {
+  build() {
+    const svg = this.svgRoot(600, 330, 'Crossover sizes of the two algorithms before and after the follow-up papers, on a doubly logarithmic axis; every row moves left, and all of them stay above the number of atoms in the universe');
+    const X = (v) => 40 + (Math.log10(v) - 2) / 15 * 530, row = (i) => 92 + i * 52;
+    [2, 5, 10, 15].forEach((e) => {
+      S('line', { x1: X(10 ** e), x2: X(10 ** e), y1: 60, y2: 290, class: 's-rule', 'stroke-width': 1 }, svg);
+      S('text', { x: X(10 ** e), y: 308, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: '2^(10' + sup(e) + ')' }, svg);
+    });
+    S('text', { x: 40, y: 18, class: 'sl', 'font-size': 11, text: 'INPUT SIZE BEFORE THE ALGORITHM WINS' }, svg);
+    // reference: atoms in the observable universe, about 10^80 ≈ 2^266
+    const xa = X(266);
+    S('line', { x1: xa, x2: xa, y1: 40, y2: 290, class: 's-ink3', 'stroke-width': 1.2, 'stroke-dasharray': '3 4' }, svg);
+    S('text', { x: xa + 6, y: 38, class: 't3', 'font-size': 11, text: 'atoms in the universe ≈ 2^266' }, svg);
+    // Majdoddin's floor for grid algorithms like Anthropic's, general 3-SAT
+    const xf = X(6000);
+    S('line', { x1: xf, x2: xf, y1: 56, y2: 290, class: 's-green', 'stroke-width': 1.2, 'stroke-dasharray': '3 4' }, svg);
+    S('text', { x: xf + 6, y: 54, class: 't3', 'font-size': 11, text: 'floor for algorithms built like Anthropic\'s ≈ 2^6000 variables' }, svg);
+    const tip = tooltip(svg);
+    this.rows = CROSS.map(([lab, a, b, unit, sa, sb], i) => {
+      const y = row(i), xo = X(a), xn = X(b);
+      S('rect', { x: 38, y: y - 25, width: lab.length * 6.9 + 6, height: 17, class: 'f-panel' }, svg);
+      S('text', { x: 40, y: y - 12, class: 't2', 'font-size': 11.5, text: lab }, svg);
+      const old = S('circle', { cx: xo, cy: y, r: 4.5, class: 'f-panel s-ink3', 'stroke-width': 1.6 }, svg);
+      const arr = S('path', { d: `M${xo - 7} ${y}H${xn + 8}M${xn + 14} ${y - 5}l-6 5l6 5`, class: 'f-none s-green', 'stroke-width': 2, 'stroke-linecap': 'round' }, svg);
+      const nw = S('circle', { cx: xn, cy: y, r: 4.5, class: 'f-ink' }, svg);
+      hit(svg, tip, xo, y, `${big(a)} ${unit}`, sa);
+      hit(svg, tip, xn, y, `${big(b)} ${unit}`, sb);
+      return { old, arr, nw };
+    });
+    this.hand = S('text', { x: X(1e9), y: 284, class: 'hand', 'font-size': 17, 'text-anchor': 'middle', text: 'smaller, still astronomical' }, svg);
+    entrance(this, (k) => {
+      this.rows.forEach((r, i) => { op(r.old, seg(k, i * 0.08, i * 0.08 + 0.2)); drawOn(r.arr, seg(k, 0.3 + i * 0.08, 0.7 + i * 0.08)); op(r.nw, seg(k, 0.6 + i * 0.08, 0.75 + i * 0.08)); });
+      op(this.hand, seg(k, 0.85, 1));
+    }, 1800);
+  }
+}
+
+define({ 'sat-cube': SatCube, 'sat-phase': SatPhase, 'sat-records': SatRecords, 'sat-split': SatSplit, 'sat-interp': SatInterp, 'sat-rect': SatRect, 'sat-cross': SatCross });

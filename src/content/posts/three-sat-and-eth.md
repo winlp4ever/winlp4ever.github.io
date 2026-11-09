@@ -5,7 +5,7 @@ description: 3-SAT asks whether a list of three-variable rules can all be true a
 tags: [math, complexity, ai]
 category: ai
 glyph: sat
-figures: 6
+figures: 7
 math: true
 ---
 
@@ -88,6 +88,8 @@ Not everyone believed it. In 2019 Ryan Williams gave ETH a 70% chance of being t
 
 According to Anthropic's paper, the core of its algorithm was found on 16 October "by an internal Claude research model with 14M output tokens and no human input", and researchers then helped improve the presentation<sup><a href="#src-2">2</a></sup>. OpenAI's paper is dated 17 October and revised 25 October, and OpenAI published it on 26 October with a group led by Impagliazzo, Paturi and Williams to examine it<sup><a href="#src-1">1</a></sup>. The group wrote that "our involvement should not be taken as certification of the claim"<sup><a href="#src-30">30</a></sup>.
 
+The account of who did the work comes from the labs, and outsiders can't check it. Scientific American noted that OpenAI's model is proprietary and that the prompts, the compute time and the chain of thought behind the proofs haven't been published<sup><a href="#src-36">36</a></sup>. Anthropic's paper gives a date, a token count and "no human input", but neither the paper nor its README includes the model's transcript<sup><a href="#src-2">2</a></sup>. Anthropic posted hours after OpenAI's announcement, and its paper says OpenAI's model reached a similar result "independently and concurrently"; neither lab has said more about the timing. On Hacker News, where OpenAI's announcement drew more than 700 comments, some readers doubted that a model got there without researchers steering it, and others called the release marketing<sup><a href="#src-37">37</a></sup>. These doubts are about credit, not correctness. The Lean checks and the review group test whether the proofs hold; whether a model found them alone rests on the labs' word.
+
 Both algorithms are deterministic, both count solutions, and they reach almost the same bound:
 
 $$
@@ -151,13 +153,32 @@ After the merge the instance has fewer nodes and fewer bits between them, and th
 
 OpenAI's paper also proves its sharpest bound through tensor contraction, in an appendix<sup><a href="#src-1">1</a></sup>.
 
+## the constants
+
+The bounds above hide constants, and the constants decide when the algorithms beat anything. A running time of $$2^{c\,n/\sqrt{\log_2 n}}$$ is below $$2^n$$ only once $$\log_2 n > c^2$$, so a constant of 1,000 already puts the crossover beyond $$2^{10^{6}}$$<sup><a href="#src-40">40</a></sup>. Neither paper was written to make these numbers small, and within two weeks several people had cut them.
+
+Stefan Szeider worked out on 27 October that OpenAI's main algorithm does nothing but exhaustive search until $$n$$ passes about $$2^{10^{10}}$$, and its appendix algorithm until $$n + m$$ passes $$2^{131071}$$<sup><a href="#src-38">38</a></sup>. On 30 October Ruhollah Majdoddin made the recursion of Anthropic's algorithm explicit and changed its parameters, with proofs. For counting formulas with as many clauses as variables, the size at which it beats the best known algorithms fell from about $$2^{33858}$$ clauses, a figure Vaibhav Tulsyan had computed the day before, to about $$2^{420}$$. For arbitrary 3-SAT his estimate fell from $$2^{2.2 \cdot 10^{12}}$$ variables to $$2^{8.6 \cdot 10^{9}}$$<sup><a href="#src-39">39</a></sup>.
+
+In early November Bjarne Vandebroek did the same for OpenAI's algorithm. The constant in its tensor contraction theorem is about 19,530 as the proof is written. Mostly by using the inequalities the proof actually establishes instead of the looser ones it states, plus a new basis for one expansion, he brings it to about 223, or 65.5 for networks of bounded degree. He also builds smaller networks for 3-SAT formulas, about $$8n$$ wires at the hardest density where OpenAI's construction used about $$45n$$. At that density the exponential part of the running time drops below $$2^{0.99n}$$ once $$\log_2 n \ge 2.45 \cdot 10^5$$, down from $$8.2 \cdot 10^{11}$$ with the original constants<sup><a href="#src-40">40</a></sup>. His paper is a preprint on alphaXiv and takes OpenAI's manuscript as correct.
+
+<figure class="wide">
+<sat-cross data-fig data-label="fig 7 · the crossover points come down">
+<p class="fallback">Input sizes at which each algorithm starts to win, before and after the follow-up papers. Anthropic's algorithm, counting with as many clauses as variables: 2^33858 clauses before, about 2^420 after. Anthropic's algorithm on any 3-SAT formula: 2^(2.2·10^12) variables before, 2^(8.6·10^9) after. OpenAI's algorithm at clause density 4.27: 2^(8.2·10^11) variables before, 2^(2.45·10^5) after. OpenAI's algorithm on any formula: 2^(2.5·10^16) before, 2^(2.18·10^8) after for counting. For comparison, the observable universe has about 2^266 atoms, and Majdoddin proves that algorithms built like Anthropic's can't win on general 3-SAT below about 2^6000 variables.</p>
+</sat-cross>
+<figcaption><b>fig 7</b>Each row moves left by orders of magnitude in the exponent, and every row stays far to the right of anything that could be stored. The axis is doubly logarithmic. <span class="m">Values from Majdoddin<sup><a href="#src-39">39</a></sup> and Vandebroek<sup><a href="#src-40">40</a></sup>. Each paper uses its own bar: Majdoddin compares with the best known algorithms, Vandebroek with a running time of 2<sup>0.99n</sup>. Hover a point for the size and the source.</span></figcaption>
+</figure>
+
+There is a limit to how far these numbers can fall. Majdoddin defines a class of algorithms that contains Anthropic's recursion and all his variants, and proves that none of them can win on general 3-SAT below about $$2^{6000}$$ variables. He also proves a lower bound on the exponent for two kinds of merge step, which rules out times like $$2^{n^{0.99}}$$ for algorithms built from them<sup><a href="#src-39">39</a></sup>. Vandebroek writes that his changes leave the asymptotic class where it was, $$n/\sqrt{\log n}$$ up to the $$\log\log n$$ factor<sup><a href="#src-40">40</a></sup>. So far the follow-ups have lowered the constants, not the shape of the bound.
+
+Others have gone after the ideas. Jesper Nederlof wrote on the review group's blog that Anthropic's approach "now looks quite intuitive to me", with a short crossing inequality as the main source of the gain, and that he was writing a self-contained exposition<sup><a href="#src-41">41</a></sup>. Siyuan Zhuang posted two shorter proofs of the refutation, both checked in Lean, and others posted consequences, such as subexponential algorithms for sampling from small quantum circuits<sup><a href="#src-42">42</a></sup> and for counting pattern occurrences in permutations<sup><a href="#src-43">43</a></sup>.
+
 ## consequences
 
 ETH and SETH are false if the proofs hold, along with several variants such as #ETH and NSETH. The hundreds of lower bounds proved under ETH remain true as conditional statements, but their condition is gone. Anthropic's paper lists algorithms that follow, counting independent sets, cliques, vertex covers and $$k$$-colourings in time $$2^{\delta n}$$ for every $$\delta > 0$$<sup><a href="#src-2">2</a></sup>.
 
 Several things are untouched. A running time of $$2^{n/\sqrt{\log n}}$$ is still far from polynomial, so the result says nothing directly about P vs NP. Fortnow points out that it "gives nothing new for Subset Sum or Traveling Salesman", because reductions from those problems to 3-SAT make the formula too large for a $$2^{o(n)}$$ gain to carry over<sup><a href="#src-34">34</a></sup>. Neither paper refutes the orthogonal vectors hypothesis, a weaker assumption than SETH, so the lower bounds for edit distance and similar problems that can be based on it still hold under that assumption<sup><a href="#src-2">2</a></sup>. On cryptography, Williams told TechCrunch that OpenAI had checked and was reasonably confident the result doesn't imply any breaks<sup><a href="#src-35">35</a></sup>.
 
-As of 9 November the group led by Impagliazzo, Paturi and Williams hasn't posted a verdict. Its last post, on 1 November, asks researchers to announce results that follow from the claimed refutation<sup><a href="#src-30">30</a></sup>.
+As of 9 November the group led by Impagliazzo, Paturi and Williams hasn't posted a verdict. Its last post, on 1 November, asks researchers to announce results that follow from the claimed refutation, and by 8 November it had 23 replies<sup><a href="#src-42">42</a></sup>.
 
 <details class="sources">
 <summary>sources</summary>
@@ -196,6 +217,14 @@ As of 9 November the group led by Impagliazzo, Paturi and Williams hasn't posted
 <li id="src-32"><a href="https://shivakintali.github.io/papers/ETH.pdf">Shiva Kintali, A simplified proof of ETH is false (26 October 2026)</a></li>
 <li id="src-33"><a href="https://msellke.com/Files/ETH-False-Slides.pdf">Mark Sellke, An Outline of OpenAI's 2^o(n)-Time k-SAT Algorithm, slides (October 2026)</a></li>
 <li id="src-34"><a href="https://blog.computationalcomplexity.org/2026/10/the-exponential-time-refutation.html">Lance Fortnow, The Exponential Time Refutation, Computational Complexity blog (28 October 2026)</a></li>
-<li id="src-35"><a href="https://techcrunch.com/?p=3182002">TechCrunch, interview with Ryan Williams on OpenAI's ETH result (27 October 2026)</a></li>
+<li id="src-35"><a href="https://techcrunch.com/2026/10/27/frontier-ai-labs-say-their-models-refuted-the-exponential-time-hypothesis-what-does-that-mean/">TechCrunch, interview with Ryan Williams on OpenAI's ETH result (27 October 2026)</a></li>
+<li id="src-36"><a href="https://www.scientificamerican.com/article/dueling-proofs-from-openai-and-anthropic-astound-scientists/">Joseph Howlett and Peter Hall, Dueling proofs from OpenAI and Anthropic astound scientists, Scientific American (27 October 2026)</a></li>
+<li id="src-37"><a href="https://news.ycombinator.com/item?id=50251344">Hacker News, discussion of OpenAI's announcement (from 26 October 2026)</a></li>
+<li id="src-38"><a href="https://doi.org/10.5281/zenodo.23688832">Stefan Szeider, OpenAI's claimed refutation of ETH: exhaustive search below 2^131071, Zenodo (27 October 2026)</a></li>
+<li id="src-39"><a href="https://arxiv.org/abs/2610.41622">Ruhollah Majdoddin, Lowered crossover points of Anthropic's subexponential 3-SAT algorithm, arXiv:2610.41622 (30 October 2026)</a></li>
+<li id="src-40"><a href="https://www.alphaxiv.org/abs/2611.subexponential-sat-tensor-contraction.pdf">Bjarne Vandebroek, Explicit constants for subexponential #k-SAT: quantitative tensor contraction, sparsification and sparse networks, preprint (November 2026)</a></li>
+<li id="src-41"><a href="https://ethdiscussion.blog/2026/10/26/eth-refutation-examination-and-discussion/comment-page-1/#comment-32">Jesper Nederlof, comment on ETH Refutation: Examination and Discussion (5 November 2026)</a></li>
+<li id="src-42"><a href="https://ethdiscussion.blog/2026/11/01/announce-your-results/">Impagliazzo, Paturi and Williams, New Results Related to ETH, with replies (1–8 November 2026)</a></li>
+<li id="src-43"><a href="https://arxiv.org/abs/2610.41048">László Kozma, Faster #PPM from faster #3SAT, arXiv:2610.41048 (29 October 2026)</a></li>
 </ol>
 </details>
