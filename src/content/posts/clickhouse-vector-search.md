@@ -39,7 +39,7 @@ ClickHouse stores a table as **parts**, immutable chunks written by each insert 
 A few things follow from that design:
 
 - The graph of a part has to be in memory to be searched. The cache is `vector_similarity_index_cache_size`, 5 GB by default. The docs' sizing rule is vectors × dimensions × bytes per value for the vectors, plus vectors × M × 8 bytes for the graph<sup><a href="#src-1">1</a></sup>. One million 1,536-dimension vectors in bf16 with M = 64 comes to about 3.5 GB.
-- Only one query shape uses the index: `ORDER BY distance(...) LIMIT k`. A threshold like `WHERE cosineDistance(...) < 0.3` scans. `k` is capped by `max_limit_for_vector_search_queries`, 100 by default.
+- Only one query shape uses the index: `ORDER BY distance(...) LIMIT k`. A threshold like `WHERE cosineDistance(...) < 0.3` scans. A `LIMIT` above `max_limit_for_vector_search_queries` (100 by default) returns an error.
 - Parts with pending lightweight deletes or mutations are searched exactly until they're rewritten.
 - The column must be a single non-Nullable array of a fixed length.
 
@@ -72,7 +72,7 @@ ENGINE = MergeTree
 ORDER BY id;
 ```
 
-`CODEC(NONE)` is what the docs recommend for the vector column, since float vectors barely compress. Every array you insert must have exactly 1,024 values or the insert fails. On a table that already has data, add the index and build it for the existing parts:
+`CODEC(NONE)` is what the docs recommend for the vector column, since float vectors barely compress. Every array you insert must have exactly 1,024 values or the insert fails. On a table that already has data and was created without the index, add it and build it for the existing parts:
 
 ```sql
 ALTER TABLE docs ADD INDEX vec_idx embedding TYPE vector_similarity('hnsw', 'cosineDistance', 1024);
@@ -130,7 +130,7 @@ The default filter strategy is **post-filtering**: the index returns the k neare
 
 <figure class="wide">
 <cv-filter data-fig data-label="fig 2 · post-filter and prefilter">
-<p class="fallback">Two hundred candidate rows are drawn as squares in order of distance to the query, nearest first. Filled squares match the WHERE filter. With post-filtering the index fetches the nearest 10, and with a 20% filter only about 2 of them survive. Fetching 40 returns 8 or so. Prefiltering scans every matching row exactly and always returns 10.</p>
+<p class="fallback">Two hundred candidate rows are drawn as squares in order of distance to the query, nearest first. Filled squares match the WHERE filter. With a filter that matches 20% of rows, post-filtering fetches the nearest 10 and only 2 of them survive. Fetching 40 returns 8. Prefiltering scans every matching row exactly and returns all 10. With a 5% filter the numbers are 0, 1 and 10.</p>
 </cv-filter>
 <figcaption><b>fig 2</b>The outlined squares are what the index fetches, and the coloured ones are the rows returned. Toggle the strategy and how much of the table the filter matches. The rows are random, seeded so every toggle shows the same table.<span class="m">k = 10. Settings from the ClickHouse vector index docs.</span></figcaption>
 </figure>
@@ -244,7 +244,7 @@ Sources for the table: each project's docs and release notes<sup><a href="#src-1
 
 Postgres's built-in `ts_rank` is not BM25: it has no inverse document frequency and no length normalisation of the BM25 kind<sup><a href="#src-17">17</a></sup>. For real BM25 there are three extensions. Tiger Data's pg_textsearch (PostgreSQL licence) is on Google's AlloyDB and Cloud SQL since September 2026<sup><a href="#src-18">18</a></sup>. ParadeDB's pg_search wraps the Tantivy engine and is AGPL<sup><a href="#src-19">19</a></sup>. VectorChord-bm25 comes from the VectorChord team<sup><a href="#src-20">20</a></sup>.
 
-Until 1.20, Qdrant did BM25 through sparse vectors with an IDF modifier (October 2026), which added native BM25 scoring on a text payload index. The statistics are per shard, so scores across shards are approximate<sup><a href="#src-13">13</a></sup>.
+Until 1.20, Qdrant did BM25 through sparse vectors with an IDF modifier. Version 1.20 (October 2026) added native BM25 scoring on a text payload index. Its statistics are per shard, so scores across shards are approximate<sup><a href="#src-13">13</a></sup>.
 
 A few more worth knowing:
 

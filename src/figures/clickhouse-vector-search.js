@@ -29,7 +29,7 @@ class CvParts extends Figure {
       const edges = S('path', { d: knnEdges(pts), class: 'f-none s-ink3', 'stroke-width': 1.1 }, svg);
       // nearest two points of this part to the query
       const near = pts.map((p, j) => [Math.hypot(p[0] - this.q[0], p[1] - this.q[1]), j]).sort((a, b) => a[0] - b[0]).slice(0, 2).map(([, j]) => j);
-      const dots = pts.map((p, j) => S('circle', { cx: p[0], cy: p[1], r: 4, class: near.includes(j) ? 'f-ink2' : 'f-ink3' }, svg));
+      const dots = pts.map((p, j) => S('circle', { cx: p[0], cy: p[1], r: 4, class: 'f-ink3' }, svg));
       const ray = S('path', { d: `M${this.q[0]} ${this.q[1] + 8}L${x + BW / 2} ${BY - 4}`, class: 'f-none s-green', 'stroke-width': 1.5, 'stroke-dasharray': '3 4' }, svg);
       return { x, pts, box, lab, edges, dots, near, ray };
     });
@@ -48,8 +48,9 @@ class CvParts extends Figure {
       const a = seg(t, i * 0.9, i * 0.9 + 0.6);
       op(p.box, a); op(p.lab, a); p.dots.forEach((d) => op(d, a));
       drawOn(p.edges, seg(t, i * 0.9 + 0.4, i * 0.9 + 1.4));
-      // query phase: rays out, nearest dots turn green; they stay green afterwards
-      drawOn(p.ray, seg(t, 3.8 + i * 0.3, 4.6 + i * 0.3) * (1 - seg(t, 7, 7.5)));
+      // query phase: rays fade in (opacity, so the dash pattern survives), the nearest dots light up,
+      // and both clear before the merge
+      op(p.ray, seg(t, 3.8 + i * 0.3, 4.6 + i * 0.3) * (1 - seg(t, 7, 7.5)));
       const lit = seg(t, 4.6 + i * 0.3, 5 + i * 0.3) * (1 - seg(t, 7, 7.5));
       p.dots.forEach((d, j) => attr(d, { class: p.near.includes(j) && lit > 0.5 ? 'f-green' : 'f-ink3' }));
     });
@@ -68,30 +69,21 @@ class CvParts extends Figure {
 // ── fig 2 · post-filter, fetch multiplier, prefilter ─────────────────────────
 // 200 candidate rows in distance order (rank 1 top-left). Each row matches the
 // WHERE filter with probability `sel`. Seeded, so every toggle shows the same rows.
-const K = 10, N = 200;
+const K = 10, N = 200, C = 20, CS = 22, X0 = 80, Y0 = 46;
 class CvFilter extends Figure {
   build() {
     const svg = this.svgRoot(600, 300, 'Two hundred rows sorted by distance to the query; filled squares match the WHERE filter; the index fetches the nearest rows and only matching ones are returned');
-    const r = rng(11); this.u = Array.from({ length: N }, () => r());
+    const r = rng(111); this.u = Array.from({ length: N }, () => r());
     this.sel = 0.2; this.mode = 'post';
-    const C = 20, cs = 22, x0 = 80, y0 = 46;
-    S('text', { x: x0, y: 24, class: 'sl', 'font-size': 11, text: 'ROWS IN DISTANCE ORDER, NEAREST FIRST →' }, svg);
-    this.cells = this.u.map((_, i) => S('rect', { x: x0 + (i % C) * cs, y: y0 + Math.floor(i / C) * cs, width: cs - 5, height: cs - 5, rx: 3, 'stroke-width': 1.4 }, svg));
+    S('text', { x: X0, y: 24, class: 'sl', 'font-size': 11, text: 'ROWS IN DISTANCE ORDER, NEAREST FIRST →' }, svg);
+    this.cells = this.u.map((_, i) => S('rect', { x: X0 + (i % C) * CS, y: Y0 + Math.floor(i / C) * CS, width: CS - 5, height: CS - 5, rx: 3, 'stroke-width': 1.4 }, svg));
     this.win = S('path', { class: 'f-none s-ochre', 'stroke-width': 2.2, 'stroke-linejoin': 'round' }, svg);
-    this.out = S('text', { x: x0, y: 290, class: 't', 'font-size': 14 }, svg);
+    this.out = S('text', { x: X0, y: 290, class: 't', 'font-size': 14 }, svg);
     this.paint();
     pills(this, [['post', 'post-filter'], ['mult', 'fetch ×4'], ['pre', 'prefilter']], 'post', (v) => { this.mode = v; this.paint(); });
-    // second row of pills for selectivity
-    const bar = this.querySelector('.fc');
-    const sels = [[0.5, '50% match'], [0.2, '20%'], [0.05, '5%']].map(([v, l]) => {
-      const b = document.createElement('button'); attr(b, { class: 'pill', type: 'button', 'aria-pressed': String(v === this.sel) }); b.textContent = l;
-      b.onclick = () => { sels.forEach((x) => x.setAttribute('aria-pressed', String(x === b))); this.sel = v; this.paint(); };
-      bar.appendChild(b); return b;
-    });
-    entrance(this, () => {});
+    pills(this, [[0.5, '50% match'], [0.2, '20%'], [0.05, '5%']], 0.2, (v) => { this.sel = v; this.paint(); });
   }
   paint() {
-    const C = 20, cs = 22, x0 = 80, y0 = 46;
     const match = this.u.map((v) => v < this.sel);
     const fetched = this.mode === 'post' ? K : this.mode === 'mult' ? 4 * K : N;
     let got = 0;
@@ -101,10 +93,10 @@ class CvFilter extends Figure {
       attr(c, { class: keep ? 'f-green s-green' : m ? 'f-ink3 s-ink3' : 'f-none s-rule' });
     });
     // outline the fetch window (whole rows plus a partial last row)
-    const full = Math.floor(Math.min(fetched, N) / C), rest = Math.min(fetched, N) % C, w = C * cs, X = x0 - 3, Y = y0 - 3;
+    const full = Math.floor(Math.min(fetched, N) / C), rest = Math.min(fetched, N) % C, w = C * CS, X = X0 - 3, Y = Y0 - 3;
     const d = rest
-      ? `M${X} ${Y}h${w}v${full * cs}h${-(C - rest) * cs}v${cs}h${-rest * cs}z`
-      : `M${X} ${Y}h${w}v${full * cs}h${-w}z`;
+      ? `M${X} ${Y}h${w}v${full * CS}h${-(C - rest) * CS}v${CS}h${-rest * CS}z`
+      : `M${X} ${Y}h${w}v${full * CS}h${-w}z`;
     attr(this.win, { d });
     const how = this.mode === 'pre' ? 'exact scan of every matching row' : `index fetches ${fetched}`;
     this.out.textContent = `${how} → ${got} of ${K} rows returned`;
