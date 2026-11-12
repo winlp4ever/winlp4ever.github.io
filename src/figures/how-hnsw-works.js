@@ -10,11 +10,13 @@ function layerLinks(pts, ids, k) {
   return adj;
 }
 // greedy routing: look at every neighbour, move to the closest if it beats the current node
+// `seen` lists only nodes whose distance wasn't computed before, as HNSW keeps a visited set
 function greedy(pts, adj, start, q) {
-  const steps = []; let cur = start;
+  const steps = [], visited = new Set([start]); let cur = start;
   for (;;) {
-    const nb = [...adj.get(cur)], best = nb.reduce((b, j) => (d2(pts[j], q) < d2(pts[b], q) ? j : b), cur);
-    steps.push({ from: cur, to: best, seen: nb });
+    const nb = [...adj.get(cur)], fresh = nb.filter((j) => !visited.has(j)), best = nb.reduce((b, j) => (d2(pts[j], q) < d2(pts[b], q) ? j : b), cur);
+    fresh.forEach((j) => visited.add(j));
+    steps.push({ from: cur, to: best, seen: fresh });
     if (best === cur) return steps;
     cur = best;
   }
@@ -64,8 +66,10 @@ class HnSearch extends Figure {
   label(t) { const i = Math.min(this.steps.length - 1, Math.max(0, Math.floor((t - 1.2) / 0.7))); return `layer ${2 - this.steps[i].li}`; }
   render(t) {
     const k = Math.floor((t - 1.2) / 0.7), f = ((t - 1.2) / 0.7) - k;
-    let seen = 0;
+    // the entry point's distance is computed first
+    let seen = t > 1.2 ? 1 : 0;
     this.dots.forEach((m) => m.forEach((c) => attr(c, { class: 'f-ink3' })));
+    if (seen) attr(this.dots[0].get(this.steps[0].from), { class: 'f-ink' });
     this.steps.forEach((s, i) => {
       const lit = i < k || (i === k && f > 0.15);
       if (lit) { seen += s.seen.length; s.seen.forEach((j) => attr(this.dots[s.li].get(j), { class: 'f-ink' })); }
@@ -93,7 +97,7 @@ const COUNT = [
 ];
 class HnCount extends Figure {
   build() {
-    const svg = this.svgRoot(600, 320, 'Distance computations per query on a log-log chart: brute force grows in a straight line with N, HNSW stays nearly flat at a few hundred');
+    const svg = this.svgRoot(600, 320, 'Distance computations on a log-log chart: brute force grows in a straight line with N; an HNSW query stays between about 600 and 1,100, and an HNSW insert between about 700 and 2,300');
     const X = (n) => 70 + (Math.log10(n) - 3) / (Math.log10(3e5) - 3) * 420, Y = (v) => 270 - (Math.log10(v) - 2) / 3.6 * 230;
     [1e3, 1e4, 1e5].forEach((n) => { S('line', { x1: X(n), x2: X(n), y1: 36, y2: 270, class: 's-rule', 'stroke-width': 1 }, svg); S('text', { x: X(n), y: 290, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: n.toLocaleString('en') }, svg); });
     [100, 1000, 1e4, 1e5].forEach((v) => { S('line', { x1: 70, x2: 490, y1: Y(v), y2: Y(v), class: 's-rule', 'stroke-width': 1 }, svg); S('text', { x: 62, y: Y(v) + 4, class: 't3', 'font-size': 11, 'text-anchor': 'end', text: v >= 1000 ? v / 1000 + 'k' : v }, svg); });
@@ -105,10 +109,10 @@ class HnCount extends Figure {
     COUNT.forEach((r) => {
       [['brute', 'f-ink3', 'brute force query'], ['perInsert', 'f-ochre', 'HNSW insert'], ['perQuery', 'f-green', 'HNSW query']].forEach(([k, c, name]) => {
         this.dots.push(S('circle', { cx: X(r.n), cy: Y(r[k]), r: 3.5, class: c }, svg));
-        hit(svg, tip, X(r.n), Y(r[k]), `${name}, N = ${r.n.toLocaleString('en')}`, `${r[k].toLocaleString('en')} distances` + (k === 'perQuery' ? ` · recall@10 ${r.recall}` : ''));
+        hit(svg, tip, X(r.n), Y(r[k]), `${name}, N = ${r.n.toLocaleString('en')}`, `${r[k].toLocaleString('en')} distances` + (k === 'perQuery' ? ` · recall@10 ${r.recall}` : k === 'perInsert' ? ', mean while growing to N' : ''));
       });
     });
-    const last = COUNT.at(-1) || { n: 3e5, brute: 3e5, perInsert: 1000, perQuery: 500 };
+    const last = COUNT.at(-1);
     const lab = (k, text, cls, dy) => S('text', { x: X(last.n) + 8, y: Y(last[k]) + dy, class: cls, 'font-size': 12, text }, svg);
     this.labs = [lab('brute', 'brute force', 't2', 4), lab('perInsert', 'insert', 't2', -2), lab('perQuery', 'query', 't2', 12)];
     this.hand = S('text', { x: 300, y: 252, class: 'hand', 'font-size': 17, 'text-anchor': 'middle', text: '300× more data, about the same work' }, svg);
@@ -125,7 +129,8 @@ class HnInsert extends Figure {
     const adj = layerLinks(pts, ids, 3), P = (p) => [20 + p[0] * 560, 52 + p[1] * 196];
     const np = [0.47, 0.52], start = ids.reduce((b, i) => (d2(pts[i], np) > d2(pts[b], np) ? i : b), 0);
     this.route = greedy(pts, adj, start, np);
-    const nb = near(pts, ids, np, 3);
+    // link to the nearest three among the nodes the search computed a distance to
+    const nb = near(pts, [...new Set(this.route.flatMap((x) => [x.from, ...x.seen]))], np, 3);
     // the neighbour with the most links gets one too many; cap = its old degree
     const over = nb.reduce((b, j) => (adj.get(j).size > adj.get(b).size ? j : b), nb[0]);
     const cap = adj.get(over).size, drop = [...adj.get(over)].reduce((b, j) => (d2(pts[j], pts[over]) > d2(pts[b], pts[over]) ? j : b));
@@ -137,7 +142,7 @@ class HnInsert extends Figure {
     }));
     pts.forEach((p) => { const [x, y] = P(p); S('circle', { cx: x, cy: y, r: 4, class: 'f-ink3' }, svg); });
     const [nx, ny] = P(np);
-    this.hops = this.route.filter((s) => s.from !== s.to).map((s) => { const a = P(pts[s.from]), b = P(pts[s.to]); return S('path', { d: `M${a[0]} ${a[1]}L${b[0]} ${b[1]}`, class: 'f-none s-ink2', 'stroke-width': 2, 'stroke-dasharray': '1 0', 'stroke-linecap': 'round' }, svg); });
+    this.hops = this.route.filter((s) => s.from !== s.to).map((s) => { const a = P(pts[s.from]), b = P(pts[s.to]); return S('path', { d: `M${a[0]} ${a[1]}L${b[0]} ${b[1]}`, class: 'f-none s-ink2', 'stroke-width': 2, 'stroke-linecap': 'round' }, svg); });
     this.links = nb.map((j) => { const [x, y] = P(pts[j]); return S('path', { d: `M${nx} ${ny}L${x} ${y}`, class: 'f-none s-green', 'stroke-width': 2.4, 'stroke-linecap': 'round' }, svg); });
     this.newDot = S('circle', { cx: nx, cy: ny, r: 7, class: 'f-green' }, svg);
     const [ox, oy] = P(pts[over]);
@@ -147,7 +152,7 @@ class HnInsert extends Figure {
     this.harrow = S('path', { d: handArrow(420, 266, ox + 4, oy + 14, 0.2), class: 'f-none s-ink3', 'stroke-width': 1.3, 'stroke-linecap': 'round' }, svg);
     this.seenCount = this.route.reduce((s, x) => s + x.seen.length, 0);
     this.count = S('text', { x: 20, y: 40, class: 't', 'font-size': 12.5 }, svg);
-    this.counts = [this.seenCount, nb.length * 2, cap + 1];
+    this.counts = [this.seenCount, cap + 1];
   }
   label(t) { return t < 1 ? 'new point' : t < 4.5 ? 'search' : t < 6 ? 'link' : 'prune'; }
   render(t) {
@@ -158,7 +163,7 @@ class HnInsert extends Figure {
     op(this.ring, seg(t, 6, 6.4)); op(this.hand, seg(t, 6.3, 6.8)); drawOn(this.harrow, seg(t, 6.3, 6.9));
     if (this.dropEdge) { attr(this.dropEdge, { class: t > 6.8 ? 's-ochre' : 's-rule', 'stroke-width': t > 6.8 ? 2 : 1.1 }); op(this.dropEdge, 1 - seg(t, 7.6, 8.4)); }
     this.status.textContent = t < 4.5 ? 'AN INSERT STARTS AS A SEARCH FOR ITS OWN NEIGHBOURS' : t < 6 ? 'THEN IT LINKS TO THE NEAREST ONES, BOTH WAYS' : 'A NEIGHBOUR OVER ITS CAP IS PRUNED';
-    const [a, b, c] = this.counts;
+    const [a, c] = this.counts;
     this.count.textContent = `distances: ${t < 1 ? 0 : t < 4.5 ? Math.round(a * seg(t, 1, 4)) : t < 6.5 ? a : a + c}` + (t >= 6.5 ? `  (search ${a} + pruning ${c})` : '');
   }
 }
@@ -187,7 +192,7 @@ function amplification(strategy, steps = 990, factor = 10) {
 }
 class HnAmp extends Figure {
   build() {
-    const svg = this.svgRoot(600, 300, 'Graph insertions per vector written, as writes accumulate: a single mutable graph stays at one, segment merges that rebuild the graph climb to four, reusing or joining graphs climbs less');
+    const svg = this.svgRoot(600, 300, 'Graph insertions per vector written, as writes accumulate: a single mutable graph stays at one, segment merges that rebuild the graph climb to 2.9, reusing the largest graph to 2.7 and joining graphs to 2.3');
     const X = (s) => 70 + s / 1000 * 360, Y = (v) => 260 - v / 3.5 * 220;
     [0, 1, 2, 3].forEach((v) => { S('line', { x1: 70, x2: 430, y1: Y(v), y2: Y(v), class: 's-rule', 'stroke-width': 1 }, svg); S('text', { x: 62, y: Y(v) + 4, class: 't3', 'font-size': 11, 'text-anchor': 'end', text: v + '×' }, svg); });
     [0, 250, 500, 750, 1000].forEach((s) => S('text', { x: X(s), y: 280, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: s === 1000 ? '1M' : s ? s + 'k' : '0' }, svg));

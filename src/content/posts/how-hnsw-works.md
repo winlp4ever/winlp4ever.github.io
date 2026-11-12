@@ -4,7 +4,7 @@ date: 2026-11-12
 description: HNSW is the default vector index in almost every database. This post explains the graph and why a search touches so few vectors, then why building it costs so much, what that does to databases that take writes all day, and how Elasticsearch, Qdrant, Milvus, Weaviate, pgvector, ClickHouse and newer designs deal with it.
 tags: [search, vectors, algorithms, infra]
 category: code
-glyph: graph
+glyph: hnsw
 figures: 6
 math: true
 ---
@@ -35,7 +35,7 @@ A search starts at the single entry point on the top layer, routes greedily to t
 
 <figure class="wide">
 <hn-search data-fig data-label="fig 1 · a search through the layers">
-<p class="fallback">Three panels show layer 2, layer 1 and layer 0 of a small graph over sixty points. The query starts at a top-layer node, hops towards the query point, drops to the same node on layer 1, hops again, and drops to layer 0 where it reaches its nearest neighbour. A counter shows how many distances were computed along the way, against sixty for brute force.</p>
+<p class="fallback">Three panels show layer 2 (7 points), layer 1 (17 points) and layer 0 (all 60). The search starts at the top-layer point farthest from the query and makes one hop towards it. On layer 1 none of that point's neighbours is closer, so it drops straight down. On layer 0 it makes two hops and reaches the true nearest neighbour. It computed 15 distances, against 60 for brute force.</p>
 </hn-search>
 <figcaption><b>fig 1</b>Greedy routing through three layers. Highlighted points are the ones whose distance the search computed. The graph links each point to its nearest neighbours in the layer, and layer 0 uses plain greedy routing here, where HNSW keeps a beam of <code>ef</code> candidates.<span class="m">Sixty random points, levels drawn with M = 4.</span></figcaption>
 </figure>
@@ -54,12 +54,12 @@ The paper proves $$O(\log N)$$ search only for low-dimensional data that has an 
 
 <figure class="wide">
 <hn-count data-fig data-label="fig 2 · distance computations, measured">
-<p class="fallback">A log-log chart of distance computations against the number of vectors, from 1,000 to 300,000. Brute force is a straight line equal to N. An HNSW query stays between about 600 and 1,100 distance computations at every size, with recall@10 above 0.99. An HNSW insert costs between 1,300 and 2,300 distance computations once the index holds 10,000 vectors or more.</p>
+<p class="fallback">A log-log chart of distance computations against the number of vectors, from 1,000 to 300,000. Brute force is a straight line equal to N. An HNSW query stays between about 600 and 1,100 distance computations at every size, with recall@10 above 0.99. An HNSW insert, averaged over each step of growth, costs between 700 and 2,300 distance computations.</p>
 </hn-count>
-<figcaption><b>fig 2</b>Work per query and per insert as the index grows. Hover a point for the exact count and the recall.<span class="m">My measurement with scripts/hnsw-count.mjs: 32-d clustered data, 200 queries per size, recall@10 against brute force.</span></figcaption>
+<figcaption><b>fig 2</b>Work per query and per insert as the index grows. Each insert point is the mean over the inserts that grew the index to that size. Hover a point for the exact count and the recall.<span class="m">My measurement with scripts/hnsw-count.mjs: 32-d clustered data, 200 queries per size, recall@10 against brute force.</span></figcaption>
 </figure>
 
-**At 100,000 vectors a query computed 727 distances and found 99.8% of the true top 10.** Brute force computed 100,000. The count wanders between 600 and 1,100 because the clusters fill up as the data grows. The Faiss wiki has the same picture in wall-clock time on SIFT1M: HNSW answers in 0.033 ms at 0.978 recall@1 with `efSearch = 64`, and an IVF index needs 0.344 ms to reach 0.986<sup><a href="#src-4">4</a></sup>.
+**At 100,000 vectors a query computed 727 distances and found 99.8% of the true top 10.** Brute force computed 100,000. Across sizes the count moves between 600 and 1,100 with no upward trend. The Faiss wiki has the same picture in wall-clock time on SIFT1M: HNSW answers in 0.033 ms at 0.978 recall@1 with `efSearch = 64`, and an IVF index needs 0.344 ms to reach 0.986<sup><a href="#src-4">4</a></sup>.
 
 ## the neighbour rule
 
@@ -84,7 +84,7 @@ Adding a vector runs the whole search descent with `ef_construction` as the beam
 <figcaption><b>fig 3</b>The three parts of an insert. The search here is greedy and the neighbours are simply the nearest three; real HNSW uses a beam of <code>ef_construction</code> candidates and the neighbour rule.<span class="m">Thirty-four random points.</span></figcaption>
 </figure>
 
-In my measurement an insert computed between 1,300 and 2,300 distances once the index held 10,000 vectors or more, about twice as many as a query. Building the 100,000-vector index computed about 200 million distances in total, as much work as 2,000 brute-force queries over the same data. Building is slow at real scale too:
+In my measurement inserts averaged between 1,300 and 2,300 distances each while the index grew from 1,000 to 300,000 vectors, 1.5 to 2.7 times as many as a query of the same size. Building the 100,000-vector index computed about 200 million distances in total, as much work as 2,000 brute-force queries over the same data. Building is slow at real scale too:
 
 - The HNSW paper built 200 million SIFT vectors in 42 minutes with `ef_construction = 40` and in 5.6 hours with 500, on a 40-core machine<sup><a href="#src-2">2</a></sup>.
 - Elastic measured 1,054 seconds to index 1 million vectors into HNSW with BBQ quantization<sup><a href="#src-6">6</a></sup>.
@@ -192,7 +192,7 @@ turbopuffer, LanceDB and Pinecone serverless keep new data in a write buffer and
 <figcaption><b>fig 6</b>What each fix bought. The rows use different data and hardware, so compare the ratios, not the positions across rows.<span class="m">Vendor numbers: Supabase/jkatz for pgvector, OpenSearch 3.1 release post, Elastic Search Labs, Qdrant 1.13 release post.</span></figcaption>
 </figure>
 
-The biggest gains come from three places: parallel and SIMD code, GPUs, and dropping the graph for clusters. Graph reuse and joins inside Lucene save 30 to 40% of merge time.
+The biggest gains come from three places: parallel and SIMD code, GPUs, and dropping the graph for clusters. Graph reuse and joins inside Lucene save between a few percent and about half of the merge time, depending on segment sizes.
 
 ## research on fresh data
 
