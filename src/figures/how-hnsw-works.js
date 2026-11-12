@@ -1,4 +1,5 @@
 import { S, attr, op, seg, rng, entrance, tooltip, hit, handArrow, drawOn, Figure, define } from './core.js'
+import { COUNT } from './data/hnsw-count.js'
 
 const near = (pts, ids, p, k) => ids.map((j) => [Math.hypot(pts[j][0] - p[0], pts[j][1] - p[1]), j]).sort((a, b) => a[0] - b[0]).slice(0, k).map(([, j]) => j);
 const d2 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -9,6 +10,8 @@ function layerLinks(pts, ids, k) {
   ids.forEach((i) => near(pts, ids.filter((j) => j !== i), pts[i], k).forEach((j) => { adj.get(i).add(j); adj.get(j).add(i); }));
   return adj;
 }
+// each undirected edge once
+const edgeList = (adj) => [...adj].flatMap(([i, s]) => [...s].filter((j) => j > i).map((j) => [i, j]));
 // greedy routing: look at every neighbour, move to the closest if it beats the current node
 // `seen` lists only nodes whose distance wasn't computed before, as HNSW keeps a visited set
 function greedy(pts, adj, start, q) {
@@ -43,8 +46,7 @@ class HnSearch extends Figure {
     ['LAYER 2', 'LAYER 1', 'LAYER 0 (ALL POINTS)'].forEach((t, li) => {
       S('rect', { x: PX[li], y: PY, width: PW, height: PH, rx: 8, class: 'f-panel s-rule', 'stroke-width': 1.2 }, svg);
       S('text', { x: PX[li], y: PY - 10, class: 'sl', 'font-size': 11, text: t }, svg);
-      let d = ''; const seen = new Set();
-      adj[li].forEach((nb, i) => nb.forEach((j) => { const k = Math.min(i, j) + '-' + Math.max(i, j); if (seen.has(k)) return; seen.add(k); const a = P(li, pts[i]), b = P(li, pts[j]); d += `M${a[0].toFixed(1)} ${a[1].toFixed(1)}L${b[0].toFixed(1)} ${b[1].toFixed(1)}`; }));
+      const d = edgeList(adj[li]).map(([i, j]) => { const a = P(li, pts[i]), b = P(li, pts[j]); return `M${a[0].toFixed(1)} ${a[1].toFixed(1)}L${b[0].toFixed(1)} ${b[1].toFixed(1)}`; }).join('');
       S('path', { d, class: 'f-none s-rule', 'stroke-width': 1 }, svg);
     });
     this.dots = [0, 1, 2].map((li) => new Map(ids[li].map((i) => { const [x, y] = P(li, pts[i]); return [i, S('circle', { cx: x, cy: y, r: li === 2 ? 3 : 4, class: 'f-ink3' }, svg)]; })));
@@ -60,6 +62,7 @@ class HnSearch extends Figure {
       return S('path', { d: handArrow(a[0] + 6, a[1] - 6, b[0] - 8, b[1] - 6, -0.15), class: 'f-none s-ink3', 'stroke-width': 1.3 }, svg);
     });
     this.cur = S('circle', { r: 6.5, class: 'f-green' }, svg);
+    this.lastOf = [0, 1].map((li) => this.steps.map((x) => x.li).lastIndexOf(li));
     this.count = S('text', { x: 14, y: 312, class: 't', 'font-size': 14 }, svg);
     this.P = P; this.pts = pts;
   }
@@ -75,7 +78,7 @@ class HnSearch extends Figure {
       if (lit) { seen += s.seen.length; s.seen.forEach((j) => attr(this.dots[s.li].get(j), { class: 'f-ink' })); }
       if (this.hops[i]) drawOn(this.hops[i], i < k ? 1 : i === k ? seg(f, 0.4, 1) : 0);
     });
-    this.drops.forEach((d, li) => { const last = this.steps.map((s) => s.li).lastIndexOf(li); drawOn(d, k > last ? 1 : k === last ? seg(f, 0.4, 1) : 0); });
+    this.drops.forEach((d, li) => { const last = this.lastOf[li]; drawOn(d, k > last ? 1 : k === last ? seg(f, 0.4, 1) : 0); });
     const i = Math.max(0, Math.min(this.steps.length - 1, k)), s = this.steps[i];
     const node = k < 0 ? s.from : f > 0.7 || k >= this.steps.length ? s.to : s.from;
     const [x, y] = this.P(s.li, this.pts[node]);
@@ -87,14 +90,7 @@ class HnSearch extends Figure {
 
 // ── fig 2 · distance computations per query against N (measured) ─────────────
 // From scripts/hnsw-count.mjs: 32-d, M = 16, efSearch = 64, efConstruction = 100.
-const COUNT = [
-  {n: 1000, perQuery: 638, brute: 1000, recall: 0.999, perInsert: 690},
-  {n: 3000, perQuery: 923, brute: 3000, recall: 0.996, perInsert: 1428},
-  {n: 10000, perQuery: 1108, brute: 10000, recall: 0.998, perInsert: 2007},
-  {n: 30000, perQuery: 1064, brute: 30000, recall: 1, perInsert: 2302},
-  {n: 100000, perQuery: 727, brute: 100000, recall: 0.998, perInsert: 1981},
-  {n: 300000, perQuery: 623, brute: 300000, recall: 0.998, perInsert: 1270},
-];
+// COUNT rows come from scripts/hnsw-count.mjs, which writes ./data/hnsw-count.js
 class HnCount extends Figure {
   build() {
     const svg = this.svgRoot(600, 320, 'Distance computations on a log-log chart: brute force grows in a straight line with N; an HNSW query stays between about 600 and 1,100, and an HNSW insert between about 700 and 2,300');
@@ -109,7 +105,9 @@ class HnCount extends Figure {
     COUNT.forEach((r) => {
       [['brute', 'f-ink3', 'brute force query'], ['perInsert', 'f-ochre', 'HNSW insert'], ['perQuery', 'f-green', 'HNSW query']].forEach(([k, c, name]) => {
         this.dots.push(S('circle', { cx: X(r.n), cy: Y(r[k]), r: 3.5, class: c }, svg));
-        hit(svg, tip, X(r.n), Y(r[k]), `${name}, N = ${r.n.toLocaleString('en')}`, `${r[k].toLocaleString('en')} distances` + (k === 'perQuery' ? ` · recall@10 ${r.recall}` : k === 'perInsert' ? ', mean while growing to N' : ''));
+        // query and insert dots can sit a few px apart: nudge the hover targets apart
+        const close = Math.abs(Y(r.perInsert) - Y(r.perQuery)) < 16, dy = !close ? 0 : k === 'perInsert' ? -7 : k === 'perQuery' ? 7 : 0;
+        hit(svg, tip, X(r.n), Y(r[k]) + dy, `${name}, N = ${r.n.toLocaleString('en')}`, `${r[k].toLocaleString('en')} distances` + (k === 'perQuery' ? ` · recall@10 ${r.recall}` : k === 'perInsert' ? ', mean while growing to N' : ''));
       });
     });
     const last = COUNT.at(-1);
@@ -121,38 +119,43 @@ class HnCount extends Figure {
 }
 
 // ── fig 3 · one insert ───────────────────────────────────────────────────────
+const CAP = 4; // fig 3: most links a node may keep
 class HnInsert extends Figure {
   constructor() { super(); this.duration = 9; this.poster = 9; }
   build() {
-    const svg = this.svgRoot(600, 300, 'A new point joins a graph: a greedy search finds where it belongs, it links to its nearest neighbours, and a neighbour that now has too many links drops its longest one');
+    const svg = this.svgRoot(600, 300, 'A new point joins a graph: a greedy search finds where it belongs, it links to the three nearest points the search found, and every neighbour that now has more than four links drops its longest one');
     const r = rng(21), pts = Array.from({ length: 34 }, () => [0.04 + r() * 0.92, 0.06 + r() * 0.88]), ids = pts.map((_, i) => i);
     const adj = layerLinks(pts, ids, 3), P = (p) => [20 + p[0] * 560, 52 + p[1] * 196];
     const np = [0.47, 0.52], start = ids.reduce((b, i) => (d2(pts[i], np) > d2(pts[b], np) ? i : b), 0);
     this.route = greedy(pts, adj, start, np);
-    // link to the nearest three among the nodes the search computed a distance to
-    const nb = near(pts, [...new Set(this.route.flatMap((x) => [x.from, ...x.seen]))], np, 3);
-    // the neighbour with the most links gets one too many; cap = its old degree
-    const over = nb.reduce((b, j) => (adj.get(j).size > adj.get(b).size ? j : b), nb[0]);
-    const cap = adj.get(over).size, drop = [...adj.get(over)].reduce((b, j) => (d2(pts[j], pts[over]) > d2(pts[b], pts[over]) ? j : b));
-    const seen = new Set(); this.edges = [];
-    adj.forEach((s, i) => s.forEach((j) => {
-      const k = Math.min(i, j) + '-' + Math.max(i, j); if (seen.has(k)) return; seen.add(k);
-      const a = P(pts[i]), b = P(pts[j]), e = S('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], class: 's-rule', 'stroke-width': 1.1 }, svg);
-      if ((i === over && j === drop) || (j === over && i === drop)) this.dropEdge = e;
-    }));
+    // the search computed distances to the start and every node in `seen`; link to the nearest three of those
+    const found = [start, ...this.route.flatMap((x) => x.seen)];
+    const nb = near(pts, found, np, 3), NEW = -1, at = (k) => (k === NEW ? np : pts[k]);
+    // each neighbour over the cap compares all its links and drops the longest (possibly the new one)
+    this.prunes = nb.filter((k) => adj.get(k).size + 1 > CAP).map((k) => {
+      const drop = [...adj.get(k), NEW].reduce((b, m) => (d2(at(m), pts[k]) > d2(at(b), pts[k]) ? m : b));
+      return { k, drop };
+    });
+    const dropKey = new Set(this.prunes.filter((p) => p.drop !== NEW).map((p) => Math.min(p.k, p.drop) + '-' + Math.max(p.k, p.drop)));
+    this.dropEdges = [];
+    edgeList(adj).forEach(([a, b]) => {
+      const pa = P(pts[a]), pb = P(pts[b]), e = S('line', { x1: pa[0], y1: pa[1], x2: pb[0], y2: pb[1], class: 's-rule', 'stroke-width': 1.1 }, svg);
+      if (dropKey.has(a + '-' + b)) this.dropEdges.push(e);
+    });
     pts.forEach((p) => { const [x, y] = P(p); S('circle', { cx: x, cy: y, r: 4, class: 'f-ink3' }, svg); });
     const [nx, ny] = P(np);
-    this.hops = this.route.filter((s) => s.from !== s.to).map((s) => { const a = P(pts[s.from]), b = P(pts[s.to]); return S('path', { d: `M${a[0]} ${a[1]}L${b[0]} ${b[1]}`, class: 'f-none s-ink2', 'stroke-width': 2, 'stroke-linecap': 'round' }, svg); });
-    this.links = nb.map((j) => { const [x, y] = P(pts[j]); return S('path', { d: `M${nx} ${ny}L${x} ${y}`, class: 'f-none s-green', 'stroke-width': 2.4, 'stroke-linecap': 'round' }, svg); });
+    this.hops = this.route.filter((x) => x.from !== x.to).map((x) => { const a = P(pts[x.from]), b = P(pts[x.to]); return S('path', { d: `M${a[0]} ${a[1]}L${b[0]} ${b[1]}`, class: 'f-none s-ink2', 'stroke-width': 2, 'stroke-linecap': 'round' }, svg); });
+    this.links = nb.map((k) => { const [x, y] = P(pts[k]); return S('path', { d: `M${nx} ${ny}L${x} ${y}`, class: 'f-none s-green', 'stroke-width': 2.4, 'stroke-linecap': 'round' }, svg); });
+    // a neighbour whose longest link is the new one drops its side; the new point keeps its own, so that link turns one-way (dashed)
+    this.oneWay = this.prunes.filter((p) => p.drop === NEW).map((p) => this.links[nb.indexOf(p.k)]);
     this.newDot = S('circle', { cx: nx, cy: ny, r: 7, class: 'f-green' }, svg);
-    const [ox, oy] = P(pts[over]);
-    this.ring = S('circle', { cx: ox, cy: oy, r: 11, class: 'f-none s-ochre', 'stroke-width': 2 }, svg);
+    this.rings = this.prunes.map(({ k }) => { const [x, y] = P(pts[k]); return S('circle', { cx: x, cy: y, r: 11, class: 'f-none s-ochre', 'stroke-width': 2 }, svg); });
     this.status = S('text', { x: 20, y: 22, class: 'sl', 'font-size': 11 }, svg);
-    this.hand = S('text', { x: 420, y: 284, class: 'hand', 'font-size': 16, 'text-anchor': 'middle', text: `${cap + 1} links, cap is ${cap}: drop the longest` }, svg);
+    const [ox, oy] = this.prunes.length ? P(pts[this.prunes[0].k]) : [nx, ny];
+    this.hand = S('text', { x: 420, y: 284, class: 'hand', 'font-size': 16, 'text-anchor': 'middle', text: `over ${CAP} links: drop the longest` }, svg);
     this.harrow = S('path', { d: handArrow(420, 266, ox + 4, oy + 14, 0.2), class: 'f-none s-ink3', 'stroke-width': 1.3, 'stroke-linecap': 'round' }, svg);
-    this.seenCount = this.route.reduce((s, x) => s + x.seen.length, 0);
     this.count = S('text', { x: 20, y: 40, class: 't', 'font-size': 12.5 }, svg);
-    this.counts = [this.seenCount, cap + 1];
+    this.counts = [found.length, this.prunes.length * (CAP + 1)];
   }
   label(t) { return t < 1 ? 'new point' : t < 4.5 ? 'search' : t < 6 ? 'link' : 'prune'; }
   render(t) {
@@ -160,9 +163,10 @@ class HnInsert extends Figure {
     const n = this.hops.length;
     this.hops.forEach((h, i) => drawOn(h, seg(t, 1 + i * (3 / Math.max(1, n)), 1 + (i + 1) * (3 / Math.max(1, n)))));
     this.links.forEach((l, i) => drawOn(l, seg(t, 4.6 + i * 0.3, 5.1 + i * 0.3)));
-    op(this.ring, seg(t, 6, 6.4)); op(this.hand, seg(t, 6.3, 6.8)); drawOn(this.harrow, seg(t, 6.3, 6.9));
-    if (this.dropEdge) { attr(this.dropEdge, { class: t > 6.8 ? 's-ochre' : 's-rule', 'stroke-width': t > 6.8 ? 2 : 1.1 }); op(this.dropEdge, 1 - seg(t, 7.6, 8.4)); }
-    this.status.textContent = t < 4.5 ? 'AN INSERT STARTS AS A SEARCH FOR ITS OWN NEIGHBOURS' : t < 6 ? 'THEN IT LINKS TO THE NEAREST ONES, BOTH WAYS' : 'A NEIGHBOUR OVER ITS CAP IS PRUNED';
+    this.oneWay.forEach((l) => { if (t > 7.6) { l.style.strokeDasharray = '5 5'; l.style.strokeDashoffset = 0; } });
+    this.rings.forEach((r) => op(r, seg(t, 6, 6.4))); op(this.hand, seg(t, 6.3, 6.8)); drawOn(this.harrow, seg(t, 6.3, 6.9));
+    this.dropEdges.forEach((e) => { e._c = e._c || e.getAttribute('class'); attr(e, { class: t > 6.8 ? e._c.replace(/s-\w+/, 's-ochre') : e._c }); op(e, 1 - seg(t, 7.6, 8.4)); });
+    this.status.textContent = t < 4.5 ? 'AN INSERT STARTS AS A SEARCH FOR ITS OWN NEIGHBOURS' : t < 6 ? 'THEN IT LINKS TO THE NEAREST ONES, BOTH WAYS' : 'NEIGHBOURS OVER THE CAP ARE PRUNED';
     const [a, c] = this.counts;
     this.count.textContent = `distances: ${t < 1 ? 0 : t < 4.5 ? Math.round(a * seg(t, 1, 4)) : t < 6.5 ? a : a + c}` + (t >= 6.5 ? `  (search ${a} + pruning ${c})` : '');
   }

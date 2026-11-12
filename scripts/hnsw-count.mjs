@@ -1,6 +1,7 @@
 // Counts distance computations for a plain HNSW (Malkov & Yashunin, Alg. 1–5)
 // against brute force, at several sizes N. Writes JSON to stdout.
-//   node scripts/hnsw-count.mjs > out.json
+//   node scripts/hnsw-count.mjs                 (JSON to stdout)
+//   node scripts/hnsw-count.mjs --module        (also writes src/figures/data/hnsw-count.js for fig 2)
 // Data: a seeded mixture of 1,000 overlapping Gaussian clusters in 32 dimensions.
 // M = 16, Mmax0 = 32, efConstruction = 100, efSearch = 64, k = 10.
 
@@ -106,3 +107,9 @@ for (const n of SIZES) {
   console.error(JSON.stringify(out.at(-1)));
 }
 console.log(JSON.stringify({ D, M, M0, efConstruction: EFC, efSearch: EF, k: K, queries: Q, rows: out }, null, 1));
+if (process.argv.includes('--module')) {
+  const { writeFileSync } = await import('node:fs');
+  const rows = out.map(({ n, perQuery, brute, recall, perInsert }) => `  { n: ${n}, perQuery: ${perQuery}, brute: ${brute}, recall: ${recall}, perInsert: ${perInsert} },`).join('\n');
+  writeFileSync(new URL('../src/figures/data/hnsw-count.js', import.meta.url),
+    `// Written by scripts/hnsw-count.mjs --module. ${D}-d clustered data, M = ${M}, efConstruction = ${EFC}, efSearch = ${EF}, k = ${K}, ${Q} queries per size.\n// perInsert is the mean over the inserts that grew the index to n.\nexport const COUNT = [\n${rows}\n];\n`);
+}

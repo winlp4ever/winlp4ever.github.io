@@ -37,7 +37,7 @@ A search starts at the single entry point on the top layer, routes greedily to t
 <hn-search data-fig data-label="fig 1 · a search through the layers">
 <p class="fallback">Three panels show layer 2 (7 points), layer 1 (17 points) and layer 0 (all 60). The search starts at the top-layer point farthest from the query and makes one hop towards it. On layer 1 none of that point's neighbours is closer, so it drops straight down. On layer 0 it makes two hops and reaches the true nearest neighbour. It computed 15 distances, against 60 for brute force.</p>
 </hn-search>
-<figcaption><b>fig 1</b>Greedy routing through three layers. Highlighted points are the ones whose distance the search computed. The graph links each point to its nearest neighbours in the layer, and layer 0 uses plain greedy routing here, where HNSW keeps a beam of <code>ef</code> candidates.<span class="m">Sixty random points, levels drawn with M = 4.</span></figcaption>
+<figcaption><b>fig 1</b>Greedy routing through three layers. Highlighted points are the ones whose distance the search computed. The graph links each point to its nearest neighbours in the layer (the small top layer is fully linked), and layer 0 uses plain greedy routing here, where HNSW keeps a beam of <code>ef</code> candidates.<span class="m">Sixty random points, levels drawn with M = 4.</span></figcaption>
 </figure>
 
 Three parameters control the graph:
@@ -79,12 +79,12 @@ Adding a vector runs the whole search descent with `ef_construction` as the beam
 
 <figure class="wide">
 <hn-insert data-fig data-label="fig 3 · one insert">
-<p class="fallback">A new point appears in the middle of a graph. A greedy search walks from an entry node towards it, computing distances to every neighbour it passes. The new point then links to its three nearest nodes. One of those nodes now has one link more than its cap, and its longest link is removed.</p>
+<p class="fallback">A new point appears in the middle of a graph. A greedy search walks three hops towards it from the far side, computing 10 distances. The new point links to the three nearest points that search found; the true third-nearest point was never reached. Two of those neighbours now have five links, one over the cap of four. One drops its longest link, to another node. For the other, the longest link is the one to the new point, so it drops its side and that link becomes one-way. The pruning computes 10 more distances.</p>
 </hn-insert>
-<figcaption><b>fig 3</b>The three parts of an insert. The search here is greedy and the neighbours are simply the nearest three; real HNSW uses a beam of <code>ef_construction</code> candidates and the neighbour rule.<span class="m">Thirty-four random points.</span></figcaption>
+<figcaption><b>fig 3</b>The three parts of an insert. The search here is greedy and the new point links to the nearest three it found, which misses the true third-nearest point; real HNSW searches with a beam of <code>ef_construction</code> candidates, which usually finds it, and picks links with the neighbour rule. A dashed link is one-way.<span class="m">Thirty-four random points.</span></figcaption>
 </figure>
 
-In my measurement inserts averaged between 1,300 and 2,300 distances each while the index grew from 1,000 to 300,000 vectors, 1.5 to 2.7 times as many as a query of the same size. Building the 100,000-vector index computed about 200 million distances in total, as much work as 2,000 brute-force queries over the same data. Building is slow at real scale too:
+In my measurement inserts averaged between 700 and 2,300 distances each while the index grew to 300,000 vectors, 1.1 to 2.7 times as many as a query at the same size. Building the 100,000-vector index computed about 200 million distances in total, as much work as 2,000 brute-force queries over the same data. Building is slow at real scale too:
 
 - The HNSW paper built 200 million SIFT vectors in 42 minutes with `ef_construction = 40` and in 5.6 hours with 500, on a 40-core machine<sup><a href="#src-2">2</a></sup>.
 - Elastic measured 1,054 seconds to index 1 million vectors into HNSW with BBQ quantization<sup><a href="#src-6">6</a></sup>.
@@ -111,7 +111,7 @@ HNSW has no real delete. hnswlib marks a deleted node so it's left out of result
 | Jasper<sup><a href="#src-18">18</a></sup> | 2026 | GPU Vamana with lock-free streaming inserts | about 7× faster build than CAGRA |
 | LSM-VEC<sup><a href="#src-19">19</a></sup> | 2025 | graph stored in an LSM tree on disk | up to 15× fewer bytes written per insert than FreshDiskANN and SPFresh |
 
-The graph indexes (NSG, DiskANN, CAGRA) are all close relatives of HNSW with one flat layer. The others replace the graph with clusters, an IVF index: assign each vector to its nearest centroid, then search only the few closest clusters. IVF searches slower than a graph at very high recall, but adding a vector to IVF means one comparison against the centroids and an append, so inserts cost far less. That difference matters for the rest of this post.
+The graph indexes (NSG, DiskANN, CAGRA) are all close relatives of HNSW with one flat layer. The others replace the graph with clusters, an IVF index: assign each vector to its nearest centroid, then search only the few closest clusters. IVF searches slower than a graph at very high recall, but adding a vector to IVF means one comparison against the centroids and an append, so inserts cost far less.
 
 ## writes that keep coming
 
