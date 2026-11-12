@@ -2,18 +2,23 @@ import { S, attr, op, seg, rng, entrance, pills, tooltip, hit, handArrow, drawOn
 
 // ── fig 1 · one graph per part, rebuilt on merge ──────────────────────────────
 // Points are random (seeded); edges join each point to its two nearest neighbours,
-// which is the flavour of an HNSW layer without the hierarchy.
+// which is the flavour of an HNSW layer without the hierarchy. Like a real HNSW graph,
+// the result is connected: separate pieces are joined by their shortest gap.
 const knnEdges = (pts, k = 2) => {
-  const seen = new Set(); let d = '';
-  pts.forEach((p, i) => {
-    pts.map((q, j) => [Math.hypot(p[0] - q[0], p[1] - q[1]), j]).filter(([, j]) => j !== i)
-      .sort((a, b) => a[0] - b[0]).slice(0, k).forEach(([, j]) => {
-        const key = Math.min(i, j) + '-' + Math.max(i, j);
-        if (seen.has(key)) return; seen.add(key);
-        d += `M${p[0].toFixed(1)} ${p[1].toFixed(1)}L${pts[j][0].toFixed(1)} ${pts[j][1].toFixed(1)}`;
-      });
-  });
-  return d;
+  const D = (i, j) => Math.hypot(pts[i][0] - pts[j][0], pts[i][1] - pts[j][1]);
+  const comp = pts.map((_, i) => i), find = (i) => (comp[i] === i ? i : (comp[i] = find(comp[i])));
+  const seen = new Set(), edges = [];
+  const add = (i, j) => {
+    const key = Math.min(i, j) + '-' + Math.max(i, j);
+    if (seen.has(key)) return; seen.add(key); edges.push([i, j]); comp[find(i)] = find(j);
+  };
+  pts.forEach((_, i) => pts.map((_, j) => j).filter((j) => j !== i).sort((a, b) => D(i, a) - D(i, b)).slice(0, k).forEach((j) => add(i, j)));
+  for (;;) { // join the closest pair of points that sit in different pieces
+    let best = null;
+    pts.forEach((_, i) => pts.forEach((_, j) => { if (find(i) !== find(j) && (!best || D(i, j) < best[2])) best = [i, j, D(i, j)]; }));
+    if (!best) break; add(best[0], best[1]);
+  }
+  return edges.map(([i, j]) => `M${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}L${pts[j][0].toFixed(1)} ${pts[j][1].toFixed(1)}`).join('');
 };
 
 class CvParts extends Figure {

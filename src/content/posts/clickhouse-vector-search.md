@@ -27,13 +27,15 @@ This reads every vector in the table. ClickHouse reads columns fast and on every
 
 The approximate index is HNSW, built on the usearch library<sup><a href="#src-1">1</a></sup>. If you want to understand how HNSW itself works, I wrote it up in [how HNSW works](/blog/how-hnsw-works/), with the graph, the layers and why inserts are expensive. It went experimental, then beta in 25.5, then GA in 25.8, which also removed the older `annoy` and `usearch` index types. Since 25.8 it needs no experimental setting.
 
-ClickHouse stores a table as **parts**, immutable chunks written by each insert and combined later by background merges. A skip index belongs to a part, so each part gets its own small HNSW graph. A query searches every part's graph and merges the top results. When two parts merge, the new part's graph is built again from all its vectors. ClickHouse's own RFC on the next version of the index lists this rebuild-on-merge as the main cost<sup><a href="#src-3">3</a></sup>.
+ClickHouse stores a table as **parts**, immutable chunks written by each insert. A skip index belongs to a part, so each part gets its own small HNSW graph, and a query searches every part's graph and merges the top results.
+
+You don't schedule merges. ClickHouse keeps picking a few small parts of the same partition in the background and merges them into one larger part, until parts reach about 150 GB<sup><a href="#src-39">39</a></sup>; `OPTIMIZE TABLE` forces one. A merge reads the rows of its input parts and writes them out as a new part, and it recreates the new part's skip indexes from the merged columns<sup><a href="#src-39">39</a></sup>. For a vector index, that means every vector of the new part goes into an empty graph; the graphs of the old parts are not reused. Queries keep using the old parts and their graphs until the new part is written. Then the old parts are marked inactive and deleted eight minutes later. A row is indexed when it is inserted, and again in every merge it goes through. ClickHouse's own RFC on the next version of the index lists this rebuild-on-merge as the main cost<sup><a href="#src-3">3</a></sup>.
 
 <figure class="wide">
 <cv-parts data-fig data-label="fig 1 · one graph per part">
 <p class="fallback">Three parts appear one after another, each holding nine vectors joined into a small neighbour graph. A query vector then sends a line to each part, and the two nearest points in each part light up; the results from all parts are merged. Finally parts 1 and 2 merge into one bigger part: their two graphs disappear and a new graph over all eighteen points is drawn from scratch.</p>
 </cv-parts>
-<figcaption><b>fig 1</b>Each part has its own graph, and a merge builds a new one. Real HNSW graphs have several layers and far more points; the points here are random and each one links to its two nearest neighbours.<span class="m">Based on the ClickHouse vector index docs and RFC #104122.</span></figcaption>
+<figcaption><b>fig 1</b>Each part has its own graph, and a merge builds a new one. Real HNSW graphs have several layers and far more points; the points here are random and each one links to its two nearest neighbours, with one extra link wherever that leaves the graph in pieces.<span class="m">Based on the ClickHouse vector index docs and RFC #104122.</span></figcaption>
 </figure>
 
 A few things follow from that design:
@@ -419,5 +421,6 @@ My view is that vector search stopped being the fixed first step of every pipeli
 <li id="src-36"><a href="https://cursor.com/blog/semsearch">Cursor, improving agent with semantic search (6 November 2025)</a></li>
 <li id="src-37"><a href="https://arxiv.org/abs/2508.06600">Chen et al., BrowseComp-Plus (arXiv 2508.06600)</a></li>
 <li id="src-38"><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">Anthropic, effective context engineering for AI agents (29 September 2025)</a></li>
+<li id="src-39"><a href="https://clickhouse.com/docs/merges">ClickHouse docs, part merges (read 12 November 2026)</a></li>
 </ol>
 </details>
