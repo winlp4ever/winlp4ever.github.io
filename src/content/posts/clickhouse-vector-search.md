@@ -25,7 +25,7 @@ This reads every vector in the table. ClickHouse reads columns fast and on every
 
 ## the vector_similarity index
 
-The approximate index is HNSW, built on the usearch library<sup><a href="#src-1">1</a></sup>. It went experimental, then beta in 25.5, then GA in 25.8, which also removed the older `annoy` and `usearch` index types. Since 25.8 it needs no experimental setting.
+The approximate index is HNSW, built on the usearch library<sup><a href="#src-1">1</a></sup>. If you want to understand how HNSW itself works, I wrote it up in [how HNSW works](/blog/how-hnsw-works/), with the graph, the layers and why inserts are expensive. It went experimental, then beta in 25.5, then GA in 25.8, which also removed the older `annoy` and `usearch` index types. Since 25.8 it needs no experimental setting.
 
 ClickHouse stores a table as **parts**, immutable chunks written by each insert and combined later by background merges. A skip index belongs to a part, so each part gets its own small HNSW graph. A query searches every part's graph and merges the top results. When two parts merge, the new part's graph is built again from all its vectors. ClickHouse's own RFC on the next version of the index lists this rebuild-on-merge as the main cost<sup><a href="#src-3">3</a></sup>.
 
