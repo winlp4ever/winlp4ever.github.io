@@ -27,7 +27,7 @@ This reads every vector in the table. ClickHouse reads columns fast and on every
 
 The approximate index is HNSW, built on the usearch library<sup><a href="#src-1">1</a></sup>. If you want to understand how HNSW itself works, I wrote it up in [how HNSW works](/blog/how-hnsw-works/), with the graph, the layers and why inserts are expensive. It went experimental, then beta in 25.5, then GA in 25.8, which also removed the older `annoy` and `usearch` index types. Since 25.8 it needs no experimental setting.
 
-ClickHouse stores a table as **parts**, immutable chunks written by each insert. A skip index belongs to a part, so each part gets its own small HNSW graph, and a query searches every part's graph and merges the top results.
+ClickHouse stores a table as **parts**, immutable chunks written by each insert. Its secondary indexes are called **skip indexes**. The usual kind keeps a small summary of each block of rows, such as the block's minimum and maximum, so a query can skip blocks that can't match<sup><a href="#src-40">40</a></sup>. A skip index is stored inside a part and built when the part is written. The vector index is one more skip index type, `vector_similarity`, and what it stores is an HNSW graph over the part's vectors. So each part gets its own small HNSW graph, and a query searches every part's graph and merges the top results.
 
 You don't schedule merges. ClickHouse keeps picking a few small parts of the same partition in the background and merges them into one larger part, until parts reach about 150 GB<sup><a href="#src-39">39</a></sup>; `OPTIMIZE TABLE` forces one. A merge reads the rows of its input parts and writes them out as a new part, and it recreates the new part's skip indexes from the merged columns<sup><a href="#src-39">39</a></sup>. For a vector index, that means every vector of the new part goes into an empty graph; the graphs of the old parts are not reused. Queries keep using the old parts and their graphs until the new part is written. Then the old parts are marked inactive and deleted eight minutes later. A row is indexed when it is inserted, and again in every merge it goes through. ClickHouse's own RFC on the next version of the index lists this rebuild-on-merge as the main cost<sup><a href="#src-3">3</a></sup>.
 
@@ -422,5 +422,6 @@ My view is that vector search stopped being the fixed first step of every pipeli
 <li id="src-37"><a href="https://arxiv.org/abs/2508.06600">Chen et al., BrowseComp-Plus (arXiv 2508.06600)</a></li>
 <li id="src-38"><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">Anthropic, effective context engineering for AI agents (29 September 2025)</a></li>
 <li id="src-39"><a href="https://clickhouse.com/docs/merges">ClickHouse docs, part merges (read 12 November 2026)</a></li>
+<li id="src-40"><a href="https://clickhouse.com/docs/concepts/features/performance/skip-indexes/skipping-indexes">ClickHouse docs, data skipping indexes (read 12 November 2026)</a></li>
 </ol>
 </details>
