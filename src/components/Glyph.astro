@@ -90,6 +90,16 @@ const { name, size = 52 } = Astro.props
       <circle class="f3" cx="32" cy="18" r="2.2" /><circle class="fa mv" cx="32" cy="42" r="3.4" />
     </g>
   )}
+  {name === 'hnsw' && (
+    <g>
+      <path class="k3" d="M6 12h40 M6 26h40 M6 40h40" />
+      <path class="ka mv" d="M14 12 H36 V26 H28 V40 H22" />
+      <circle class="f3" cx="14" cy="12" r="2.2" /><circle class="f3" cx="36" cy="12" r="2.2" />
+      <circle class="f3" cx="10" cy="26" r="2.2" /><circle class="f3" cx="28" cy="26" r="2.2" /><circle class="f3" cx="36" cy="26" r="2.2" /><circle class="f3" cx="44" cy="26" r="2.2" />
+      <circle class="f3" cx="8" cy="40" r="2.2" /><circle class="f3" cx="15" cy="40" r="2.2" /><circle class="f3" cx="28" cy="40" r="2.2" /><circle class="f3" cx="36" cy="40" r="2.2" /><circle class="f3" cx="44" cy="40" r="2.2" />
+      <circle class="fa" cx="22" cy="40" r="3.2" />
+    </g>
+  )}
   {name === 'cursor' && (
     <g><path class="k" d="M15 15 L6 26 L15 37 M37 15 L46 26 L37 37" /><rect class="fa mv" x="21" y="17" width="10" height="18" /></g>
   )}
