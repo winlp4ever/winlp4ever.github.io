@@ -1,6 +1,7 @@
 ---
 title: Vector search and BM25 in ClickHouse, compared with Postgres, Qdrant and the rest
 date: 2026-11-11
+updated: 2026-11-12
 description: How the ClickHouse vector index works, how to set it up, where it stands on BM25 and hybrid search, and how it compares with pgvector, Qdrant, Elasticsearch, Milvus and Weaviate. The last section compares what coding and research agents get from grep and from vector search.
 tags: [clickhouse, search, vectors, infra]
 category: code
@@ -27,15 +28,15 @@ This reads every vector in the table. ClickHouse reads columns fast and on every
 
 The approximate index is HNSW, built on the usearch library<sup><a href="#src-1">1</a></sup>. If you want to understand how HNSW itself works, I wrote it up in [how HNSW works](/blog/how-hnsw-works/), with the graph, the layers and why inserts are expensive. It went experimental, then beta in 25.5, then GA in 25.8, which also removed the older `annoy` and `usearch` index types. Since 25.8 it needs no experimental setting.
 
-ClickHouse stores a table as **parts**, immutable chunks written by each insert. Its secondary indexes are called **skip indexes**. The usual kind keeps a small summary of each block of rows, such as the block's minimum and maximum, so a query can skip blocks that can't match<sup><a href="#src-40">40</a></sup>. A skip index is stored inside a part and built when the part is written. The vector index is one more skip index type, `vector_similarity`, and what it stores is an HNSW graph over the part's vectors. So each part gets its own small HNSW graph, and a query searches every part's graph and merges the top results.
+ClickHouse stores a table as **parts**, immutable chunks written by each insert. Its secondary indexes are called **skip indexes**. The usual kind keeps a small summary of each block of rows, such as the block's minimum and maximum, so a query can skip blocks that can't match<sup><a href="#src-3">3</a></sup>. A skip index is stored inside a part and, by default, built when the part is written. The vector index is one more skip index type, `vector_similarity`, and what it stores is an HNSW graph over the part's vectors. So each part gets its own small HNSW graph, and a query searches every part's graph and merges the top results.
 
-You don't schedule merges. ClickHouse keeps picking a few small parts of the same partition in the background and merges them into one larger part, until parts reach about 150 GB<sup><a href="#src-39">39</a></sup>; `OPTIMIZE TABLE` forces one. A merge reads the rows of its input parts and writes them out as a new part, and it recreates the new part's skip indexes from the merged columns<sup><a href="#src-39">39</a></sup>. For a vector index, that means every vector of the new part goes into an empty graph; the graphs of the old parts are not reused. Queries keep using the old parts and their graphs until the new part is written. Then the old parts are marked inactive and deleted eight minutes later. A row is indexed when it is inserted, and again in every merge it goes through. ClickHouse's own RFC on the next version of the index lists this rebuild-on-merge as the main cost<sup><a href="#src-3">3</a></sup>.
+You don't schedule merges. ClickHouse keeps picking a few small parts of the same partition in the background and merges them into one larger part, until parts reach about 150 GB<sup><a href="#src-4">4</a></sup>; `OPTIMIZE TABLE` forces one. A merge reads the rows of its input parts and writes them out as a new part, and it recreates the new part's skip indexes from the merged columns<sup><a href="#src-4">4</a></sup>. For a vector index, that means every vector of the new part goes into an empty graph; the graphs of the old parts are not reused. Queries keep using the old parts and their graphs until the new part is written. Then the old parts are marked inactive and deleted after a configurable delay, eight minutes by default<sup><a href="#src-4">4</a></sup>. By default, a row is indexed when it is inserted, and again in every merge it goes through. ClickHouse's own RFC on the next version of the index lists this rebuild-on-merge as the main cost<sup><a href="#src-5">5</a></sup>.
 
 <figure class="wide">
 <cv-parts data-fig data-label="fig 1 · one graph per part">
 <p class="fallback">Three parts appear one after another, each holding nine vectors joined into a small neighbour graph. A query vector then sends a line to each part, and the two nearest points in each part light up; the results from all parts are merged. Finally parts 1 and 2 merge into one bigger part: their two graphs disappear and a new graph over all eighteen points is drawn from scratch.</p>
 </cv-parts>
-<figcaption><b>fig 1</b>Each part has its own graph, and a merge builds a new one. Real HNSW graphs have several layers and far more points; the points here are random and each one links to its two nearest neighbours, with one extra link wherever that leaves the graph in pieces.<span class="m">Based on the ClickHouse vector index docs and RFC #104122.</span></figcaption>
+<figcaption><b>fig 1</b>Each part has its own graph, and a merge builds a new one. Real HNSW graphs have several layers and far more points; the points here are random and each one links to its two nearest neighbours, with separate pieces joined by their shortest gap so the drawing stays connected.<span class="m">Based on the ClickHouse vector index docs and RFC #104122.</span></figcaption>
 </figure>
 
 A few things follow from that design:
@@ -45,7 +46,7 @@ A few things follow from that design:
 - Parts with pending lightweight deletes or mutations are searched exactly until they're rewritten.
 - The column must be a single non-Nullable array of a fixed length.
 
-The index stores vectors in **bf16 by default**. The other options are f64, f32, f16, i8 and b1 (one bit per dimension). With i8 or b1, turn on `vector_search_with_rescoring`, which recomputes the final distances on the full-precision column. The 26.7 release added experimental quantized column codecs (int8, RaBitQ, TurboQuant, PQ and a Matryoshka truncation) behind `enable_quantized_codec`<sup><a href="#src-4">4</a></sup>.
+The index stores vectors in **bf16 by default**. The other options are f64, f32, f16, i8 and b1 (one bit per dimension). With i8 or b1, turn on `vector_search_with_rescoring`, which recomputes the final distances on the full-precision column. The 26.7 release added experimental quantized column codecs (int8, RaBitQ, TurboQuant, PQ and a Matryoshka truncation) behind `enable_quantized_codec`<sup><a href="#src-6">6</a></sup>.
 
 ## setting it up
 
@@ -147,11 +148,11 @@ SETTINGS vector_search_index_fetch_multiplier = 4;
 -- or, for very selective filters: vector_search_filter_strategy = 'prefilter'
 ```
 
-If the filter is on a column in the table's `ORDER BY` key (a tenant id, a date), the primary index prunes whole granules before the vector search, which is the cheapest filter ClickHouse has. Qdrant and Weaviate check filters while walking the graph, so they keep returning k results under selective filters without either trick<sup><a href="#src-5">5</a></sup>.
+If the filter is on a column in the table's `ORDER BY` key (a tenant id, a date), the primary index prunes whole granules before the vector search, which is the cheapest filter ClickHouse has. Qdrant and Weaviate check filters while walking the graph, so they keep returning k results under selective filters without either trick<sup><a href="#src-7">7</a></sup>.
 
 ## qbit
 
-QBit is a column type, production-ready since 26.2, that stores a vector bit plane by bit plane: all the sign bits, then all the next bits, and so on<sup><a href="#src-6">6</a></sup>. A query picks how many planes to read, so the precision becomes a query parameter. One informal test in the announcement, on 10 million DBpedia vectors, went from 1.157 s to 0.271 s and from 6.05 GiB to 740 MiB of memory at reduced precision.
+QBit is a column type, production-ready since 26.2, that stores a vector bit plane by bit plane: all the sign bits, then all the next bits, and so on<sup><a href="#src-8">8</a></sup>. A query picks how many planes to read, so the precision becomes a query parameter. One informal test in the announcement, on 10 million DBpedia vectors, went from 1.157 s to 0.271 s and from 6.05 GiB to 740 MiB of memory at reduced precision.
 
 ```sql
 CREATE TABLE docs_q (id UInt64, vec QBit(Float32, 1024)) ENGINE = MergeTree ORDER BY id;
@@ -162,13 +163,13 @@ ORDER BY L2DistanceTransposed(vec, {q:Array(Float32)}, 12)   -- read 12 of the 3
 LIMIT 10;
 ```
 
-QBit is a brute-force tool with no graph. It suits tables where the HNSW memory bill is too high and a few hundred milliseconds per query is acceptable. 26.7 added Int8 elements and a stride argument<sup><a href="#src-4">4</a></sup>.
+QBit is a brute-force tool with no graph. It suits tables where the HNSW memory bill is too high and a few hundred milliseconds per query is acceptable. 26.7 added Int8 elements and a stride argument<sup><a href="#src-6">6</a></sup>.
 
 ## bm25
 
 **ClickHouse has no BM25 today.** The `text` index is an inverted index: it maps each token to the rows that contain it and speeds up `hasToken`, `hasAnyTokens`, `hasAllTokens`, `hasPhrase`, `LIKE`, `match` and `=`. It finds rows; it doesn't score them. The GA post says so directly: the text index "is not a relevance engine"<sup><a href="#src-2">2</a></sup>. On 10 billion GitHub events, a token search went from 193 s to 0.42 s with the index, which took 216 GiB and cut insert throughput by about half.
 
-BM25 is coming. Pull request #117519 adds a `bm25([k1, b])` scoring function behind `allow_experimental_text_index_scoring`, and draft #125775 stores the per-part statistics it needs (document count, average length, document frequency), pointing at 26.11<sup><a href="#src-7">7</a></sup>. Until then, the formula fits in one query. The text index narrows the candidates, and the scoring runs on them:
+BM25 is coming. Pull request #117519 adds a `bm25([k1, b])` scoring function behind `allow_experimental_text_index_scoring`, and draft #125775 stores the per-part statistics it needs (document count, average length, document frequency), pointing at 26.11<sup><a href="#src-9">9</a></sup>. Until then, the formula fits in one query. The text index narrows the candidates, and the scoring runs on them:
 
 ```sql
 WITH
@@ -197,11 +198,11 @@ ORDER BY bm25 DESC
 LIMIT 50;
 ```
 
-`tokens()` splits on non-alphanumeric characters, the same rule as the `splitByNonAlpha` tokenizer on the index, so the counts agree with what the index matched. The `avgdl` subquery scans the whole column; in production keep it in a small table that a materialized view updates on insert. Tinybird published a repository with the same idea plus hybrid search<sup><a href="#src-8">8</a></sup>.
+`tokens()` splits on non-alphanumeric characters, the same rule as the `splitByNonAlpha` tokenizer on the index, so the counts agree with what the index matched. The `avgdl` subquery scans the whole column; in production keep it in a small table that a materialized view updates on insert. Tinybird published a repository with the same idea plus hybrid search<sup><a href="#src-10">10</a></sup>.
 
 ## hybrid search with rrf
 
-Keyword search finds exact terms (an error code, a function name), and vector search finds paraphrases. **Reciprocal rank fusion** (RRF) combines the two rankings: each document scores the sum of 1 / (60 + rank) over the lists it appears in. A document in both lists beats one that tops only one list. In Anthropic's Contextual Retrieval tests, their contextual embeddings cut the top-20 retrieval failure rate by 35%, adding BM25 to them brought the cut to 49%, and adding a reranker brought it to 67%<sup><a href="#src-9">9</a></sup>.
+Keyword search finds exact terms (an error code, a function name), and vector search finds paraphrases. **Reciprocal rank fusion** (RRF) combines the two rankings: each document scores the sum of 1 / (60 + rank) over the lists it appears in. A document in both lists beats one that tops only one list. In Anthropic's Contextual Retrieval tests, their contextual embeddings cut the top-20 retrieval failure rate by 35%, adding BM25 to them brought the cut to 49%, and adding a reranker brought it to 67%<sup><a href="#src-11">11</a></sup>.
 
 <figure class="wide">
 <cv-rrf data-fig data-label="fig 3 · reciprocal rank fusion">
@@ -210,7 +211,7 @@ Keyword search finds exact terms (an error code, a function name), and vector se
 <figcaption><b>fig 3</b>Dots mark the documents both lists found. Hover a fused row to see its sum. I made the documents up; the arithmetic is the real RRF formula with k = 60.<span class="m">Cormack, Clarke and Büttcher, SIGIR 2009.</span></figcaption>
 </figure>
 
-ClickHouse has no fusion operator yet (RFC #105781 proposes a `hybridSearch` function<sup><a href="#src-10">10</a></sup>), so RRF is two CTEs and a `GROUP BY`:
+ClickHouse has no fusion operator yet (RFC #105781 proposes a `hybridSearch` function<sup><a href="#src-12">12</a></sup>), so RRF is two CTEs and a `GROUP BY`:
 
 ```sql
 WITH
@@ -242,20 +243,20 @@ LIMIT 10;
 | scale-out | sharded, columnar | one primary plus replicas | sharded | sharded | sharded on Kubernetes | sharded |
 | licence | Apache-2.0 | PostgreSQL | Apache-2.0 | ELv2/AGPL (ES), Apache-2.0 (OS) | Apache-2.0 | BSD-3 |
 
-Sources for the table: each project's docs and release notes<sup><a href="#src-11">11</a></sup><sup><a href="#src-12">12</a></sup><sup><a href="#src-13">13</a></sup><sup><a href="#src-14">14</a></sup><sup><a href="#src-15">15</a></sup><sup><a href="#src-16">16</a></sup>.
+Sources for the table: each project's docs and release notes<sup><a href="#src-13">13</a></sup><sup><a href="#src-14">14</a></sup><sup><a href="#src-15">15</a></sup><sup><a href="#src-16">16</a></sup><sup><a href="#src-17">17</a></sup><sup><a href="#src-18">18</a></sup>.
 
-Postgres's built-in `ts_rank` is not BM25: it has no inverse document frequency and no length normalisation of the BM25 kind<sup><a href="#src-17">17</a></sup>. For real BM25 there are three extensions. Tiger Data's pg_textsearch (PostgreSQL licence) is on Google's AlloyDB and Cloud SQL since September 2026<sup><a href="#src-18">18</a></sup>. ParadeDB's pg_search wraps the Tantivy engine and is AGPL<sup><a href="#src-19">19</a></sup>. VectorChord-bm25 comes from the VectorChord team<sup><a href="#src-20">20</a></sup>.
+Postgres's built-in `ts_rank` is not BM25: it has no inverse document frequency and no length normalisation of the BM25 kind<sup><a href="#src-19">19</a></sup>. For real BM25 there are three extensions. Tiger Data's pg_textsearch (PostgreSQL licence) is on Google's AlloyDB and Cloud SQL since September 2026<sup><a href="#src-20">20</a></sup>. ParadeDB's pg_search wraps the Tantivy engine and is AGPL<sup><a href="#src-21">21</a></sup>. VectorChord-bm25 comes from the VectorChord team<sup><a href="#src-22">22</a></sup>.
 
-Until 1.20, Qdrant did BM25 through sparse vectors with an IDF modifier. Version 1.20 (October 2026) added native BM25 scoring on a text payload index. Its statistics are per shard, so scores across shards are approximate<sup><a href="#src-13">13</a></sup>.
+Until 1.20, Qdrant did BM25 through sparse vectors with an IDF modifier. Version 1.20 (October 2026) added native BM25 scoring on a text payload index. Its statistics are per shard, so scores across shards are approximate<sup><a href="#src-15">15</a></sup>.
 
 A few more worth knowing:
 
-- Vespa has had BM25 and HNSW in one ranking expression for years, with the most control over ranking of anything here, and the steepest learning curve<sup><a href="#src-21">21</a></sup>.
-- turbopuffer keeps vectors and a BM25 index on object storage. Cold queries take around 900 ms and warm ones around 14 ms<sup><a href="#src-22">22</a></sup>.
-- Pinecone made full-text BM25 search GA in September 2026; hybrid fusion is mostly done in the client<sup><a href="#src-23">23</a></sup>.
-- Redis 8.4 added `FT.HYBRID` with server-side fusion<sup><a href="#src-24">24</a></sup>, and MongoDB 8 has `$rankFusion` in the aggregation pipeline<sup><a href="#src-25">25</a></sup>.
-- LanceDB has BM25 and vectors in an embedded library, with the fusion in the client<sup><a href="#src-26">26</a></sup>.
-- DuckDB's VSS extension has HNSW, but persisting the index is still experimental<sup><a href="#src-27">27</a></sup>.
+- Vespa has had BM25 and HNSW in one ranking expression for years, with the most control over ranking of anything here, and the steepest learning curve<sup><a href="#src-23">23</a></sup>.
+- turbopuffer keeps vectors and a BM25 index on object storage. Cold queries take around 900 ms and warm ones around 14 ms<sup><a href="#src-24">24</a></sup>.
+- Pinecone made full-text BM25 search GA in September 2026; hybrid fusion is mostly done in the client<sup><a href="#src-25">25</a></sup>.
+- Redis 8.4 added `FT.HYBRID` with server-side fusion<sup><a href="#src-26">26</a></sup>, and MongoDB 8 has `$rankFusion` in the aggregation pipeline<sup><a href="#src-27">27</a></sup>.
+- LanceDB has BM25 and vectors in an embedded library, with the fusion in the client<sup><a href="#src-28">28</a></sup>.
+- DuckDB's VSS extension has HNSW, but persisting the index is still experimental<sup><a href="#src-29">29</a></sup>.
 
 ## the same hybrid query on three other systems
 
@@ -351,7 +352,7 @@ The `query_vector` is cut to two numbers here; send all 1,024.
 
 ## benchmarks
 
-**No public benchmark includes the ClickHouse vector index.** It's absent from Zilliz's VDBBench leaderboard and from ann-benchmarks, and the ClickHouse docs publish no recall/QPS table for 25.8 or later. The closest number is in a pull request: 0.985 recall at about 2,750 QPS on Deep10M<sup><a href="#src-28">28</a></sup>. Every comparison below was run by a company selling one of the systems.
+**No public benchmark includes the ClickHouse vector index.** It's absent from Zilliz's VDBBench leaderboard and from ann-benchmarks, and the ClickHouse docs publish no recall/QPS table for 25.8 or later. The closest number is in a pull request: 0.985 recall at about 2,750 QPS on Deep10M<sup><a href="#src-30">30</a></sup>. Every comparison below was run by a company selling one of the systems.
 
 <figure class="wide">
 <cv-bench data-fig data-label="fig 4 · VDBBench, Cohere 1M">
@@ -362,21 +363,21 @@ The `query_vector` is cut to two numbers here; send all 1,024.
 
 Other published comparisons:
 
-- Tiger Data compared Postgres and Qdrant on 50 million 768-dimension vectors: at 99% recall, Postgres with pgvectorscale served 471 QPS and Qdrant 41, but Qdrant's p99 latency was lower (38.7 ms against 74.6 ms) and its index built in 3.3 hours against 11.1<sup><a href="#src-29">29</a></sup>.
-- MariaDB ran ann-benchmarks on 1 million 1,536-dimension vectors: at 94% recall Redis and MariaDB did 850 to 1,000 QPS, pgvectorscale and Weaviate about 500, pgvector about 250, and Qdrant, Milvus and OpenSearch 90 to 150. Several competitors ran old versions<sup><a href="#src-30">30</a></sup>.
-- Elastic reports BBQ up to 5 times faster than OpenSearch with Faiss, at recall levels that don't match<sup><a href="#src-31">31</a></sup>.
-- ClickHouse reports cold log queries 4 to 6 times faster than Elasticsearch with about 5 times less disk. The queries match and aggregate, and rank nothing<sup><a href="#src-32">32</a></sup>.
-- For BM25, Tiger Data measured pg_textsearch at 40.6 ms p50 against ParadeDB's 94.4 ms on MS MARCO's 138 million passages<sup><a href="#src-18">18</a></sup>.
+- Tiger Data compared Postgres and Qdrant on 50 million 768-dimension vectors: at 99% recall, Postgres with pgvectorscale served 471 QPS and Qdrant 41, but Qdrant's p99 latency was lower (38.7 ms against 74.6 ms) and its index built in 3.3 hours against 11.1<sup><a href="#src-31">31</a></sup>.
+- MariaDB ran ann-benchmarks on 1 million 1,536-dimension vectors: at 94% recall Redis and MariaDB did 850 to 1,000 QPS, pgvectorscale and Weaviate about 500, pgvector about 250, and Qdrant, Milvus and OpenSearch 90 to 150. Several competitors ran old versions<sup><a href="#src-32">32</a></sup>.
+- Elastic reports BBQ up to 5 times faster than OpenSearch with Faiss, at recall levels that don't match<sup><a href="#src-33">33</a></sup>.
+- ClickHouse reports cold log queries 4 to 6 times faster than Elasticsearch with about 5 times less disk. The queries match and aggregate, and rank nothing<sup><a href="#src-34">34</a></sup>.
+- For BM25, Tiger Data measured pg_textsearch at 40.6 ms p50 against ParadeDB's 94.4 ms on MS MARCO's 138 million passages<sup><a href="#src-20">20</a></sup>.
 
 Each vendor wins its own benchmark. VDBBench is open source and runs against your own data, which is the only result I'd trust for a decision.
 
 ## do agents still need vector search
 
-Claude Code started with a RAG index built on Voyage embeddings and replaced it with plain glob and grep. Boris Cherny gave two reasons on Latent Space: the index has to be stored and secured somewhere, and it drifts out of date while the code changes. He called the evidence "mostly vibes" plus internal benchmarks<sup><a href="#src-33">33</a></sup>. Augment found grep and find enough for their SWE-bench agent<sup><a href="#src-34">34</a></sup>, and Letta's agent scored 74.0% on the LoCoMo memory benchmark keeping its memory in plain files<sup><a href="#src-35">35</a></sup>.
+Claude Code started with a RAG index built on Voyage embeddings and replaced it with plain glob and grep. Boris Cherny gave two reasons on Latent Space: the index has to be stored and secured somewhere, and it drifts out of date while the code changes. He called the evidence "mostly vibes" plus internal benchmarks<sup><a href="#src-35">35</a></sup>. Augment found grep and find enough for their SWE-bench agent<sup><a href="#src-36">36</a></sup>, and Letta's agent scored 74.0% on the LoCoMo memory benchmark keeping its memory in plain files<sup><a href="#src-37">37</a></sup>.
 
-Other measurements go the other way. Cursor added semantic search next to grep and measured 12.5% higher answer accuracy on their internal benchmark, and 2.6% more of the agent's code kept by users on codebases over 1,000 files<sup><a href="#src-36">36</a></sup>. On BrowseComp-Plus, a deep-research benchmark with a fixed corpus, GPT-5 answered 55.9% of questions with a BM25 retriever and 70.1% with Qwen3-Embedding-8B, and made fewer search calls with the embeddings<sup><a href="#src-37">37</a></sup>. Anthropic's own guide to context engineering recommends just-in-time retrieval with tools, and says a hybrid of that and up-front retrieval may work best<sup><a href="#src-38">38</a></sup>.
+Other measurements go the other way. Cursor added semantic search next to grep and measured 12.5% higher answer accuracy on their internal benchmark, and 2.6% more of the agent's code kept by users on codebases over 1,000 files<sup><a href="#src-38">38</a></sup>. On BrowseComp-Plus, a deep-research benchmark with a fixed corpus, GPT-5 answered 55.9% of questions with a BM25 retriever and 70.1% with Qwen3-Embedding-8B, and made fewer search calls with the embeddings<sup><a href="#src-39">39</a></sup>. Anthropic's own guide to context engineering recommends just-in-time retrieval with tools, and says a hybrid of that and up-front retrieval may work best<sup><a href="#src-40">40</a></sup>.
 
-Both results hold for their setting. Code is full of exact identifiers that grep finds in one call, and the files change while the agent works. A document collection written in many words for the same idea is the opposite case, and that's where embeddings win. The Contextual Retrieval post also gives the small-corpus rule: under about 200,000 tokens, put the whole thing in the prompt and skip retrieval<sup><a href="#src-9">9</a></sup>.
+Both results hold for their setting. Code is full of exact identifiers that grep finds in one call, and the files change while the agent works. A document collection written in many words for the same idea is the opposite case, and that's where embeddings win. The Contextual Retrieval post also gives the small-corpus rule: under about 200,000 tokens, put the whole thing in the prompt and skip retrieval<sup><a href="#src-11">11</a></sup>.
 
 My view is that vector search stopped being the fixed first step of every pipeline and became one tool the agent calls, next to grep and keyword search. For an agent over code, grep first. Over a large document collection, I'd give it a hybrid search tool with BM25, embeddings and RRF. If the data already sits in ClickHouse I'd build that tool there with the SQL above and move to native BM25 when the PR lands. If it doesn't, I'd start with Postgres, pgvector and pg_textsearch, and move to Qdrant once filtered queries or scale need a dedicated service.
 
@@ -385,43 +386,43 @@ My view is that vector search stopped being the fixed first step of every pipeli
 <ol>
 <li id="src-1"><a href="https://clickhouse.com/docs/engines/table-engines/mergetree-family/annindexes">ClickHouse docs, exact and approximate vector search (read 11 November 2026)</a></li>
 <li id="src-2"><a href="https://clickhouse.com/blog/full-text-search-ga-release">ClickHouse, full-text search is generally available (10 March 2026)</a></li>
-<li id="src-3"><a href="https://github.com/ClickHouse/ClickHouse/issues/104122">ClickHouse issue #104122, RFC for the next vector index</a></li>
-<li id="src-4"><a href="https://presentations.clickhouse.com/2026-release-26.7/">ClickHouse 26.7 release call slides</a></li>
-<li id="src-5"><a href="https://qdrant.tech/documentation/manage-data/indexing/">Qdrant docs, indexing and filterable HNSW</a></li>
-<li id="src-6"><a href="https://clickhouse.com/blog/qbit-vector-search">ClickHouse, QBit vector search (27 October 2025)</a> and <a href="https://clickhouse.com/docs/sql-reference/data-types/qbit">QBit type docs</a></li>
-<li id="src-7"><a href="https://github.com/ClickHouse/ClickHouse/pull/117519">ClickHouse PR #117519, BM25 scoring for the text index</a> and <a href="https://github.com/ClickHouse/ClickHouse/pull/125775">draft PR #125775, text index statistics</a></li>
-<li id="src-8"><a href="https://github.com/tinybirdco/tinybird-synthetic-hybrid-search">Tinybird, hybrid search example repository</a></li>
-<li id="src-9"><a href="https://www.anthropic.com/news/contextual-retrieval">Anthropic, Introducing Contextual Retrieval (19 September 2024)</a></li>
-<li id="src-10"><a href="https://github.com/ClickHouse/ClickHouse/issues/105781">ClickHouse issue #105781, RFC for hybrid search</a></li>
-<li id="src-11"><a href="https://github.com/pgvector/pgvector">pgvector README and changelog</a></li>
-<li id="src-12"><a href="https://github.com/timescale/pgvectorscale">pgvectorscale</a></li>
-<li id="src-13"><a href="https://qdrant.tech/blog/qdrant-1.20.x/">Qdrant 1.20 release post</a> and <a href="https://qdrant.tech/documentation/concepts/hybrid-queries/">hybrid queries docs</a></li>
-<li id="src-14"><a href="https://www.elastic.co/docs/reference/elasticsearch/mapping-reference/dense-vector">Elasticsearch dense_vector docs</a>, <a href="https://www.elastic.co/docs/reference/elasticsearch/rest-apis/retrievers/rrf-retriever">RRF retriever docs</a> and <a href="https://docs.opensearch.org/latest/vector-search/optimizing-storage/disk-based-vector-search/">OpenSearch disk-based vector search</a></li>
-<li id="src-15"><a href="https://milvus.io/docs/full-text-search.md">Milvus full-text search docs</a> and <a href="https://milvus.io/docs/index-explained.md">index types</a></li>
-<li id="src-16"><a href="https://docs.weaviate.io/weaviate/concepts/search/hybrid-search">Weaviate hybrid search</a> and <a href="https://docs.weaviate.io/weaviate/concepts/vector-quantization">vector quantization docs</a></li>
-<li id="src-17"><a href="https://www.postgresql.org/docs/current/textsearch-controls.html">PostgreSQL docs, ranking search results</a></li>
-<li id="src-18"><a href="https://www.tigerdata.com/blog/pg-textsearch-bm25-full-text-search-postgres">Tiger Data, pg_textsearch</a> and <a href="https://www.tigerdata.com/newsroom/google-cloud-brings-native-bm25-full-text-search-to-alloydb-and-cloud-sql-via-tiger-datas-pg_textsearch">AlloyDB and Cloud SQL announcement</a></li>
-<li id="src-19"><a href="https://github.com/paradedb/paradedb/releases">ParadeDB releases</a> and <a href="https://www.paradedb.com/docs/documentation/hybrid/rrf.md">RRF docs</a></li>
-<li id="src-20"><a href="https://github.com/tensorchord/VectorChord-bm25">VectorChord-bm25</a></li>
-<li id="src-21"><a href="https://docs.vespa.ai/en/reference/bm25.html">Vespa BM25 reference</a></li>
-<li id="src-22"><a href="https://turbopuffer.com/docs/architecture">turbopuffer architecture</a> and <a href="https://turbopuffer.com/docs/hybrid">hybrid search docs</a></li>
-<li id="src-23"><a href="https://www.pinecone.io/blog/full-text-search-generally-available/">Pinecone, full-text search is generally available (9 September 2026)</a></li>
-<li id="src-24"><a href="https://redis.io/docs/latest/commands/ft.hybrid">Redis FT.HYBRID</a></li>
-<li id="src-25"><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/rankFusion/">MongoDB $rankFusion</a></li>
-<li id="src-26"><a href="https://docs.lancedb.com/search/hybrid-search">LanceDB hybrid search</a></li>
-<li id="src-27"><a href="https://duckdb.org/docs/2.0/core_extensions/vss.html">DuckDB VSS extension</a></li>
-<li id="src-28"><a href="https://github.com/ClickHouse/ClickHouse/pull/130214">ClickHouse PR #130214</a></li>
-<li id="src-29"><a href="https://www.tigerdata.com/blog/pgvector-vs-qdrant">Tiger Data, pgvector vs Qdrant</a></li>
-<li id="src-30"><a href="https://mariadb.org/big-vector-search-benchmark-10-databases-comparison/">MariaDB, vector search benchmark of 10 databases (11 March 2026)</a></li>
-<li id="src-31"><a href="https://www.elastic.co/search-labs/blog/elasticsearch-bbq-vs-opensearch-faiss">Elastic, BBQ vs OpenSearch FAISS</a></li>
-<li id="src-32"><a href="https://clickhouse.com/blog/elasticsearch-log-analytics-clickhouse">ClickHouse, log analytics against Elasticsearch (22 May 2026)</a></li>
-<li id="src-33"><a href="https://www.latent.space/p/claude-code">Latent Space, Claude Code with Boris Cherny and Cat Wu (7 May 2025)</a></li>
-<li id="src-34"><a href="https://jxnl.co/writing/2025/09/11/why-grep-beat-embeddings-in-our-swe-bench-agent-lessons-from-augment/">Jason Liu, why grep beat embeddings in Augment's SWE-bench agent (11 September 2025)</a></li>
-<li id="src-35"><a href="https://www.letta.com/blog/benchmarking-ai-agent-memory">Letta, benchmarking AI agent memory</a></li>
-<li id="src-36"><a href="https://cursor.com/blog/semsearch">Cursor, improving agent with semantic search (6 November 2025)</a></li>
-<li id="src-37"><a href="https://arxiv.org/abs/2508.06600">Chen et al., BrowseComp-Plus (arXiv 2508.06600)</a></li>
-<li id="src-38"><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">Anthropic, effective context engineering for AI agents (29 September 2025)</a></li>
-<li id="src-39"><a href="https://clickhouse.com/docs/merges">ClickHouse docs, part merges (read 12 November 2026)</a></li>
-<li id="src-40"><a href="https://clickhouse.com/docs/concepts/features/performance/skip-indexes/skipping-indexes">ClickHouse docs, data skipping indexes (read 12 November 2026)</a></li>
+<li id="src-3"><a href="https://clickhouse.com/docs/concepts/features/performance/skip-indexes/skipping-indexes">ClickHouse docs, data skipping indexes (read 12 November 2026)</a></li>
+<li id="src-4"><a href="https://clickhouse.com/docs/merges">ClickHouse docs, part merges (read 12 November 2026)</a></li>
+<li id="src-5"><a href="https://github.com/ClickHouse/ClickHouse/issues/104122">ClickHouse issue #104122, RFC for the next vector index</a></li>
+<li id="src-6"><a href="https://presentations.clickhouse.com/2026-release-26.7/">ClickHouse 26.7 release call slides</a></li>
+<li id="src-7"><a href="https://qdrant.tech/documentation/manage-data/indexing/">Qdrant docs, indexing and filterable HNSW</a></li>
+<li id="src-8"><a href="https://clickhouse.com/blog/qbit-vector-search">ClickHouse, QBit vector search (27 October 2025)</a> and <a href="https://clickhouse.com/docs/sql-reference/data-types/qbit">QBit type docs</a></li>
+<li id="src-9"><a href="https://github.com/ClickHouse/ClickHouse/pull/117519">ClickHouse PR #117519, BM25 scoring for the text index</a> and <a href="https://github.com/ClickHouse/ClickHouse/pull/125775">draft PR #125775, text index statistics</a></li>
+<li id="src-10"><a href="https://github.com/tinybirdco/tinybird-synthetic-hybrid-search">Tinybird, hybrid search example repository</a></li>
+<li id="src-11"><a href="https://www.anthropic.com/news/contextual-retrieval">Anthropic, Introducing Contextual Retrieval (19 September 2024)</a></li>
+<li id="src-12"><a href="https://github.com/ClickHouse/ClickHouse/issues/105781">ClickHouse issue #105781, RFC for hybrid search</a></li>
+<li id="src-13"><a href="https://github.com/pgvector/pgvector">pgvector README and changelog</a></li>
+<li id="src-14"><a href="https://github.com/timescale/pgvectorscale">pgvectorscale</a></li>
+<li id="src-15"><a href="https://qdrant.tech/blog/qdrant-1.20.x/">Qdrant 1.20 release post</a> and <a href="https://qdrant.tech/documentation/concepts/hybrid-queries/">hybrid queries docs</a></li>
+<li id="src-16"><a href="https://www.elastic.co/docs/reference/elasticsearch/mapping-reference/dense-vector">Elasticsearch dense_vector docs</a>, <a href="https://www.elastic.co/docs/reference/elasticsearch/rest-apis/retrievers/rrf-retriever">RRF retriever docs</a> and <a href="https://docs.opensearch.org/latest/vector-search/optimizing-storage/disk-based-vector-search/">OpenSearch disk-based vector search</a></li>
+<li id="src-17"><a href="https://milvus.io/docs/full-text-search.md">Milvus full-text search docs</a> and <a href="https://milvus.io/docs/index-explained.md">index types</a></li>
+<li id="src-18"><a href="https://docs.weaviate.io/weaviate/concepts/search/hybrid-search">Weaviate hybrid search</a> and <a href="https://docs.weaviate.io/weaviate/concepts/vector-quantization">vector quantization docs</a></li>
+<li id="src-19"><a href="https://www.postgresql.org/docs/current/textsearch-controls.html">PostgreSQL docs, ranking search results</a></li>
+<li id="src-20"><a href="https://www.tigerdata.com/blog/pg-textsearch-bm25-full-text-search-postgres">Tiger Data, pg_textsearch</a> and <a href="https://www.tigerdata.com/newsroom/google-cloud-brings-native-bm25-full-text-search-to-alloydb-and-cloud-sql-via-tiger-datas-pg_textsearch">AlloyDB and Cloud SQL announcement</a></li>
+<li id="src-21"><a href="https://github.com/paradedb/paradedb/releases">ParadeDB releases</a> and <a href="https://www.paradedb.com/docs/documentation/hybrid/rrf.md">RRF docs</a></li>
+<li id="src-22"><a href="https://github.com/tensorchord/VectorChord-bm25">VectorChord-bm25</a></li>
+<li id="src-23"><a href="https://docs.vespa.ai/en/reference/bm25.html">Vespa BM25 reference</a></li>
+<li id="src-24"><a href="https://turbopuffer.com/docs/architecture">turbopuffer architecture</a> and <a href="https://turbopuffer.com/docs/hybrid">hybrid search docs</a></li>
+<li id="src-25"><a href="https://www.pinecone.io/blog/full-text-search-generally-available/">Pinecone, full-text search is generally available (9 September 2026)</a></li>
+<li id="src-26"><a href="https://redis.io/docs/latest/commands/ft.hybrid">Redis FT.HYBRID</a></li>
+<li id="src-27"><a href="https://www.mongodb.com/docs/manual/reference/operator/aggregation/rankFusion/">MongoDB $rankFusion</a></li>
+<li id="src-28"><a href="https://docs.lancedb.com/search/hybrid-search">LanceDB hybrid search</a></li>
+<li id="src-29"><a href="https://duckdb.org/docs/2.0/core_extensions/vss.html">DuckDB VSS extension</a></li>
+<li id="src-30"><a href="https://github.com/ClickHouse/ClickHouse/pull/130214">ClickHouse PR #130214</a></li>
+<li id="src-31"><a href="https://www.tigerdata.com/blog/pgvector-vs-qdrant">Tiger Data, pgvector vs Qdrant</a></li>
+<li id="src-32"><a href="https://mariadb.org/big-vector-search-benchmark-10-databases-comparison/">MariaDB, vector search benchmark of 10 databases (11 March 2026)</a></li>
+<li id="src-33"><a href="https://www.elastic.co/search-labs/blog/elasticsearch-bbq-vs-opensearch-faiss">Elastic, BBQ vs OpenSearch FAISS</a></li>
+<li id="src-34"><a href="https://clickhouse.com/blog/elasticsearch-log-analytics-clickhouse">ClickHouse, log analytics against Elasticsearch (22 May 2026)</a></li>
+<li id="src-35"><a href="https://www.latent.space/p/claude-code">Latent Space, Claude Code with Boris Cherny and Cat Wu (7 May 2025)</a></li>
+<li id="src-36"><a href="https://jxnl.co/writing/2025/09/11/why-grep-beat-embeddings-in-our-swe-bench-agent-lessons-from-augment/">Jason Liu, why grep beat embeddings in Augment's SWE-bench agent (11 September 2025)</a></li>
+<li id="src-37"><a href="https://www.letta.com/blog/benchmarking-ai-agent-memory">Letta, benchmarking AI agent memory</a></li>
+<li id="src-38"><a href="https://cursor.com/blog/semsearch">Cursor, improving agent with semantic search (6 November 2025)</a></li>
+<li id="src-39"><a href="https://arxiv.org/abs/2508.06600">Chen et al., BrowseComp-Plus (arXiv 2508.06600)</a></li>
+<li id="src-40"><a href="https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents">Anthropic, effective context engineering for AI agents (29 September 2025)</a></li>
 </ol>
 </details>
