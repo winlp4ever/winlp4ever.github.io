@@ -2,19 +2,29 @@ import { S, attr, op, seg, rng, entrance, pills, tooltip, hit, handArrow, drawOn
 
 // ── fig 1 · one graph per part, rebuilt on merge ──────────────────────────────
 // Points are random (seeded); edges join each point to its two nearest neighbours,
-// which is the flavour of an HNSW layer without the hierarchy.
+// which is the flavour of an HNSW layer without the hierarchy. For readability the drawing
+// is kept connected: separate pieces are joined by their shortest gap. (Real HNSW graphs
+// can leave points unreachable; this is an illustration choice, not HNSW behaviour.)
 const knnEdges = (pts, k = 2) => {
-  const seen = new Set(); let d = '';
-  pts.forEach((p, i) => {
-    pts.map((q, j) => [Math.hypot(p[0] - q[0], p[1] - q[1]), j]).filter(([, j]) => j !== i)
-      .sort((a, b) => a[0] - b[0]).slice(0, k).forEach(([, j]) => {
-        const key = Math.min(i, j) + '-' + Math.max(i, j);
-        if (seen.has(key)) return; seen.add(key);
-        d += `M${p[0].toFixed(1)} ${p[1].toFixed(1)}L${pts[j][0].toFixed(1)} ${pts[j][1].toFixed(1)}`;
-      });
-  });
-  return d;
+  const D = (i, j) => Math.hypot(pts[i][0] - pts[j][0], pts[i][1] - pts[j][1]);
+  const comp = pts.map((_, i) => i), find = (i) => (comp[i] === i ? i : (comp[i] = find(comp[i])));
+  const seen = new Set(), edges = [];
+  const add = (i, j) => {
+    const key = Math.min(i, j) + '-' + Math.max(i, j);
+    if (seen.has(key)) return; seen.add(key); edges.push([i, j]); comp[find(i)] = find(j);
+  };
+  pts.forEach((_, i) => pts.map((_, j) => j).filter((j) => j !== i).sort((a, b) => D(i, a) - D(i, b)).slice(0, k).forEach((j) => add(i, j)));
+  for (;;) { // join the closest pair of points that sit in different pieces
+    let best = null;
+    pts.forEach((_, i) => pts.forEach((_, j) => { if (find(i) !== find(j) && (!best || D(i, j) < best[2])) best = [i, j, D(i, j)]; }));
+    if (!best) break; add(best[0], best[1]);
+  }
+  return edges.map(([i, j]) => `M${pts[i][0].toFixed(1)} ${pts[i][1].toFixed(1)}L${pts[j][0].toFixed(1)} ${pts[j][1].toFixed(1)}`);
 };
+// One path per edge: a dash-offset draw-on restarts at every subpath, so a single path
+// holding all the edges would pop in at once. drawEdges draws them one after another.
+const edgeGroup = (ds, attrs, parent) => { const g = S('g', {}, parent); ds.forEach((d) => S('path', { d, ...attrs }, g)); return g; };
+const drawEdges = (g, p) => { const n = g.children.length; [...g.children].forEach((e, i) => drawOn(e, p * n - i)); };
 
 class CvParts extends Figure {
   constructor() { super(); this.duration = 12; this.loop = false; this.poster = 12; }
@@ -26,7 +36,7 @@ class CvParts extends Figure {
       const pts = Array.from({ length: 9 }, () => [x + 14 + r() * (BW - 28), BY + 14 + r() * (BH - 28)]);
       const box = S('rect', { x, y: BY, width: BW, height: BH, rx: 8, class: 'f-panel s-rule', 'stroke-width': 1.2 }, svg);
       const lab = S('text', { x: x + 8, y: BY + BH + 18, class: 't3', 'font-size': 12, text: `part ${i + 1}` }, svg);
-      const edges = S('path', { d: knnEdges(pts), class: 'f-none s-ink3', 'stroke-width': 1.1 }, svg);
+      const edges = edgeGroup(knnEdges(pts), { class: 'f-none s-ink3', 'stroke-width': 1.1 }, svg);
       // nearest two points of this part to the query
       const near = pts.map((p, j) => [Math.hypot(p[0] - this.q[0], p[1] - this.q[1]), j]).sort((a, b) => a[0] - b[0]).slice(0, 2).map(([, j]) => j);
       const dots = pts.map((p, j) => S('circle', { cx: p[0], cy: p[1], r: 4, class: 'f-ink3' }, svg));
@@ -34,7 +44,7 @@ class CvParts extends Figure {
       return { x, pts, box, lab, edges, dots, near, ray };
     });
     // the merged part: parts 1 and 2 together, with one new graph over all 18 points
-    this.mergedEdges = S('path', { d: knnEdges([...this.parts[0].pts, ...this.parts[1].pts]), class: 'f-none s-green', 'stroke-width': 1.3 }, svg);
+    this.mergedEdges = edgeGroup(knnEdges([...this.parts[0].pts, ...this.parts[1].pts]), { class: 'f-none s-green', 'stroke-width': 1.3 }, svg);
     this.qDot = S('circle', { cx: this.q[0], cy: this.q[1], r: 6, class: 'f-green' }, svg);
     this.qLab = S('text', { x: this.q[0] + 12, y: this.q[1] + 4, class: 't2', 'font-size': 12.5, text: 'query vector' }, svg);
     this.status = S('text', { x: 20, y: 22, class: 'sl', 'font-size': 11, text: '' }, svg);
@@ -47,7 +57,7 @@ class CvParts extends Figure {
     this.parts.forEach((p, i) => {
       const a = seg(t, i * 0.9, i * 0.9 + 0.6);
       op(p.box, a); op(p.lab, a); p.dots.forEach((d) => op(d, a));
-      drawOn(p.edges, seg(t, i * 0.9 + 0.4, i * 0.9 + 1.4));
+      drawEdges(p.edges, seg(t, i * 0.9 + 0.4, i * 0.9 + 1.4));
       // query phase: rays fade in (opacity, so the dash pattern survives), the nearest dots light up,
       // and both clear before the merge
       op(p.ray, seg(t, 3.8 + i * 0.3, 4.6 + i * 0.3) * (1 - seg(t, 7, 7.5)));
@@ -55,14 +65,15 @@ class CvParts extends Figure {
       p.dots.forEach((d, j) => attr(d, { class: p.near.includes(j) && lit > 0.5 ? 'f-green' : 'f-ink3' }));
     });
     op(this.qDot, seg(t, 3.5, 3.8) * (1 - seg(t, 7, 7.5))); op(this.qLab, seg(t, 3.5, 3.8) * (1 - seg(t, 7, 7.5)));
-    // merge phase: box 1 grows over box 2, old graphs fade, the new graph draws on
+    // merge phase: box 1 grows over box 2 and the new graph draws on while the old graphs
+    // are still there (queries keep using them until the new part is written); then they fade
     const m = seg(t, 7.8, 9);
     attr(p1.box, { width: 170 + m * 195 }); op(p2.box, seg(t, 1, 1.6) * (1 - m)); op(p2.lab, seg(t, 1, 1.6) * (1 - m));
     p1.lab.textContent = m > 0.5 ? 'part 1+2 (new)' : 'part 1';
-    const fade = 1 - seg(t, 9, 9.6);
+    const fade = 1 - seg(t, 10.8, 11.4);
     op(p1.edges, fade); op(p2.edges, fade); op(p3.edges, 1);
-    drawOn(this.mergedEdges, seg(t, 9.6, 11.4)); op(this.mergedEdges, t > 9.6 ? 1 : 0);
-    op(this.hand, seg(t, 10.8, 11.6));
+    drawEdges(this.mergedEdges, seg(t, 9, 10.8)); op(this.mergedEdges, t > 9 ? 1 : 0);
+    op(this.hand, seg(t, 11, 11.8));
   }
 }
 
