@@ -173,3 +173,24 @@
 .sources ol { margin: 1em 0 0; padding-left: 1.6em; }
 .sources li { margin: 0.35em 0; }
 .sources li:target { color: var(--ink); }
+
+/* exercises: a collapsible card per problem, with nested hint / solution toggles */
+.ex { margin: 0.9em 0; border: 1px solid var(--rule-2); border-radius: 12px; background: var(--panel); }
+.ex > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 12px; padding: 12px 16px; }
+.ex > summary::-webkit-details-marker, .ex details > summary::-webkit-details-marker { display: none; }
+.ex > summary::before { content: '▸'; color: var(--accent-t); font: 14px var(--mono); transition: transform 0.15s; display: inline-block; }
+.ex[open] > summary::before { transform: rotate(90deg); }
+.ex .ex-n { font: 12px var(--mono); color: var(--ink-3); letter-spacing: 0.06em; white-space: nowrap; }
+.ex .ex-t { flex: 1; font-weight: 600; color: var(--ink); }
+.ex .ex-d { font: 12px var(--mono); color: var(--ink-3); white-space: nowrap; }
+.ex .ex-d b { color: var(--accent-t); font-weight: 400; }
+.ex > .ex-b { padding: 0 18px 14px 42px; font-size: 16.5px; }
+.ex > .ex-b > :first-child { margin-top: 0; }
+.ex > .ex-b > :last-child { margin-bottom: 0; }
+.ex details { margin: 0.7em 0 0; border-top: 1px dashed var(--rule-2); padding-top: 0.6em; }
+.ex details > summary { list-style: none; cursor: pointer; font: 13px var(--mono); color: var(--ink-2); letter-spacing: 0.04em; }
+.ex details > summary::before { content: '+ '; color: var(--accent-t); }
+.ex details[open] > summary::before { content: '− '; }
+.ex details > :not(summary) { margin-top: 0.6em; }
+.ex pre { font-size: 13px; }
+@media (max-width: 640px) { .ex > .ex-b { padding-left: 18px; } .ex > summary { flex-wrap: wrap; row-gap: 2px; } }
