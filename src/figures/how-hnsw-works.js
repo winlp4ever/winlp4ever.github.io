@@ -38,7 +38,7 @@ class HnSearch extends Figure {
     const q = [0.8, 0.82];
     const PX = [14, 210, 406], PW = 180, PY = 62, PH = 220;
     const P = (li, p) => [PX[li] + 8 + p[0] * (PW - 16), PY + 8 + p[1] * (PH - 16)];
-    // route: top layer from node 0, then each lower layer starts where the last stopped
+    // route: top layer from its node farthest from the query, then each lower layer starts where the last stopped
     this.steps = []; let at = ids[0].reduce((b, i) => (d2(pts[i], q) > d2(pts[b], q) ? i : b), ids[0][0]); // start far away
     [0, 1, 2].forEach((li) => { const s = greedy(pts, adj[li], at, q); s.forEach((x) => this.steps.push({ ...x, li })); at = s.at(-1).to; });
     this.found = at; this.N = N;
@@ -59,7 +59,8 @@ class HnSearch extends Figure {
     });
     this.drops = [0, 1].map((li) => {
       const s = this.steps.filter((x) => x.li === li).at(-1), a = P(li, pts[s.to]), b = P(li + 1, pts[s.to]);
-      return S('path', { d: handArrow(a[0] + 6, a[1] - 6, b[0] - 8, b[1] - 6, -0.15), class: 'f-none s-ink3', 'stroke-width': 1.3 }, svg);
+      // a plain dashed connector (faded in, not drawn on, so the dashes stay)
+      return S('path', { d: `M${a[0] + 8} ${a[1]}L${b[0] - 9} ${b[1]}`, class: 'f-none s-ink3', 'stroke-width': 1.3, 'stroke-dasharray': '3 4' }, svg);
     });
     this.cur = S('circle', { r: 6.5, class: 'f-green' }, svg);
     this.lastOf = [0, 1].map((li) => this.steps.map((x) => x.li).lastIndexOf(li));
@@ -78,7 +79,7 @@ class HnSearch extends Figure {
       if (lit) { seen += s.seen.length; s.seen.forEach((j) => attr(this.dots[s.li].get(j), { class: 'f-ink' })); }
       if (this.hops[i]) drawOn(this.hops[i], i < k ? 1 : i === k ? seg(f, 0.4, 1) : 0);
     });
-    this.drops.forEach((d, li) => { const last = this.lastOf[li]; drawOn(d, k > last ? 1 : k === last ? seg(f, 0.4, 1) : 0); });
+    this.drops.forEach((d, li) => { const last = this.lastOf[li]; op(d, k > last ? 1 : k === last ? seg(f, 0.4, 1) : 0); });
     const i = Math.max(0, Math.min(this.steps.length - 1, k)), s = this.steps[i];
     const node = k < 0 ? s.from : f > 0.7 || k >= this.steps.length ? s.to : s.from;
     const [x, y] = this.P(s.li, this.pts[node]);
@@ -89,7 +90,6 @@ class HnSearch extends Figure {
 }
 
 // ── fig 2 · distance computations per query against N (measured) ─────────────
-// From scripts/hnsw-count.mjs: 32-d, M = 16, efSearch = 64, efConstruction = 100.
 // COUNT rows come from scripts/hnsw-count.mjs, which writes ./data/hnsw-count.js
 class HnCount extends Figure {
   build() {
@@ -131,23 +131,23 @@ class HnInsert extends Figure {
     // the search computed distances to the start and every node in `seen`; link to the nearest three of those
     const found = [start, ...this.route.flatMap((x) => x.seen)];
     const nb = near(pts, found, np, 3), NEW = -1, at = (k) => (k === NEW ? np : pts[k]);
-    // each neighbour over the cap compares all its links and drops the longest (possibly the new one)
+    // each neighbour over the cap drops its longest link (possibly the one to the new point).
+    // HNSW links are directed: the other end keeps its link, so a pruned edge turns one-way (dashed).
     this.prunes = nb.filter((k) => adj.get(k).size + 1 > CAP).map((k) => {
       const drop = [...adj.get(k), NEW].reduce((b, m) => (d2(at(m), pts[k]) > d2(at(b), pts[k]) ? m : b));
       return { k, drop };
     });
     const dropKey = new Set(this.prunes.filter((p) => p.drop !== NEW).map((p) => Math.min(p.k, p.drop) + '-' + Math.max(p.k, p.drop)));
-    this.dropEdges = [];
+    this.pruned = [];
     edgeList(adj).forEach(([a, b]) => {
       const pa = P(pts[a]), pb = P(pts[b]), e = S('line', { x1: pa[0], y1: pa[1], x2: pb[0], y2: pb[1], class: 's-rule', 'stroke-width': 1.1 }, svg);
-      if (dropKey.has(a + '-' + b)) this.dropEdges.push(e);
+      if (dropKey.has(a + '-' + b)) this.pruned.push(e);
     });
     pts.forEach((p) => { const [x, y] = P(p); S('circle', { cx: x, cy: y, r: 4, class: 'f-ink3' }, svg); });
     const [nx, ny] = P(np);
     this.hops = this.route.filter((x) => x.from !== x.to).map((x) => { const a = P(pts[x.from]), b = P(pts[x.to]); return S('path', { d: `M${a[0]} ${a[1]}L${b[0]} ${b[1]}`, class: 'f-none s-ink2', 'stroke-width': 2, 'stroke-linecap': 'round' }, svg); });
     this.links = nb.map((k) => { const [x, y] = P(pts[k]); return S('path', { d: `M${nx} ${ny}L${x} ${y}`, class: 'f-none s-green', 'stroke-width': 2.4, 'stroke-linecap': 'round' }, svg); });
-    // a neighbour whose longest link is the new one drops its side; the new point keeps its own, so that link turns one-way (dashed)
-    this.oneWay = this.prunes.filter((p) => p.drop === NEW).map((p) => this.links[nb.indexOf(p.k)]);
+    this.oneWayLinks = new Set(this.prunes.filter((p) => p.drop === NEW).map((p) => this.links[nb.indexOf(p.k)]));
     this.newDot = S('circle', { cx: nx, cy: ny, r: 7, class: 'f-green' }, svg);
     this.rings = this.prunes.map(({ k }) => { const [x, y] = P(pts[k]); return S('circle', { cx: x, cy: y, r: 11, class: 'f-none s-ochre', 'stroke-width': 2 }, svg); });
     this.status = S('text', { x: 20, y: 22, class: 'sl', 'font-size': 11 }, svg);
@@ -162,10 +162,13 @@ class HnInsert extends Figure {
     op(this.newDot, seg(t, 0.2, 0.8));
     const n = this.hops.length;
     this.hops.forEach((h, i) => drawOn(h, seg(t, 1 + i * (3 / Math.max(1, n)), 1 + (i + 1) * (3 / Math.max(1, n)))));
-    this.links.forEach((l, i) => drawOn(l, seg(t, 4.6 + i * 0.3, 5.1 + i * 0.3)));
-    this.oneWay.forEach((l) => { if (t > 7.6) { l.style.strokeDasharray = '5 5'; l.style.strokeDashoffset = 0; } });
+    // every frame sets the dash state from t alone, so scrubbing back restores the draw-on
+    this.links.forEach((l, i) => {
+      drawOn(l, seg(t, 4.6 + i * 0.3, 5.1 + i * 0.3));
+      if (this.oneWayLinks.has(l) && t > 7.6) { l.style.strokeDasharray = '5 5'; l.style.strokeDashoffset = 0; } else l.style.strokeDasharray = l._len;
+    });
     this.rings.forEach((r) => op(r, seg(t, 6, 6.4))); op(this.hand, seg(t, 6.3, 6.8)); drawOn(this.harrow, seg(t, 6.3, 6.9));
-    this.dropEdges.forEach((e) => { e._c = e._c || e.getAttribute('class'); attr(e, { class: t > 6.8 ? e._c.replace(/s-\w+/, 's-ochre') : e._c }); op(e, 1 - seg(t, 7.6, 8.4)); });
+    this.pruned.forEach((e) => attr(e, { class: t > 6.8 ? 's-ochre' : 's-rule', 'stroke-dasharray': t > 7.6 ? '5 5' : 'none' }));
     this.status.textContent = t < 4.5 ? 'AN INSERT STARTS AS A SEARCH FOR ITS OWN NEIGHBOURS' : t < 6 ? 'THEN IT LINKS TO THE NEAREST ONES, BOTH WAYS' : 'NEIGHBOURS OVER THE CAP ARE PRUNED';
     const [a, c] = this.counts;
     this.count.textContent = `distances: ${t < 1 ? 0 : t < 4.5 ? Math.round(a * seg(t, 1, 4)) : t < 6.5 ? a : a + c}` + (t >= 6.5 ? `  (search ${a} + pruning ${c})` : '');
@@ -175,8 +178,8 @@ class HnInsert extends Figure {
 // ── fig 4 · graph insertions per vector written, with merges ─────────────────
 // My simulation: one segment per refresh, merges of 10 same-size segments.
 // rebuild: every vector in the merge is inserted again; reuse: the largest input
-// keeps its graph (Lucene PR #12050); join: about 30% less merge work (Lucene 10.2).
-function amplification(strategy, steps = 990, factor = 10) {
+// keeps its graph (Lucene PR #12050); join: about 30% less merge work than reuse (Lucene 10.2).
+function amplification(strategy, steps = 1000, factor = 10) {
   let tiers = [], inserted = 0, written = 0; const out = [];
   for (let s = 1; s <= steps; s++) {
     written += 1; inserted += 1; tiers.push(1);
@@ -186,7 +189,7 @@ function amplification(strategy, steps = 990, factor = 10) {
       const bySize = {}; tiers.forEach((x) => { bySize[x] = (bySize[x] || 0) + 1; });
       for (const size in bySize) if (bySize[size] >= factor) {
         const sz = +size, total = sz * factor;
-        inserted += strategy === 'rebuild' ? total : strategy === 'reuse' ? total - sz : strategy === 'join' ? total * 0.7 : 0;
+        inserted += strategy === 'rebuild' ? total : strategy === 'reuse' ? total - sz : strategy === 'join' ? (total - sz) * 0.7 : 0;
         let removed = 0; tiers = tiers.filter((x) => !(x === sz && removed++ < factor)); tiers.push(total); merged = true; break;
       }
     }
@@ -196,9 +199,9 @@ function amplification(strategy, steps = 990, factor = 10) {
 }
 class HnAmp extends Figure {
   build() {
-    const svg = this.svgRoot(600, 300, 'Graph insertions per vector written, as writes accumulate: a single mutable graph stays at one, segment merges that rebuild the graph climb to 2.9, reusing the largest graph to 2.7 and joining graphs to 2.3');
-    const X = (s) => 70 + s / 1000 * 360, Y = (v) => 260 - v / 3.5 * 220;
-    [0, 1, 2, 3].forEach((v) => { S('line', { x1: 70, x2: 430, y1: Y(v), y2: Y(v), class: 's-rule', 'stroke-width': 1 }, svg); S('text', { x: 62, y: Y(v) + 4, class: 't3', 'font-size': 11, 'text-anchor': 'end', text: v + '×' }, svg); });
+    const svg = this.svgRoot(600, 300, 'Graph insertions per vector written, as writes accumulate to a million: a single mutable graph stays at one; segment merges that rebuild the graph climb to 4, reusing the largest graph to 3.7 and joining graphs to 2.9, and all three keep climbing with every further round of merges');
+    const X = (s) => 70 + s / 1000 * 360, Y = (v) => 260 - v / 4.5 * 220;
+    [0, 1, 2, 3, 4].forEach((v) => { S('line', { x1: 70, x2: 430, y1: Y(v), y2: Y(v), class: 's-rule', 'stroke-width': 1 }, svg); S('text', { x: 62, y: Y(v) + 4, class: 't3', 'font-size': 11, 'text-anchor': 'end', text: v + '×' }, svg); });
     [0, 250, 500, 750, 1000].forEach((s) => S('text', { x: X(s), y: 280, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: s === 1000 ? '1M' : s ? s + 'k' : '0' }, svg));
     S('text', { x: 70, y: 22, class: 'sl', 'font-size': 11, text: 'GRAPH INSERTIONS PER VECTOR WRITTEN · VECTORS WRITTEN →' }, svg);
     const series = [['rebuild', 'rebuild', 's-ink'], ['reuse', 'reuse largest', 's-ink3'], ['join', 'join (−30%)', 's-ochre'], ['mutable', 'one graph', 's-green']];
@@ -243,7 +246,7 @@ const BUILD = [
   ['pgvector 0.5.0 → 0.6.2, dbpedia 1M', 7479, 252],
   ['OpenSearch CPU → remote GPU build', 273.8 * 60, 29.1 * 60],
   ['Elasticsearch HNSW-BBQ → DiskBBQ, 1M', 1054, 94],
-  ['Lucene merge, gist int8: rebuild → join', 536, 279],
+  ['Lucene merge, gist int8: reuse → join', 536, 279],
   ['Qdrant 1M × 1536: 8 CPU cores → L4 GPU', 97.5, 12.4],
 ];
 class HnBuild extends Figure {

@@ -92,18 +92,20 @@ for (const n of SIZES) {
   const t0 = performance.now(), from = built; count = 0;
   for (; built < n; built++) index.insert(built);
   const perInsert = count / (n - from); // average over the inserts that grew the index to n
-  const buildMs = performance.now() - t0;
+  const stepMs = performance.now() - t0; // time for the inserts since the previous size only
   count = 0; let hit = 0;
   for (const q of queries) {
     const got = index.knn(q, EF);
     const c0 = count;
-    const truth = data.map((x, i) => [dist(q, x), i]).sort((a, b) => a[0] - b[0]).slice(0, K).map(([, i]) => i);
+    const top = new Heap(-1); // exact top K with a bounded max-heap
+    data.forEach((x, i) => { const d = dist(q, x); if (top.size < K) top.push([d, i]); else if (d < top.peek()[0]) { top.pop(); top.push([d, i]); } });
+    const truth = top.a.map(([, i]) => i);
     count = c0; // brute force is exactly n per query; don't add it to the HNSW count
     hit += got.filter((g) => truth.includes(g)).length;
   }
   const perQuery = count / Q;
   const layers = index.levels().reduce((a, b) => Math.max(a, b), 0) + 1;
-  out.push({ n, perQuery: Math.round(perQuery), brute: n, recall: +(hit / (Q * K)).toFixed(3), perInsert: Math.round(perInsert), layers, buildSeconds: +(buildMs / 1000).toFixed(1) });
+  out.push({ n, perQuery: Math.round(perQuery), brute: n, recall: +(hit / (Q * K)).toFixed(3), perInsert: Math.round(perInsert), layers, stepSeconds: +(stepMs / 1000).toFixed(1) });
   console.error(JSON.stringify(out.at(-1)));
 }
 console.log(JSON.stringify({ D, M, M0, efConstruction: EFC, efSearch: EF, k: K, queries: Q, rows: out }, null, 1));

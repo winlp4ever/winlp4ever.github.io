@@ -79,9 +79,9 @@ Adding a vector runs the whole search descent with `ef_construction` as the beam
 
 <figure class="wide">
 <hn-insert data-fig data-label="fig 3 · one insert">
-<p class="fallback">A new point appears in the middle of a graph. A greedy search walks three hops towards it from the far side, computing 10 distances. The new point links to the three nearest points that search found; the true third-nearest point was never reached. Two of those neighbours now have five links, one over the cap of four. One drops its longest link, to another node. For the other, the longest link is the one to the new point, so it drops its side and that link becomes one-way. The pruning computes 10 more distances.</p>
+<p class="fallback">A new point appears in the middle of a graph. A greedy search walks three hops towards it from the far side, computing 10 distances. The new point links to the three nearest points that search found; the true third-nearest point was never reached. Two of those neighbours now have five links, one over the cap of four, and each drops its longest link: one to another node, the other to the new point. Links in HNSW are directed, so the node at the other end keeps its side and both dropped links stay as one-way links, drawn dashed. The pruning computes 10 more distances.</p>
 </hn-insert>
-<figcaption><b>fig 3</b>The three parts of an insert. The search here is greedy and the new point links to the nearest three it found, which misses the true third-nearest point; real HNSW searches with a beam of <code>ef_construction</code> candidates, which usually finds it, and picks links with the neighbour rule. A dashed link is one-way.<span class="m">Thirty-four random points.</span></figcaption>
+<figcaption><b>fig 3</b>The three parts of an insert. The search here is greedy and the new point links to the nearest three it found, which misses the true third-nearest point; real HNSW searches with a beam of <code>ef_construction</code> candidates, which usually finds it, and picks links with the neighbour rule. A dashed link is one-way: one end dropped it and the other end still keeps it.<span class="m">Thirty-four random points.</span></figcaption>
 </figure>
 
 In my measurement inserts averaged between 700 and 2,300 distances each while the index grew to 300,000 vectors, 1.1 to 2.7 times as many as a query at the same size. Building the 100,000-vector index computed about 200 million distances in total, as much work as 2,000 brute-force queries over the same data. Building is slow at real scale too:
@@ -115,13 +115,13 @@ The graph indexes (NSG, DiskANN, CAGRA) are all close relatives of HNSW with one
 
 ## writes that keep coming
 
-Most databases don't keep one big graph. Lucene (inside Elasticsearch and OpenSearch), Qdrant, Milvus and ClickHouse write data into immutable **segments** and merge small segments into bigger ones in the background. Each segment has its own HNSW graph, and a merge needs a graph for the new segment. The simple way is to build it again from all the vectors, so a vector that goes through two rounds of merges gets inserted into a graph three times.
+Most databases don't keep one big graph. Lucene (inside Elasticsearch and OpenSearch), Qdrant, Milvus and ClickHouse write data into immutable **segments** and merge small segments into bigger ones in the background. Each segment has its own HNSW graph, and a merge needs a graph for the new segment. The simple way is to build it again from all the vectors, so a vector that goes through three rounds of merges gets inserted into a graph four times.
 
 <figure class="wide">
 <hn-amp data-fig data-label="fig 4 · graph insertions per vector written">
-<p class="fallback">Lines show graph insertions per vector written as 990,000 vectors arrive in batches of a thousand. A single mutable graph stays at one. Rebuilding on every merge climbs in steps to 2.9. Reusing the largest input graph ends at 2.7, and joining graphs, at about 30% less merge work, ends at 2.3.</p>
+<p class="fallback">Lines show graph insertions per vector written as a million vectors arrive in batches of a thousand. A single mutable graph stays at one. Rebuilding on every merge climbs in steps and reaches four at a million, when every vector has been through three rounds of merges. Reusing the largest input graph reaches 3.7, and joining graphs, at about 30% less work than reuse, reaches 2.9. All three keep climbing with each further round.</p>
 </hn-amp>
-<figcaption><b>fig 4</b>Write amplification of the graph under segment merges. Merges of equal-size segments gain little from reusing the largest graph, because every input is the same size.<span class="m">My simulation: one segment per thousand vectors, merges of ten same-size segments, stopped just before the merge into one segment of a million. Lucene's real merge policy picks segments by size and caps them at 5 GB.</span></figcaption>
+<figcaption><b>fig 4</b>Write amplification of the graph under segment merges. Merges of equal-size segments gain little from reusing the largest graph, because every input is the same size.<span class="m">My simulation: one segment per thousand vectors, merges of ten same-size segments; join is modelled as 30% less work than reuse, as Lucene measured it. Lucene's real merge policy picks segments by size and caps them at 5 GB.</span></figcaption>
 </figure>
 
 Three things go wrong under constant writes:
@@ -138,7 +138,7 @@ The fixes so far, in order:
 
 - **Reuse the biggest graph on merge** (Lucene, February 2023): the merged segment starts from the largest input's graph. Merge time fell about 42% with segments of 500,000 vectors and 3 to 5% at 100,000. It only applies to segments without deletes<sup><a href="#src-23">23</a></sup>.
 - **SIMD distance code** through Java's Panama API (Lucene 9.10, Elasticsearch 8.13) raised indexing from about 900 to about 1,300 documents per second on one dataset<sup><a href="#src-20">20</a></sup>.
-- **Join graphs on merge** (Lucene 10.2, April 2025) uses the smaller graphs' neighbourhoods so that only a covering subset of nodes needs a full search. Merges got a little over 30% faster on average; one int8 merge went from 536 to 279 seconds<sup><a href="#src-24">24</a></sup>.
+- **Join graphs on merge** (Lucene 10.2, April 2025) uses the smaller graphs' neighbourhoods so that only a covering subset of nodes needs a full search. Merges got a little over 30% faster on average than with graph reuse; one int8 merge went from 536 to 279 seconds<sup><a href="#src-24">24</a></sup>.
 - **DiskBBQ** (GA December 2025) drops the graph for clusters. On 1 million vectors it indexed in 94 seconds against 1,054 for HNSW with BBQ, at 91% recall against 92%<sup><a href="#src-6">6</a></sup>. Elastic still recommends HNSW when recall has to be very high and updates are rare.
 - **GPU builds** through NVIDIA cuVS (technical preview in 9.3): about 12× the indexing throughput and 7× faster force-merges on 2.6 million 1,536-dimension vectors. Against a CPU machine of the same price the gains are about 5× and 6×. It needs an Enterprise licence<sup><a href="#src-25">25</a></sup>.
 
@@ -187,7 +187,7 @@ turbopuffer, LanceDB and Pinecone serverless keep new data in a write buffer and
 
 <figure class="wide">
 <hn-build data-fig data-label="fig 6 · build and merge times, before and after">
-<p class="fallback">Five before-and-after build times on a log scale. pgvector 0.5.0 to 0.6.2 on dbpedia 1M: 7,479 to 252 seconds, 29.7 times faster. OpenSearch CPU to remote GPU build: 273.8 to 29.1 minutes, 9.4 times. Elasticsearch HNSW-BBQ to DiskBBQ on 1M vectors: 1,054 to 94 seconds, 11.2 times. Lucene merge on gist int8, rebuild to join: 536 to 279 seconds, 1.9 times. Qdrant on 1M 1,536-dimension vectors, 8 CPU cores to an L4 GPU: 97.5 to 12.4 seconds, 7.9 times.</p>
+<p class="fallback">Five before-and-after build times on a log scale. pgvector 0.5.0 to 0.6.2 on dbpedia 1M: 7,479 to 252 seconds, 29.7 times faster. OpenSearch CPU to remote GPU build: 273.8 to 29.1 minutes, 9.4 times. Elasticsearch HNSW-BBQ to DiskBBQ on 1M vectors: 1,054 to 94 seconds, 11.2 times. Lucene merge on gist int8, reusing the largest graph to joining graphs: 536 to 279 seconds, 1.9 times. Qdrant on 1M 1,536-dimension vectors, 8 CPU cores to an L4 GPU: 97.5 to 12.4 seconds, 7.9 times.</p>
 </hn-build>
 <figcaption><b>fig 6</b>What each fix bought. The rows use different data and hardware, so compare the ratios, not the positions across rows.<span class="m">Vendor numbers: Supabase/jkatz for pgvector, OpenSearch 3.1 release post, Elastic Search Labs, Qdrant 1.13 release post.</span></figcaption>
 </figure>
