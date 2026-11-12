@@ -1,7 +1,7 @@
 ---
 title: Segment trees, a lesson with exercises
 date: 2026-11-12T19:00:00Z
-description: How a segment tree answers range queries and updates in O(log n), starting from buckets, with lazy propagation, searching inside the tree, the variants worth knowing, the sum tree inside prioritized experience replay, and sixteen problems to practise on.
+description: How a segment tree answers range queries and updates in O(log n), starting from buckets, with lazy propagation, searching inside the tree, the variants worth knowing, the sum tree inside prioritized experience replay, and three proofs and sixteen judge problems to practise on.
 tags: [algorithms, data-structures, competitive-programming]
 category: code
 glyph: segtree
@@ -11,7 +11,7 @@ math: true
 
 You have an array of n numbers and two kinds of requests that keep arriving in any order: change one number, or tell me the sum (or the minimum, or the gcd) of the numbers between positions l and r. With n and the number of requests both around 200,000, which is the usual size on judges like CSES, anything that costs O(n) per request does about 40 billion steps, which is far too slow.
 
-The two obvious structures each make one request cheap and the other expensive. A plain array updates in O(1) and sums a range by looping, O(n). A prefix-sum array answers any range sum in O(1) as $$P[r+1] - P[l]$$, but changing one number shifts every prefix after it, O(n). A segment tree pays O(log n) for both, which for n = 200,000 is about 18 steps. For ordered sets with insert and delete, see the companion lesson on [red-black trees](/blog/red-black-trees/).
+The two obvious structures each make one request cheap and the other expensive. A plain array updates in O(1) and sums a range by looping, O(n). A prefix-sum array answers any range sum in O(1) as $$P[r+1] - P[l]$$, but changing one number shifts every prefix after it, O(n). A segment tree pays O(log n) for both. For n = 200,000 the tree has 18 levels. For ordered sets with insert and delete, see the companion lesson on [red-black trees](/blog/red-black-trees/).
 
 ## buckets first
 
@@ -26,7 +26,7 @@ The idea a segment tree refines is older and simpler. Cut the array into blocks 
 
 With blocks of size b, a query reads at most n/b block sums and at most 2b loose numbers. That total is smallest when $$b = \sqrt{n}$$, which gives $$O(\sqrt{n})$$ per query. A point update for sums is O(1): change the number and add the difference to its block's sum. For minimum it's $$O(\sqrt{n})$$, because the block has to be rescanned when its smallest number gets bigger.
 
-At n = 200,000 that's about 900 reads per query, roughly 50 times worse than the tree. Buckets still earn a place. They are easy to get right under contest pressure, and Mo's algorithm, which answers range queries offline by sorting them so the window moves little between queries, is built on the same block idea and handles questions like "how many distinct values in [l, r]" that don't merge nicely<sup><a href="#src-1">1</a></sup>.
+At n = 200,000, with b ≈ 447, that's up to about 1,340 reads per query. The segment tree below visits at most about 70 nodes. Buckets still earn a place. They are easy to get right under contest pressure, and Mo's algorithm, which answers range queries offline by sorting them so the window moves little between queries, is built on the same block idea and handles questions like "how many distinct values in [l, r]" that don't merge nicely<sup><a href="#src-1">1</a></sup>.
 
 ## the tree
 
@@ -603,7 +603,7 @@ If L + R contains "abc", the subsequence starts in one half and may cross into t
 
 For more, the CSES "Range Queries" section has 20+ problems in rough order of difficulty, and cp-algorithms' segment tree article covers every variant above with code<sup><a href="#src-2">2</a></sup>.
 
-If I had to pick one version to memorise, it would be the iterative tree with a generic combine function: 2n memory, no recursion, and it covers everything up to EX 10. I'd switch to the recursive one only when the problem needs lazy tags or a descent, because both are easier to get right when the node's range is passed down explicitly.
+If I had to pick one version to memorise, it would be the iterative tree with a generic combine function: 2n memory, no recursion, and enough for EX 1 to 5 and the merge problems EX 8 to 10. I'd switch to the recursive one when a problem needs a descent (EX 6, 7) or lazy tags (EX 11, 12), because both are easier to get right when the node's range is passed down explicitly.
 
 <details class="sources">
 <summary>sources</summary>

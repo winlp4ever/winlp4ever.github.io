@@ -33,7 +33,8 @@ function treeNodes(n, x0, w, y0, dy) {
   rec(1, 0, n - 1, 0);
   return out;
 }
-function drawTree(svg, nodes, bw) {
+function drawTree(svg, nodes, bw, labels = true) { // labels: leaf indices under the leaves
+  if (labels) nodes.forEach((o) => { if (o && o.lo === o.hi) S('text', { x: o.x, y: o.y + 26, class: 't3', 'font-size': 10, 'text-anchor': 'middle', text: o.lo }, svg); });
   const eg = S('g', {}, svg);
   nodes.forEach((o) => { if (o && o.i > 1) { const p = nodes[o.i >> 1]; S('line', { x1: p.x, y1: p.y + 11, x2: o.x, y2: o.y - 11, class: 's-rule', 'stroke-width': 1.2 }, eg); } });
   return nodes.map((o) => {
@@ -93,7 +94,6 @@ class SgQuery extends Figure {
     this.T = sums(A);
     this.E = drawTree(svg, this.N, 30);
     this.E.forEach((e, i) => { if (e) e.txt.textContent = this.T[i]; });
-    this.N.filter((o) => o && o.lo === o.hi).forEach((o) => S('text', { x: o.x, y: o.y + 26, class: 't3', 'font-size': 10, 'text-anchor': 'middle', text: o.lo }, svg));
     S('text', { x: 20, y: 24, class: 'sl', 'font-size': 11, text: 'EACH NODE STORES THE SUM OF ITS RANGE' }, svg);
     this.out = S('text', { x: 20, y: 312, class: 't2', 'font-size': 13 }, svg);
     rangeCtl(this, 16, 3, 12, (l, r) => this.paint(l, r));
@@ -130,7 +130,6 @@ class SgUpdate extends Figure {
     this.before = sums(A); this.after = sums(B);
     this.E = drawTree(svg, this.N, 30);
     this.path = []; for (let i = 16 + UPD.i; i >= 1; i >>= 1) this.path.push(i); // leaf … root
-    this.N.filter((o) => o && o.lo === o.hi).forEach((o) => S('text', { x: o.x, y: o.y + 26, class: 't3', 'font-size': 10, 'text-anchor': 'middle', text: o.lo }, svg));
     this.lab = S('text', { x: 20, y: 24, class: 'sl', 'font-size': 11 }, svg);
     this.out = S('text', { x: 20, y: 312, class: 't2', 'font-size': 13 }, svg);
   }
@@ -190,7 +189,6 @@ class SgLazy extends Figure {
       const t = S('text', { x: 8, y: 2, class: 'f-bg', 'font-size': 10, 'text-anchor': 'middle', 'font-weight': 600 }, g);
       return { g, t };
     });
-    this.N.filter((o) => o && o.lo === o.hi).forEach((o) => S('text', { x: o.x, y: o.y + 26, class: 't3', 'font-size': 10, 'text-anchor': 'middle', text: o.lo }, svg));
     this.lab = S('text', { x: 20, y: 24, class: 'sl', 'font-size': 11 }, svg);
     this.out = S('text', { x: 20, y: 312, class: 't2', 'font-size': 13 }, svg);
     this.snaps = runLazy();
@@ -223,7 +221,7 @@ class SgSumTree extends Figure {
     this.N = treeNodes(8, 40, 520, 54, 52);
     this.T = sums(P); this.total = this.T[1];
     this.trail = S('path', { class: 'f-none s-green', 'stroke-width': 6, 'stroke-linecap': 'round', 'stroke-linejoin': 'round', opacity: 0.3 }, svg);
-    this.E = drawTree(svg, this.N, 40);
+    this.E = drawTree(svg, this.N, 40, false);
     this.E.forEach((e, i) => { if (e) e.txt.textContent = this.T[i]; });
     // the leaves' priorities as one bar, each slice as wide as its share
     const bx = 40, bw = 520; let acc = 0;

@@ -10,30 +10,31 @@ function rotate(T, x, dir) { // dir 'left': x's right child y comes up
   if (!x.p) T.root = y; else if (x === x.p.l) x.p.l = y; else x.p.r = y;
   if (L) y.l = x; else y.r = x;
   x.p = y;
+  T.rot = (T.rot || 0) + 1;
 }
-function insert(T, k, log = []) {
+function insert(T, k, log = null) { // log: an array to record the steps, or null to skip
   let y = null, x = T.root;
   while (x) { y = x; x = k < x.k ? x.l : x.r; }
   let z = { k, red: true, l: null, r: null, p: y };
   if (!y) T.root = z; else if (k < y.k) y.l = z; else y.r = z;
-  log.push({ kind: 'new', keys: [k] });
+  log?.push({ kind: 'new', keys: [k] });
   while (z.p && z.p.red) {
     const p = z.p, g = p.p, left = p === g.l, u = left ? g.r : g.l;
     if (u && u.red) { // case 1: red uncle, push the red up
       p.red = false; u.red = false; g.red = true;
-      log.push({ kind: 'recolor', keys: [p.k, u.k, g.k], text: `uncle ${u.k} is red: recolor ${p.k}, ${u.k}, ${g.k} and move up to ${g.k}` });
+      log?.push({ kind: 'recolor', keys: [p.k, u.k, g.k], text: `uncle ${u.k} is red: recolor ${p.k}, ${u.k}, ${g.k} and move up to ${g.k}` });
       z = g;
       continue;
     }
     if (z === (left ? p.r : p.l)) { // case 2: inner child, rotate it to the outside
-      log.push({ kind: 'rotate', keys: [p.k, z.k], text: `${z.k} is an inner child: rotate ${left ? 'left' : 'right'} at ${p.k}` });
+      log?.push({ kind: 'rotate', keys: [p.k, z.k], text: `${z.k} is an inner child: rotate ${left ? 'left' : 'right'} at ${p.k}` });
       z = p; rotate(T, z, left ? 'left' : 'right');
     }
     const pp = z.p; // case 3: outer child, rotate the grandparent the other way
     pp.red = false; g.red = true; rotate(T, g, left ? 'right' : 'left');
-    log.push({ kind: 'rotate', keys: [g.k, pp.k], text: `rotate ${left ? 'right' : 'left'} at ${g.k}, recolor ${pp.k} black and ${g.k} red` });
+    log?.push({ kind: 'rotate', keys: [g.k, pp.k], text: `rotate ${left ? 'right' : 'left'} at ${g.k}, recolor ${pp.k} black and ${g.k} red` });
   }
-  if (T.root.red) { T.root.red = false; log.push({ kind: 'recolor', keys: [T.root.k], text: `root ${T.root.k} turns black` }); }
+  if (T.root.red) { T.root.red = false; log?.push({ kind: 'recolor', keys: [T.root.k], text: `root ${T.root.k} turns black` }); }
   return log;
 }
 const build = (keys) => { const T = { root: null }; keys.forEach((k) => insert(T, k)); return T; };
@@ -60,18 +61,20 @@ const paintNode = (e, red, ring) => attr(e.c, { class: (red ? 'f-red' : 'f-ink')
 const KEYS1 = [13, 8, 17, 1, 11, 15, 25, 6, 22, 27, 20, 3];
 class Rb234 extends Figure {
   build() {
-    const svg = this.svgRoot(600, 300, 'A red-black tree, and the same tree drawn as a 2-3-4 tree by lifting every red node into its black parent');
-    const T = build(KEYS1), L = layout(T, 40, 520, 70, 58), at = new Map(L.map((o) => [o.n, o]));
+    const svg = this.svgRoot(600, 330, 'A red-black tree, and the same tree drawn as a 2-3-4 tree by lifting every red node into its black parent');
+    const T = build(KEYS1), L = layout(T, 40, 520, 64, 52), at = new Map(L.map((o) => [o.n, o]));
     this.L = L;
     let bh = 0; for (let n = T.root; n; n = n.l) if (!n.red) bh++;
     this.bh = bh;
     // in the 2-3-4 view a red node sits on its parent's row
-    L.forEach((o) => { o.y2 = o.n.red ? at.get(o.n.p).y : o.y; });
+    // 2-3-4 row = number of black ancestors; a red node sits on its black parent's row
+    const row = (n) => { let c = 0; for (let q = n.p; q; q = q.p) if (!q.red) c++; return n.red ? row(n.p) : c; };
+    L.forEach((o) => { o.y2 = 64 + row(o.n) * 80; });
     // one group per black node: itself plus its red children
     this.groups = L.filter((o) => !o.n.red).map((o) => {
       const mem = [o, ...[o.n.l, o.n.r].filter((c) => c && c.red).map((c) => at.get(c))];
       const xs = mem.map((m) => m.x), x = Math.min(...xs) - R - 6, w = Math.max(...xs) - Math.min(...xs) + 2 * R + 12;
-      return S('rect', { x, y: o.y - R - 6, width: w, height: 2 * R + 12, rx: 10, class: 'f-none s-green', 'stroke-width': 1.6 }, svg);
+      return S('rect', { x, y: o.y2 - R - 6, width: w, height: 2 * R + 12, rx: 10, class: 'f-none s-green', 'stroke-width': 1.6 }, svg);
     });
     this.edges = L.filter((o) => o.n.p).map((o) => {
       const p = at.get(o.n.p);
@@ -79,7 +82,7 @@ class Rb234 extends Figure {
     });
     this.nodes = L.map((o) => { const e = nodeEl(svg, o.n.k); paintNode(e, o.n.red); return e; });
     this.lab = S('text', { x: 20, y: 26, class: 'sl', 'font-size': 11 }, svg);
-    this.hand = S('text', { x: 580, y: 286, class: 'hand', 'font-size': 16, 'text-anchor': 'end', text: 'black node + its red children = one 2-3-4 node' }, svg);
+    this.hand = S('text', { x: 580, y: 318, class: 'hand', 'font-size': 16, 'text-anchor': 'end', text: 'black node + its red children = one 2-3-4 node' }, svg);
     this.k = 0; this.paint(0);
     pills(this, [[0, 'red-black tree'], [1, 'as a 2-3-4 tree']], 0, (v) => { const a = this.k; tween(this, (e) => this.paint(lerp(a, v, e)), 700); });
   }
@@ -149,10 +152,10 @@ const SEQ = {
 };
 class RbInsert extends Figure {
   build() {
-    const svg = this.svgRoot(600, 330, 'A red-black tree after each insertion, with the fix-up steps of the last insert listed and the touched nodes outlined');
+    const svg = this.svgRoot(600, 350, 'A red-black tree after each insertion, with the fix-up steps of the last insert listed and the touched nodes outlined');
     this.svg = svg; this.layer = S('g', {}, svg);
     this.head = S('text', { x: 20, y: 24, class: 'sl', 'font-size': 11 }, svg);
-    this.steps = [0, 1, 2].map((i) => S('text', { x: 20, y: 262 + i * 20, class: 't2', 'font-size': 12.5 }, svg));
+    this.steps = [0, 1, 2, 3, 4].map((i) => S('text', { x: 20, y: 274 + i * 17, class: 't2', 'font-size': 12.5 }, svg));
     this.seq = 'sorted'; this.n = 8;
     const bar = pills(this, [['sorted', 'keys 1, 2, 3, …'], ['random', 'random order']], 'sorted', (v) => { this.seq = v; this.paint(); });
     const lab = H('label', { class: 'pill', text: 'keys ' }, bar);
@@ -162,23 +165,25 @@ class RbInsert extends Figure {
     this.paint();
   }
   paint() {
-    const keys = SEQ[this.seq].slice(0, this.n), T = build(keys.slice(0, -1)), log = insert(T, keys.at(-1));
+    const keys = SEQ[this.seq].slice(0, this.n), T = build(keys.slice(0, -1)), log = insert(T, keys.at(-1), []);
     this.out.textContent = this.n;
-    const L = layout(T, 30, 540, 60, 46), at = new Map(L.map((o) => [o.n, o]));
+    const L = layout(T, 30, 540, 56, 38), at = new Map(L.map((o) => [o.n, o]));
     const touched = new Set(log.flatMap((s) => s.keys));
     this.layer.replaceChildren();
     L.forEach((o) => { if (o.n.p) { const p = at.get(o.n.p); S('line', { x1: p.x, y1: p.y, x2: o.x, y2: o.y, class: 's-ink3', 'stroke-width': 1.2 }, this.layer); } });
     L.forEach((o) => {
       const e = nodeEl(this.layer, o.n.k);
       attr(e.g, { transform: `translate(${o.x} ${o.y})` });
-      paintNode(e, o.n.red, o.n.k === keys.at(-1) ? 's-green' : touched.has(o.n.k) ? 's-ochre' : 's-bg');
+      const isNew = o.n.k === keys.at(-1), hit = !isNew && touched.has(o.n.k);
+      paintNode(e, o.n.red, isNew ? 's-green' : hit ? 's-ink' : 's-bg');
+      if (hit) attr(e.c, { 'stroke-dasharray': '3 2.5' });
     });
     const h = height(T.root), bound = 2 * Math.log2(this.n + 1);
     this.head.textContent = `${this.n} KEYS · HEIGHT ${h} · BOUND 2·LOG2(N+1) = ${bound.toFixed(1)} · PLAIN BST: ${this.seq === 'sorted' ? this.n : height(plainBst(keys))}`;
     const lines = log.filter((s) => s.text).map((s) => s.text);
     const all = [`insert ${keys.at(-1)} as a red leaf${lines.length ? '' : ': its parent is black, done'}`, ...lines];
-    // three rows; the longest fix-ups (two rotations) fit, longer recolor chains are folded
-    const rows = all.length <= 3 ? all : [all[0], all.slice(1, -1).join('; '), all.at(-1)];
+    // one step per row; 15 keys never need more than 5, but fold the middle just in case
+    const rows = all.length <= 5 ? all : [...all.slice(0, 3), `… ${all.length - 4} more steps`, all.at(-1)];
     this.steps.forEach((t, i) => { t.textContent = rows[i] ? (i ? '→ ' : '') + rows[i] : ''; });
   }
 }
@@ -193,12 +198,16 @@ function plainBst(keys) {
 const NS = Array.from({ length: 14 }, (_, i) => 2 ** (i + 1));
 function measure(order) {
   const r = rng(9);
+  if (order === 'sorted') { // one tree, grown through every n
+    const T = { root: null, rot: 0 }; let k = 0;
+    return NS.map((n) => { while (k < n) insert(T, k++); return { n, h: heightIter(T.root), rot: T.rot / n }; });
+  }
   return NS.map((n) => {
     const keys = Array.from({ length: n }, (_, i) => i);
-    if (order === 'random') for (let i = n - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [keys[i], keys[j]] = [keys[j], keys[i]]; }
-    const T = { root: null }; let rot = 0;
-    keys.forEach((k) => { rot += insert(T, k).filter((s) => s.kind === 'rotate').length; });
-    return { n, h: heightIter(T.root), rot: rot / n };
+    for (let i = n - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [keys[i], keys[j]] = [keys[j], keys[i]]; }
+    const T = { root: null, rot: 0 };
+    keys.forEach((k) => insert(T, k));
+    return { n, h: heightIter(T.root), rot: T.rot / n };
   });
 }
 function heightIter(root) { // iterative, so 16k nodes never hit the call stack

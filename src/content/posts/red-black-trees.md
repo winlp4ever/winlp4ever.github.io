@@ -1,7 +1,7 @@
 ---
 title: Red-black trees, a lesson with exercises
 date: 2026-11-12T18:00:00Z
-description: How a red-black tree keeps a binary search tree balanced with one colour bit, why that bounds its height, how insertion and deletion repair it, how it compares with AVL trees and B-trees, where Linux, Java, nginx and VS Code use it, and fourteen problems to practise on.
+description: How a red-black tree keeps a binary search tree balanced with one colour bit, why that bounds its height, how insertion and deletion repair it, how it compares with AVL trees and B-trees, where Linux, Java, nginx and VS Code use it, and four proofs and ten judge problems to practise on.
 tags: [algorithms, data-structures, competitive-programming]
 category: code
 glyph: rbtree
@@ -122,12 +122,12 @@ void insert_fixup(Node*& root, Node* z) {
 <rb-insert data-fig data-label="fig 3 · inserting, step by step">
 <p class="fallback">The tree after inserting the keys 1, 2, 3 and so on in order, with the fix-up steps of the last insertion listed below it. After 8 keys the tree has height 4 (the bound 2·log2(9) is 6.3, a plain BST would have height 8). Inserting 8 went: uncle 5 is red, recolor 7, 5 and 6 and move up to 6; then rotate left at 2, recolor 4 black and 2 red. With 15 sorted keys the height is 6. A second mode inserts the keys 1 to 15 in a fixed random order (5, 14, 10, 13, 12, 2, 9, 4, 7, 6, 1, 8, 3, 15, 11) and ends with height 5.</p>
 </rb-insert>
-<figcaption><b>fig 3</b>Drag the slider to insert one key at a time. The new key has a green ring, nodes recoloured or rotated by this insertion have an ochre ring, and the steps are the ones the code above takes.<span class="m">The figure runs the same insert as the code; the random order is seeded.</span></figcaption>
+<figcaption><b>fig 3</b>Drag the slider to insert one key at a time. The new key has a green ring, nodes recoloured or rotated by this insertion have a dashed ring, and the steps are the ones the code above takes.<span class="m">The figure runs the same insert as the code; the random order is seeded.</span></figcaption>
 </figure>
 
 The loop can climb O(log n) levels through the red-uncle case, but each rotation case ends it, so an insertion does **at most two rotations**. The recolouring is O(1) amortized over a sequence of operations, a result of Tarjan's<sup><a href="#src-6">6</a></sup><sup><a href="#src-7">7</a></sup>. Rotations are the expensive part in practice (they move pointers that other code may be holding, and in augmented trees they force recomputation), so a constant bound on them matters.
 
-Watch the sorted sequence in fig 3. Every insertion lands at the right end, the outer-child case keeps firing on the right spine, and the tree stays nearly complete: 15 keys fit in 6 levels.
+Watch the sorted sequence in fig 3, the input that turns a plain BST into a list. Every insertion lands at the right end and the outer-child case keeps firing on the right spine. 15 keys take 6 levels, against 15 for the plain BST and 4 for a perfectly balanced tree.
 
 ## deletion
 
