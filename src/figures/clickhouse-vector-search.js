@@ -94,8 +94,8 @@ class CvFilter extends Figure {
     });
     // outline the fetch window (whole rows plus a partial last row)
     const full = Math.floor(Math.min(fetched, N) / C), rest = Math.min(fetched, N) % C, w = C * CS, X = X0 - 3, Y = Y0 - 3;
-    const d = rest
-      ? `M${X} ${Y}h${w}v${full * CS}h${-(C - rest) * CS}v${CS}h${-rest * CS}z`
+    const d = !full ? `M${X} ${Y}h${rest * CS}v${CS}h${-rest * CS}z` // fewer than one row: a plain box
+      : rest ? `M${X} ${Y}h${w}v${full * CS}h${-(C - rest) * CS}v${CS}h${-rest * CS}z`
       : `M${X} ${Y}h${w}v${full * CS}h${-w}z`;
     attr(this.win, { d });
     const how = this.mode === 'pre' ? 'exact scan of every matching row' : `index fetches ${fetched}`;
