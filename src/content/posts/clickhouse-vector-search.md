@@ -1,7 +1,7 @@
 ---
 title: Vector search and BM25 in ClickHouse, compared with Postgres, Qdrant and the rest
 date: 2026-11-11
-description: How the ClickHouse vector index works, how to set it up, where it stands on BM25 and hybrid search, and how it compares with pgvector, Qdrant, Elasticsearch, Milvus and Weaviate. It ends on whether agents still need vector search now that they can grep.
+description: How the ClickHouse vector index works, how to set it up, where it stands on BM25 and hybrid search, and how it compares with pgvector, Qdrant, Elasticsearch, Milvus and Weaviate. The last section compares what coding and research agents get from grep and from vector search.
 tags: [clickhouse, search, vectors, infra]
 category: code
 glyph: search
