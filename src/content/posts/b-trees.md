@@ -1,7 +1,7 @@
 ---
 title: B-trees, a lesson with exercises
 date: 2026-11-12T20:00:00Z
-description: How a B-tree keeps a huge sorted index a few page reads deep, how splits, borrows and merges keep it balanced, B+ trees and page fill, the variants from B-link trees to LSM-trees, how PostgreSQL, InnoDB, SQLite, LMDB, Btrfs and the Linux kernel use them, and eight proofs and seven problems to practise on.
+description: How a B-tree keeps a huge sorted index a few page reads deep, how splits, borrows and merges keep it balanced, B+ trees and page fill, the variants from B-link trees to LSM-trees, how PostgreSQL, InnoDB, SQLite, LMDB, Btrfs and the Linux kernel use them, and fifteen exercises, from proofs to building a small database.
 tags: [algorithms, data-structures, databases]
 category: code
 glyph: btree
@@ -62,7 +62,7 @@ A new key always goes into a leaf, in sorted position. If the leaf now has 2t ke
 <bt-insert data-fig data-label="fig 2 · inserting, with splits">
 <p class="fallback">A B-tree with t = 2 after inserting 12, 3, 27, 6, 42, 48, 24, 63, 15, 60, 33 and 57. The twelfth key, 57, goes into the leaf holding 48 and 60 and 63; that leaf overflows and splits, sending 60 up; the parent now holds 12, 27, 42 and 60, which is too many, so it splits too and 42 becomes a new root: the tree grows from two levels to three. With t = 3 the same twelve keys fit in two levels.</p>
 </bt-insert>
-<figcaption><b>fig 2</b>Drag to insert one key at a time; switch between t = 2 and t = 3. Green marks the leaf holding the new key and the node that took the last middle key; ochre marks the other nodes a split created.<span class="m">A real B-tree runs in the figure, with bottom-up splits. The keys are multiples of 3 in a seeded random order.</span></figcaption>
+<figcaption><b>fig 2</b>Drag to insert one key at a time; switch between t = 2 and t = 3. Green marks the leaf holding the new key and the node that took the last middle key; ochre marks the other nodes a split created.<span class="m">A real B-tree runs in the figure, with bottom-up splits. The keys are multiples of 3 in a fixed shuffled order.</span></figcaption>
 </figure>
 
 CLRS writes insertion differently: on the way down, split every full node before stepping into it. The parent then always has room for a middle key, so one pass from root to leaf is enough and the code never walks back up<sup><a href="#src-4">4</a></sup>. The cost is that it sometimes splits a node that wouldn't have overflowed. In Python, with `T` the minimum degree:
@@ -231,7 +231,7 @@ The binary row is the plain count of one block per node. The B-tree's weak spot 
 
 ## exercises
 
-Proofs and by-hand exercises first, then problems and two projects. The [USFCA B-tree visualizer](https://www.cs.usfca.edu/~galles/visualization/BTree.html) is handy for checking the by-hand ones.
+Proofs and by-hand exercises first (P1 to P8), then four judge problems and three projects (EX 1 to EX 7). The [USFCA B-tree visualizer](https://www.cs.usfca.edu/~galles/visualization/BTree.html) is handy for checking the by-hand ones.
 
 <details class="ex">
 <summary><span class="ex-n">P1</span><span class="ex-t">How tall can it get?</span><span class="ex-d"><b>●</b>○○ proof</span></summary>
@@ -284,7 +284,7 @@ Fanout ≈ usable bytes / bytes per entry. Levels ≈ ⌈log_f(N)⌉ when leaves
 </details>
 <details><summary>solution sketch</summary>
 
-(8192 − 24) / (16 + 4) ≈ 408 entries; at 90% fill about 367. $$367^3 \approx 4.9 \cdot 10^7$$ and $$367^4 \approx 1.8 \cdot 10^{10}$$, so 4 levels. InnoDB: 16384 · 15/16 = 15360 usable bytes; with the same 20 bytes per entry that's about 768 entries, and again 4 levels for 10^9 rows. Counting from the bottom: about 2.7 million leaves, 7,400 pages above them, 20 above those and the root. The top two levels are about 21 pages and the top three about 7,400 pages (60 MB), small enough to stay cached.
+PostgreSQL: (8192 − 24) / (16 + 4) ≈ 408 entries, about 367 at 90% fill. Counting up from 10^9 rows: about 2.7 million leaves, 7,400 pages above them, 21 above those and the root, so 4 levels. The top two levels are 22 pages and the top three about 7,400 pages (60 MB), small enough to stay cached. InnoDB: 16384 · 15/16 = 15360 usable bytes, about 768 entries of 20 bytes. That gives about 1.3 million leaves, 1,700 pages, 3 pages and the root: again 4 levels, with the top three levels about 1,700 pages (27 MB).
 
 </details>
 </div>
@@ -313,7 +313,7 @@ Check each step in the visualizer. The two final trees can differ: top-down spli
 <summary><span class="ex-n">P5</span><span class="ex-t">Delete cases</span><span class="ex-d"><b>●●</b>○ by hand</span></summary>
 <div class="ex-b">
 
-CLRS 18.3-1: delete C, P and V, in that order, from the tree in figure 18.8(f), and name the case used at each step. Then replay fig 3's six deletions and match each one to a CLRS case.
+CLRS 18.3-1: delete C, P and V, in that order, from the tree in figure 18.8(f), and name the case used at each step. Then run fig 3's six deletions with the CLRS rules and compare your trees with the figure's.
 
 <details><summary>hint</summary>
 
@@ -322,7 +322,7 @@ The CLRS rule: before stepping into a child, make sure it has at least t keys.
 </details>
 <details><summary>solution sketch</summary>
 
-Fig 3's first and third deletions are case 1 (a key in a leaf). The second removes 30 from an internal node whose left child has t keys: case 2a, replace it with its predecessor 25. The fourth removes 60 from an internal node whose left child [50] has only t − 1 keys and whose right child [70 80] has t: CLRS uses case 2b and replaces 60 with its successor 70. The figure's code always takes the predecessor and then repairs the empty leaf with a borrow, and both routes end with [70] over [50] and [80]. The fifth is a merge, which CLRS does on the way down as case 3b. The last cascades two merges and shrinks the root; CLRS would merge before descending, at the root first.
+The figure's code repairs bottom-up, after the key is gone: 90 is a plain leaf delete, 30 swaps in its predecessor 25, 35 is a leaf delete, 60 swaps in 50 and then borrows from the right sibling, 40 merges, and 80 merges twice and shrinks the root. The CLRS rules give different trees from the first step. To delete 90 it must step into the root's right child [60], which has only t − 1 keys, so it applies case 3a at the root first: 45 comes down into that child, 30 goes up into the root, and the subtree [35 40] moves across with it. Only then does it reach 90's leaf. Draw the rest by hand and check each tree with a validator for key order, node sizes and equal leaf depth.
 
 </details>
 </div>
@@ -360,7 +360,7 @@ After a split of the rightmost leaf, which half will ever see another key?
 </details>
 <details><summary>solution sketch</summary>
 
-With the bottom-up split from fig 2, a full rightmost leaf of 2t keys splits into t and t − 1, and the left half of t keys never receives another key. So almost every leaf ends with t of its 2t − 1 slots used: 2/3 full for t = 2 and close to half for large t. Leaving the left page 90% full (or full, for InnoDB) puts the waste only in the one page still receiving keys. PostgreSQL's rule only triggers on the rightmost page, so descending keys get 50/50 splits. InnoDB's heuristic checks whether the insert lands next to the previous one, so it detects both directions; its manual says ascending or descending.
+With the bottom-up split from fig 2, a full rightmost leaf of 2t keys splits into t and t − 1, and the left half of t keys never receives another key. So almost every leaf ends with t of its 2t − 1 slots used: 2/3 full for t = 2 and close to half for large t. Leaving the left page 90% full (about 15/16 for InnoDB) puts the waste only in the one page still receiving keys. PostgreSQL's rule only triggers on the rightmost page, so descending keys get 50/50 splits. InnoDB's heuristic checks whether the insert lands next to the previous one, so it detects both directions; its manual says ascending or descending.
 
 </details>
 </div>
@@ -455,7 +455,7 @@ A counted B-tree: rank(x) adds up the counts of the children left of the path, p
 </details>
 <details><summary>solution sketch</summary>
 
-Key = (salary, id) to allow duplicates. Insert and delete update the counts along the path, and splits and merges recompute the counts of the nodes they touch. The answer is rank(b + 1) − rank(a). With t around 16 the tree is 4 or 5 levels deep for 4·10^5 keys. The same tree answers CSES 2163 Josephus Problem II by selecting the k-th key.
+Key = (salary, id) to allow duplicates. Insert and delete update the counts along the path, and splits and merges recompute the counts of the nodes they touch. The answer is rank(b + 1) − rank(a). With t = 16 and at most 2·10^5 keys, the height bound gives at most 4 levels below the root. The same tree answers CSES 2163 Josephus Problem II by selecting the k-th key.
 
 </details>
 </div>

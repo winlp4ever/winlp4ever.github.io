@@ -49,21 +49,23 @@ function remove(T, k, log = []) {
     n.keys.splice(i, 1);
     log.push({ kind: 'del', node: n, text: `remove ${k} from its leaf` });
   }
+  const first = log.at(-1); // if a merge absorbs this node, point the entry at the merged node instead
   while (n !== T.root && n.keys.length < T.t - 1) { // underflow
     const [p, j] = path.pop(), L = p.kids[j - 1], R = p.kids[j + 1];
     if (L && L.keys.length > T.t - 1) {
       n.keys.unshift(p.keys[j - 1]); p.keys[j - 1] = L.keys.pop(); if (n.kids) n.kids.unshift(L.kids.pop());
-      log.push({ kind: 'borrow', node: n, made: [L], text: `too few keys: borrow from the left sibling through the parent` }); return log;
+      log.push({ kind: 'borrow', node: n, made: [L, p], text: `too few keys: borrow from the left sibling through the parent` }); return log;
     }
     if (R && R.keys.length > T.t - 1) {
       n.keys.push(p.keys[j]); p.keys[j] = R.keys.shift(); if (n.kids) n.kids.push(R.kids.shift());
-      log.push({ kind: 'borrow', node: n, made: [R], text: `too few keys: borrow through the parent from the right sibling` }); return log;
+      log.push({ kind: 'borrow', node: n, made: [R, p], text: `too few keys: borrow through the parent from the right sibling` }); return log;
     }
     const [a, b, s] = L ? [L, n, j - 1] : [n, R, j]; // merge a, separator, b
     const sep = p.keys[s];
     a.keys = [...a.keys, sep, ...b.keys]; if (a.kids) a.kids = [...a.kids, ...b.kids];
     p.keys.splice(s, 1); p.kids.splice(s + 1, 1);
-    log.push({ kind: 'merge', node: a, text: `too few keys, no sibling can spare one: merge, pulling ${sep} down` });
+    if (first.node === b) first.node = a;
+    log.push({ kind: 'merge', node: a, made: [p], text: `too few keys, no sibling can spare one: merge, pulling ${sep} down` });
     n = p;
   }
   if (!T.root.keys.length && T.root.kids) { T.root = T.root.kids[0]; log.push({ kind: 'shrink', node: T.root, text: 'the root is empty: its only child becomes the root, the tree loses a level' }); }
@@ -183,7 +185,7 @@ function delSnaps() {
     // remember which nodes were touched by matching them in the clone
     const ids = new Map(); const map = (a, b) => { ids.set(a, b); a.kids?.forEach((c, i) => map(c, b.kids[i])); };
     const c = clone(T.root); map(T.root, c);
-    snaps.push({ root: c, log: log.map((s) => ({ ...s, node: ids.get(s.node) })), k });
+    snaps.push({ root: c, log: log.map((s) => ({ ...s, node: ids.get(s.node), made: s.made?.map((m) => ids.get(m)).filter(Boolean) })), k });
   });
   return snaps;
 }
@@ -199,9 +201,9 @@ class BtDelete extends Figure {
   }
   paint(k) {
     const s = this.snaps[k], T = { t: 2, root: s.root }, L = layout(T, 20, 560, 54, 56), mark = new Map();
-    s.log.forEach((x) => { if (x.node) mark.set(x.node, x.kind === 'merge' || x.kind === 'borrow' || x.kind === 'shrink' ? 'side' : 'main'); });
-    // the leaf the key left may have been absorbed by a merge: then the merged node is where it went
-    if (s.log.some((x) => (x.kind === 'del' || x.kind === 'swap') && !x.node)) { const m = s.log.find((x) => x.kind === 'merge' && x.node); if (m) mark.set(m.node, 'main'); }
+    // ochre: every node a borrow, merge or shrink changed; green: where the key was removed
+    s.log.forEach((x) => { if (x.kind === 'merge' || x.kind === 'borrow' || x.kind === 'shrink') [x.node, ...(x.made || [])].forEach((m) => m && mark.set(m, 'side')); });
+    s.log.forEach((x) => { if ((x.kind === 'del' || x.kind === 'swap') && x.node) mark.set(x.node, 'main'); });
     drawTree(this.g, T, L, mark);
     this.head.textContent = k ? `DELETE ${s.k} · ${depth(T)} LEVELS` : `t = 2 · EVERY NODE BUT THE ROOT KEEPS AT LEAST ${T.t - 1} KEY`;
     this.steps.forEach((t, i) => { t.textContent = s.log[i] ? (i ? '→ ' : '') + s.log[i].text : ''; });
@@ -221,7 +223,7 @@ class BtRange extends Figure {
     mid.forEach((m) => { const a = m.kids[0], b = m.kids.at(-1); m.w = 54; m.x = (a.x + b.x + b.w) / 2 - m.w / 2; m.y = 110; m.seps = m.kids.slice(1).map((c) => c.ks[0]); });
     const root = { kids: mid, w: 44, y: 50 }; root.x = 300 - root.w / 2; root.seps = mid.slice(1).map((m) => m.kids[0].ks[0]);
     this.root = root; this.mid = mid;
-    const edge = (p, c, i, cw) => S('line', { x1: p.x + i * cw + 1, y1: p.y + 18, x2: c.x + c.w / 2, y2: c.y, class: 's-ink3', 'stroke-width': 1.1 }, svg);
+    const edge = (p, c, i, cw) => S('line', { x1: p.x + i * cw, y1: p.y + 18, x2: c.x + c.w / 2, y2: c.y, class: 's-ink3', 'stroke-width': 1.1 }, svg);
     root.kids.forEach((c, i) => edge(root, c, i, root.w / (root.kids.length - 1)));
     mid.forEach((m) => m.kids.forEach((c, i) => edge(m, c, i, m.w / (m.kids.length - 1))));
     this.links = this.leaf.slice(0, -1).map((l, i) => S('path', { d: `M${l.x + l.w} ${l.y + 9} H${this.leaf[i + 1].x}`, class: 'f-none s-ink3', 'stroke-width': 1.2 }, svg));
@@ -275,9 +277,9 @@ class BtFill extends Figure {
     const X = (f) => 40 + f * 500;
     [0, 0.5, 1].forEach((f) => { S('line', { x1: X(f), x2: X(f), y1: 40, y2: 186, class: 's-rule', 'stroke-width': 1 }, svg); S('text', { x: X(f), y: 204, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: Math.round(f * 100) + '%' }, svg); });
     this.bars = CASES.map(([o, p, name], i) => {
-      const { leaves, fill: f } = fill(o, p), y = 52 + i * 46;
-      const r = S('rect', { x: X(0), y, width: 0, height: 22, rx: 3, class: i === 2 ? 'f-green' : 'f-ink3' }, svg);
-      S('text', { x: X(0) + 8, y: y + 15, class: i === 2 ? 'f-bg' : 't', 'font-size': 12, text: `${name}: ${Math.round(f * 100)}% · ${leaves} leaves` }, svg);
+      const { leaves, fill: f } = fill(o, p), y = 60 + i * 44;
+      const r = S('rect', { x: X(0), y, width: 0, height: 14, rx: 3, class: i === 2 ? 'f-green' : 'f-ink3' }, svg);
+      S('text', { x: X(0), y: y - 6, class: 't', 'font-size': 12, text: `${name}: ${Math.round(f * 100)}% · ${leaves} leaves` }, svg);
       return { r, f };
     });
     entrance(this, (k) => this.bars.forEach(({ r, f }) => attr(r, { width: (X(f) - X(0)) * k })), 900);
