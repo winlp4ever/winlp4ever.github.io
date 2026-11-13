@@ -65,55 +65,52 @@ A new key always goes into a leaf, in sorted position. If the leaf now has 2t ke
 <figcaption><b>fig 2</b>Drag to insert one key at a time; switch between t = 2 and t = 3. Green marks the leaf holding the new key and the node that took the last middle key; ochre marks the other nodes a split created.<span class="m">A real B-tree runs in the figure, with bottom-up splits. The keys are multiples of 3 in a seeded random order.</span></figcaption>
 </figure>
 
-CLRS writes insertion differently: on the way down, split every full node before stepping into it. The parent then always has room for a middle key, so one pass from root to leaf is enough and the code never walks back up<sup><a href="#src-4">4</a></sup>. The cost is that it sometimes splits a node that wouldn't have overflowed. In C++, with `T` the minimum degree:
+CLRS writes insertion differently: on the way down, split every full node before stepping into it. The parent then always has room for a middle key, so one pass from root to leaf is enough and the code never walks back up<sup><a href="#src-4">4</a></sup>. The cost is that it sometimes splits a node that wouldn't have overflowed. In Python, with `T` the minimum degree:
 
-```cpp
-constexpr int T = 2;           // minimum degree
+```python
+import bisect
 
-struct Node {
-    int n = 0;                 // number of keys
-    bool leaf = true;
-    int key[2 * T - 1];
-    Node* kid[2 * T];
-};
+T = 2  # minimum degree: every node but the root holds T-1 .. 2T-1 keys
 
-// x->kid[i] is full (2T-1 keys) and x is not: split the child around its middle key
-void split_child(Node* x, int i) {
-    Node* y = x->kid[i];
-    Node* z = new Node{T - 1, y->leaf};
-    for (int j = 0; j < T - 1; j++) z->key[j] = y->key[j + T];
-    if (!y->leaf) for (int j = 0; j < T; j++) z->kid[j] = y->kid[j + T];
-    y->n = T - 1;
-    for (int j = x->n; j > i; j--) x->kid[j + 1] = x->kid[j];
-    x->kid[i + 1] = z;
-    for (int j = x->n - 1; j >= i; j--) x->key[j + 1] = x->key[j];
-    x->key[i] = y->key[T - 1];             // the middle key moves up
-    x->n++;
-}
 
-void insert(Node*& root, int k) {
-    if (root->n == 2 * T - 1) {            // full root: the tree grows here
-        Node* s = new Node{0, false};
-        s->kid[0] = root;
-        split_child(s, 0);
-        root = s;
-    }
-    Node* x = root;
-    while (!x->leaf) {
-        int i = x->n - 1;
-        while (i >= 0 && k < x->key[i]) i--;
-        i++;
-        if (x->kid[i]->n == 2 * T - 1) {   // split before stepping in
-            split_child(x, i);
-            if (k > x->key[i]) i++;
-        }
-        x = x->kid[i];
-    }
-    int i = x->n - 1;                      // x is a leaf with room
-    while (i >= 0 && k < x->key[i]) { x->key[i + 1] = x->key[i]; i--; }
-    x->key[i + 1] = k;
-    x->n++;
-}
+class Node:
+    def __init__(self, leaf=True):
+        self.keys = []
+        self.kids = []  # stays empty for a leaf
+        self.leaf = leaf
+
+
+def split_child(x, i):
+    """x.kids[i] is full (2T-1 keys) and x is not: split the child around its middle key."""
+    y = x.kids[i]
+    z = Node(leaf=y.leaf)
+    z.keys = y.keys[T:]  # the T-1 largest keys
+    if not y.leaf:
+        z.kids = y.kids[T:]
+        y.kids = y.kids[:T]
+    mid = y.keys[T - 1]
+    y.keys = y.keys[:T - 1]  # the T-1 smallest keys
+    x.keys.insert(i, mid)  # the middle key moves up
+    x.kids.insert(i + 1, z)
+
+
+def insert(root, k):
+    """Insert k; returns the root, which is new when the old root was full."""
+    if len(root.keys) == 2 * T - 1:  # full root: the tree grows here
+        s = Node(leaf=False)
+        s.kids = [root]
+        split_child(s, 0)
+        root = s
+    x = root
+    while not x.leaf:
+        i = bisect.bisect_right(x.keys, k)
+        if len(x.kids[i].keys) == 2 * T - 1:  # split before stepping in
+            split_child(x, i)
+            if k > x.keys[i]:
+                i += 1
+        x = x.kids[i]
+    bisect.insort(x.keys, k)  # x is a leaf with room
+    return root
 ```
 
 Both versions read and write O(h) nodes and do O(t·h) work moving keys inside nodes. On disk, the node reads dominate.
