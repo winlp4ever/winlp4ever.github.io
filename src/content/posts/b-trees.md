@@ -6,6 +6,7 @@ tags: [algorithms, data-structures, databases]
 category: code
 glyph: btree
 figures: 6
+updated: 2026-11-13
 math: true
 ---
 
@@ -19,7 +20,7 @@ This is the third lesson in a series. The [red-black tree lesson](/blog/red-blac
 
 A disk doesn't hand back single keys. It reads and writes whole pages, a few kilobytes at a time, and one read from a spinning disk takes about 10 ms, long enough for millions of comparisons in memory. On disk, the cost of a search is the number of pages it reads.
 
-A binary search tree stored on disk puts one key in each node. Every step down the tree reads a page and uses a few bytes of it. Over a billion keys the tree is 30 levels deep, so a lookup is 30 reads, about 0.3 seconds<sup><a href="#src-1">1</a></sup>. A B-tree uses the whole page: it puts hundreds of sorted keys in one node, with a child pointer between each pair of neighbouring keys. One read then chooses among hundreds of branches instead of two, and a billion keys fit in four or five levels.
+A binary search tree stored on disk puts one key in each node. Every step down the tree reads a page and uses a few bytes of it. Over a billion keys the tree is 30 levels deep, so a lookup is 30 reads, about 0.3 seconds<sup><a href="#src-1">1</a></sup>. A B-tree uses the whole page: it puts hundreds of sorted keys in one node, with a child pointer before the first key, between each pair of neighbours and after the last. One read then chooses among hundreds of branches instead of two, and a billion keys fit in four or five levels. Every search starts at the root, so the top levels are read constantly and stay cached in memory, and only the lower levels cost a disk read.
 
 Fig 1 shows the idea on fifteen keys. The binary tree needs up to four reads to find a key. The B-tree, with up to three keys per node, needs at most two.
 
@@ -30,18 +31,18 @@ Fig 1 shows the idea on fifteen keys. The binary tree needs up to four reads to 
 <figcaption><b>fig 1</b>Pick a key to search for. Green marks the nodes the search reads; each one is a page read. In the B-tree, the label under each leaf gives the range of keys it holds.<span class="m">Both trees hold the same 15 keys. The binary tree is the balanced one.</span></figcaption>
 </figure>
 
-To find 35, the B-tree reads its root, 20 | 40 | 60, and sees that 35 lies between 20 and 40. Every key between 20 and 40 is stored below the pointer between those two keys, so the search follows that pointer and ignores the other three subtrees. One read removed three quarters of the tree from the search. With 500 keys in a node, one read removes all but 1/501 of it.
+To find 35, the B-tree reads its root, 20 | 40 | 60, and sees that 35 lies between 20 and 40. Every key between 20 and 40 is stored below the pointer between those two keys, so the search follows that pointer and ignores the other three subtrees. In a node with 500 keys, the same step keeps one subtree out of 501.
 
 ## the definition
 
 CLRS describes a B-tree by its **minimum degree**, a number t ≥ 2<sup><a href="#src-4">4</a></sup>. A B-tree with minimum degree t follows four rules, and each one has a job:
 
-1. **The keys in a node are sorted, and an internal node with k keys has k + 1 children.** The k keys cut the key range into k + 1 intervals, and child i holds exactly the keys in interval i. In fig 1 the root 20 | 40 | 60 has four children, holding the keys below 20, between 20 and 40, between 40 and 60, and above 60. This rule is what makes search work.
-2. **A node holds at most 2t − 1 keys.** t is chosen so that a full node fills one page.
-3. **Every node except the root holds at least t − 1 keys.** So nodes are never much less than half full: pages aren't wasted and the tree can't grow tall and thin. The root is exempt because a small tree may hold a single key.
-4. **All leaves are at the same depth.** No branch is deeper than another, so a search reads at most one page per level.
+1. The keys in a node are sorted, and an internal node with k keys has k + 1 children. The k keys cut the key range into k + 1 intervals, and child i holds exactly the keys in interval i. In fig 1 the root 20 | 40 | 60 has four children, holding the keys below 20, between 20 and 40, between 40 and 60, and above 60. Search depends on this rule.
+2. A node holds at most 2t − 1 keys. t is chosen so that a full node fills one page.
+3. Every node except the root holds at least t − 1 keys. So nodes are never much less than half full: pages aren't wasted and the tree can't grow tall and thin. The root is exempt because a small tree may hold a single key.
+4. All leaves are at the same depth. No branch is deeper than another, so a search reads at most one page per level.
 
-The two bounds, t − 1 and 2t − 1, are chosen to fit together. When a node with 2t − 1 keys receives one more, it has 2t. Take out the middle key, and the rest splits into two nodes of t − 1 and t keys, both legal; the middle key goes up to the parent to separate them. In the other direction, a node that has dropped below t − 1 keys and a sibling at the minimum, together with the key that separates them in the parent, fit into one node of at most 2t − 1 keys. If the sibling has a key to spare, the node borrows one through the parent instead. Splits, merges and borrows are the whole balancing scheme, and the sections on insertion and deletion show them step by step.
+The two bounds, t − 1 and 2t − 1, are chosen to fit together. When a node with 2t − 1 keys receives one more, it has 2t. Take out the middle key, and the rest splits into two nodes of t − 1 and t keys, both legal; the middle key goes up to the parent to separate them. In the other direction, a node that has dropped below t − 1 keys and a sibling at the minimum, together with the key that separates them in the parent, fit into one node of at most 2t − 1 keys. If the sibling has a key to spare, the node borrows one through the parent instead.
 
 Fig 1's B-tree has t = 2, so every node holds 1 to 3 keys and has 2 to 4 children. That's the 2-3-4 tree from the red-black lesson, where a red-black tree is shown to be a 2-3-4 tree stored in binary nodes. Real B-trees use a t in the hundreds, chosen so a full node fills one page: 4 KB in SQLite, 8 KB in PostgreSQL, 16 KB in InnoDB.
 
@@ -72,11 +73,7 @@ The cost model behind this is Aggarwal and Vitter's I/O model: memory holds M it
 
 ## what the rules buy
 
-- **Few page reads.** The height grows like log_t n, so a search, an insert or a delete reads a handful of pages even for billions of keys.
-- **Balance with local repairs.** An insert or a delete changes only the nodes on one path from the root to a leaf, plus at most one sibling per level. Nothing is ever rebuilt.
-- **Sorted order.** The keys can be read back in order, so a range query ("all orders between March and May"), the smallest or largest key, or the first key after x costs one descent plus the pages that hold the answer. A hash index finds a single key quickly but keeps keys in no useful order, so it can't answer any of these.
-- **A floor on space use.** Every node except the root is at least about half full, the "at least 50%" in Bayer and McCreight's report<sup><a href="#src-2">2</a></sup>.
-- **Speed in memory too.** Memory moves into the CPU cache in small blocks, the same problem at a smaller scale, which is why Rust's standard library and Google's Abseil use B-trees for sorted maps in memory (see "in memory" under the improvements below).
+An insert or a delete changes only the nodes on one path from the root to a leaf, plus at most one sibling per level, so the tree never needs rebuilding. The keys stay in sorted order, so a range query ("all orders between March and May"), the smallest key or the first key after x costs one descent plus the pages that hold the answer. A hash index finds a single key quickly but keeps keys in no useful order, so it can't answer those queries. And because every node except the root is at least about half full, the tree never takes much more than twice the space its keys need, the "at least 50%" in Bayer and McCreight's report<sup><a href="#src-2">2</a></sup>.
 
 ## search
 
