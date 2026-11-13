@@ -26,7 +26,7 @@ The idea a segment tree refines is older and simpler. Cut the array into blocks 
 
 With blocks of size b, a query reads at most n/b block sums and at most 2b loose numbers. That total is smallest when $$b = \sqrt{n}$$, which gives $$O(\sqrt{n})$$ per query. A point update for sums is O(1): change the number and add the difference to its block's sum. For minimum it's $$O(\sqrt{n})$$, because the block has to be rescanned when its smallest number gets bigger.
 
-At n = 200,000, with b ≈ 447, that's up to about 1,340 reads per query. The segment tree below visits at most about 70 nodes. Buckets still earn a place. They are easy to get right under contest pressure, and Mo's algorithm, which answers range queries offline by sorting them so the window moves little between queries, is built on the same block idea and handles questions like "how many distinct values in [l, r]" that don't merge nicely<sup><a href="#src-1">1</a></sup>.
+At n = 200,000, with b ≈ 447, that's up to about 1,340 reads per query. The segment tree below visits at most about 70 nodes. Buckets are easy to get right under contest pressure, and Mo's algorithm, which answers range queries offline by sorting them so the window moves little between queries, is built on the same block idea and handles questions like "how many distinct values in [l, r]" that don't merge nicely<sup><a href="#src-1">1</a></sup>.
 
 ## the tree
 

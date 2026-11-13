@@ -11,7 +11,7 @@ math: true
 
 Binary search trees count comparisons. On disk, comparisons are nearly free and what costs is the read: a binary tree over a billion keys is 30 levels deep, and if every level is a separate read from a spinning disk at about 10 ms each, one lookup takes 0.3 seconds<sup><a href="#src-1">1</a></sup>. A **B-tree** puts hundreds of keys in each node and sizes the node to one disk page, so the same billion keys sit four or five levels deep, and the top levels stay in memory.
 
-Rudolf Bayer and Edward McCreight described it at Boeing Scientific Research Laboratories in 1970. Their report kept an index of up to 100,000 keys on an IBM 360/44 with a 2311 disk, at an average of 9 transactions per second for 15,000 keys, and promised storage use "at least 50% but generally much higher"<sup><a href="#src-2">2</a></sup>. Nine years later Douglas Comer's survey was already called "The Ubiquitous B-Tree" and opened with "B-trees have become, de facto, a standard for file organization"<sup><a href="#src-3">3</a></sup>. They still are: PostgreSQL, MySQL, SQLite, MongoDB, LMDB, Btrfs, XFS and APFS all store their data in B-trees. Nobody knows for sure what the B stands for. Comer's footnote lists "balanced", "broad", "bushy" and "Boeing", and suggests thinking of them as "Bayer"-trees<sup><a href="#src-3">3</a></sup>.
+Rudolf Bayer and Edward McCreight described it at Boeing Scientific Research Laboratories in 1970. Their report kept an index of up to 100,000 keys on an IBM 360/44 with a 2311 disk, at an average of 9 transactions per second for 15,000 keys, and promised storage use "at least 50% but generally much higher"<sup><a href="#src-2">2</a></sup>. Nine years later Douglas Comer's survey was already called "The Ubiquitous B-Tree" and opened with "B-trees have become, de facto, a standard for file organization"<sup><a href="#src-3">3</a></sup>. PostgreSQL, MySQL, SQLite, MongoDB, LMDB, Btrfs, XFS and APFS store their data in B-trees today. Comer's footnote lists "balanced", "broad", "bushy" and "Boeing" as readings of the B, and suggests thinking of them as "Bayer"-trees<sup><a href="#src-3">3</a></sup>.
 
 This is the third lesson in a series. The [red-black tree lesson](/blog/red-black-trees/) covers the binary tree that turns out to be a B-tree in disguise, and the [segment tree lesson](/blog/segment-trees/) covers range queries over arrays.
 
@@ -518,7 +518,7 @@ Readers take shared latches hand over hand. Writers take exclusive latches down 
 </div>
 </details>
 
-Comer's survey is 17 pages and still the best short introduction to the whole family<sup><a href="#src-3">3</a></sup>. For the database side, PostgreSQL's nbtree README explains how a production B-tree handles concurrency, deletion and duplicates<sup><a href="#src-17">17</a></sup>.
+Comer's 17-page survey is the best short introduction to the whole family<sup><a href="#src-3">3</a></sup>. For the database side, PostgreSQL's nbtree README explains how a production B-tree handles concurrency, deletion and duplicates<sup><a href="#src-17">17</a></sup>.
 
 My recommendation: write insertion with bottom-up splits once, with a validator, and read fig 2 next to the red-black tree's insertion to see the same split from two sides. After that, the variants worth knowing first are the B+ tree, the rightmost-split rule and the B-link tree.
 
