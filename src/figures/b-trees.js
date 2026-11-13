@@ -1,4 +1,4 @@
-import { S, H, attr, op, rng, pills, entrance, tooltip, hit, Figure, define } from './core.js'
+import { S, H, attr, rng, pills, entrance, Figure, define } from './core.js'
 
 // ── a real B-tree with minimum degree t (CLRS): every node but the root holds
 // t−1 … 2t−1 keys. Insert splits bottom-up; delete borrows or merges bottom-up.
@@ -53,7 +53,7 @@ function remove(T, k, log = []) {
     const [p, j] = path.pop(), L = p.kids[j - 1], R = p.kids[j + 1];
     if (L && L.keys.length > T.t - 1) {
       n.keys.unshift(p.keys[j - 1]); p.keys[j - 1] = L.keys.pop(); if (n.kids) n.kids.unshift(L.kids.pop());
-      log.push({ kind: 'borrow', node: n, made: [L], text: `too few keys: borrow through the parent from the left sibling` }); return log;
+      log.push({ kind: 'borrow', node: n, made: [L], text: `too few keys: borrow from the left sibling through the parent` }); return log;
     }
     if (R && R.keys.length > T.t - 1) {
       n.keys.push(p.keys[j]); p.keys[j] = R.keys.shift(); if (n.kids) n.kids.push(R.kids.shift());
@@ -63,7 +63,7 @@ function remove(T, k, log = []) {
     const sep = p.keys[s];
     a.keys = [...a.keys, sep, ...b.keys]; if (a.kids) a.kids = [...a.kids, ...b.kids];
     p.keys.splice(s, 1); p.kids.splice(s + 1, 1);
-    log.push({ kind: 'merge', node: a, text: `too few keys and no sibling can spare one: merge with a sibling, pulling ${sep} down from the parent` });
+    log.push({ kind: 'merge', node: a, text: `too few keys, no sibling can spare one: merge, pulling ${sep} down` });
     n = p;
   }
   if (!T.root.keys.length && T.root.kids) { T.root = T.root.kids[0]; log.push({ kind: 'shrink', node: T.root, text: 'the root is empty: its only child becomes the root, the tree loses a level' }); }
@@ -136,8 +136,8 @@ class BtHeight extends Figure {
 }
 
 // ── fig 2 · inserting, with splits ───────────────────────────────────────────
-const r2 = rng(17);
-const SEQ = Array.from({ length: 24 }, (_, i) => (i + 1) * 3).sort(() => r2() - 0.5);
+// Multiples of 3 in a fixed shuffled order (written out, so every browser gets the same tree).
+const SEQ = [12, 3, 27, 6, 42, 48, 24, 63, 15, 60, 33, 57, 51, 36, 69, 45, 39, 21, 18, 9, 72, 54, 30, 66];
 class BtInsert extends Figure {
   build() {
     const svg = this.svgRoot(600, 300, 'A B-tree after each insertion: keys go into a leaf, and a leaf that overflows splits in two and sends its middle key up to the parent');
@@ -156,8 +156,14 @@ class BtInsert extends Figure {
     const keys = SEQ.slice(0, this.n), T = build(this.t, keys.slice(0, -1)), log = insert(T, keys.at(-1), []);
     this.out.textContent = this.n;
     const L = layout(T, 20, 560, 50, 56), mark = new Map();
-    log.forEach((s) => { if (s.kind === 'add') mark.set(s.node, 'main'); if (s.made) s.made.forEach((m) => mark.set(m, 'side')); });
-    log.filter((s) => s.kind === 'split').forEach((s) => mark.set(s.node, 'main'));
+    // ochre: every node a split produced; green: the leaf now holding the new key and the
+    // node that took the last middle key (green wins where they overlap)
+    const splits = log.filter((s) => s.kind === 'split');
+    splits.forEach((s) => s.made.forEach((m) => mark.set(m, 'side')));
+    if (splits.length) mark.set(splits.at(-1).node, 'main');
+    let x = T.root; const k = keys.at(-1);
+    while (x.kids) { let i = 0; while (i < x.keys.length && x.keys[i] < k) i++; if (x.keys[i] === k) break; x = x.kids[i]; }
+    mark.set(x, 'main');
     drawTree(this.g, T, L, mark);
     this.head.textContent = `${this.n} KEYS · t = ${this.t} · ${2 * this.t - 1} KEYS MAX PER NODE · ${depth(T)} LEVELS`;
     const rows = [`insert ${keys.at(-1)}: ${log[0].text}`, ...log.slice(1).map((s) => '→ ' + s.text)];
@@ -183,10 +189,10 @@ function delSnaps() {
 }
 class BtDelete extends Figure {
   build() {
-    const svg = this.svgRoot(600, 290, 'Deleting keys from a B-tree: a leaf that drops below the minimum borrows a key through its parent from a sibling, or merges with a sibling, which can shrink the tree');
+    const svg = this.svgRoot(600, 310, 'Deleting keys from a B-tree: a leaf that drops below the minimum borrows a key through its parent from a sibling, or merges with a sibling, which can shrink the tree');
     this.head = S('text', { x: 20, y: 24, class: 'sl', 'font-size': 11 }, svg);
     this.g = S('g', {}, svg);
-    this.steps = [0, 1, 2].map((i) => S('text', { x: 20, y: 232 + i * 17, class: 't2', 'font-size': 12.5 }, svg));
+    this.steps = [0, 1, 2, 3].map((i) => S('text', { x: 20, y: 232 + i * 17, class: 't2', 'font-size': 12.5 }, svg));
     this.snaps = delSnaps();
     pills(this, this.snaps.map((s, i) => [i, i ? `delete ${s.k}` : 'start']), 0, (v) => this.paint(v));
     this.paint(0);
@@ -194,6 +200,8 @@ class BtDelete extends Figure {
   paint(k) {
     const s = this.snaps[k], T = { t: 2, root: s.root }, L = layout(T, 20, 560, 54, 56), mark = new Map();
     s.log.forEach((x) => { if (x.node) mark.set(x.node, x.kind === 'merge' || x.kind === 'borrow' || x.kind === 'shrink' ? 'side' : 'main'); });
+    // the leaf the key left may have been absorbed by a merge: then the merged node is where it went
+    if (s.log.some((x) => (x.kind === 'del' || x.kind === 'swap') && !x.node)) { const m = s.log.find((x) => x.kind === 'merge' && x.node); if (m) mark.set(m.node, 'main'); }
     drawTree(this.g, T, L, mark);
     this.head.textContent = k ? `DELETE ${s.k} · ${depth(T)} LEVELS` : `t = 2 · EVERY NODE BUT THE ROOT KEEPS AT LEAST ${T.t - 1} KEY`;
     this.steps.forEach((t, i) => { t.textContent = s.log[i] ? (i ? '→ ' : '') + s.log[i].text : ''; });
@@ -266,12 +274,10 @@ class BtFill extends Figure {
     S('text', { x: 20, y: 24, class: 'sl', 'font-size': 11, text: 'AVERAGE LEAF FILL AFTER 20,000 INSERTS · 64 KEYS PER LEAF' }, svg);
     const X = (f) => 40 + f * 500;
     [0, 0.5, 1].forEach((f) => { S('line', { x1: X(f), x2: X(f), y1: 40, y2: 186, class: 's-rule', 'stroke-width': 1 }, svg); S('text', { x: X(f), y: 204, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: Math.round(f * 100) + '%' }, svg); });
-    const tip = tooltip(svg);
     this.bars = CASES.map(([o, p, name], i) => {
       const { leaves, fill: f } = fill(o, p), y = 52 + i * 46;
       const r = S('rect', { x: X(0), y, width: 0, height: 22, rx: 3, class: i === 2 ? 'f-green' : 'f-ink3' }, svg);
-      S('text', { x: X(0) + 8, y: y + 15, class: i === 2 ? 'f-bg' : 't', 'font-size': 12, text: `${name}: ${Math.round(f * 100)}%` }, svg);
-      hit(svg, tip, X(f) - 6, y + 11, name, `${leaves} leaves for 20,000 keys, ${(f * 100).toFixed(1)}% full`);
+      S('text', { x: X(0) + 8, y: y + 15, class: i === 2 ? 'f-bg' : 't', 'font-size': 12, text: `${name}: ${Math.round(f * 100)}% · ${leaves} leaves` }, svg);
       return { r, f };
     });
     entrance(this, (k) => this.bars.forEach(({ r, f }) => attr(r, { width: (X(f) - X(0)) * k })), 900);

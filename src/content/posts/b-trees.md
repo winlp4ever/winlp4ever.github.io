@@ -62,12 +62,14 @@ A new key always goes into a leaf, in sorted position. If the leaf now has 2t ke
 <bt-insert data-fig data-label="fig 2 · inserting, with splits">
 <p class="fallback">A B-tree with t = 2 after inserting 12, 3, 27, 6, 42, 48, 24, 63, 15, 60, 33 and 57. The twelfth key, 57, goes into the leaf holding 48 and 60 and 63; that leaf overflows and splits, sending 60 up; the parent now holds 12, 27, 42 and 60, which is too many, so it splits too and 42 becomes a new root: the tree grows from two levels to three. With t = 3 the same twelve keys fit in two levels.</p>
 </bt-insert>
-<figcaption><b>fig 2</b>Drag to insert one key at a time; switch between t = 2 and t = 3. The green outline marks where the new key landed and where a split's middle key went, ochre marks the two halves of a split.<span class="m">A real B-tree runs in the figure, with bottom-up splits. The keys are multiples of 3 in a seeded random order.</span></figcaption>
+<figcaption><b>fig 2</b>Drag to insert one key at a time; switch between t = 2 and t = 3. Green marks the leaf holding the new key and the node that took the last middle key; ochre marks the other nodes a split created.<span class="m">A real B-tree runs in the figure, with bottom-up splits. The keys are multiples of 3 in a seeded random order.</span></figcaption>
 </figure>
 
-CLRS writes insertion differently: on the way down, split every full node before stepping into it. The parent then always has room for a middle key, so one pass from root to leaf is enough and the code never walks back up<sup><a href="#src-4">4</a></sup>. The cost is that it sometimes splits a node that wouldn't have overflowed. In C++, with `t` the minimum degree:
+CLRS writes insertion differently: on the way down, split every full node before stepping into it. The parent then always has room for a middle key, so one pass from root to leaf is enough and the code never walks back up<sup><a href="#src-4">4</a></sup>. The cost is that it sometimes splits a node that wouldn't have overflowed. In C++, with `T` the minimum degree:
 
 ```cpp
+constexpr int T = 2;           // minimum degree
+
 struct Node {
     int n = 0;                 // number of keys
     bool leaf = true;
@@ -129,7 +131,7 @@ If a merge takes the root's last key, the merged node becomes the root and the t
 <bt-delete data-fig data-label="fig 3 · deleting, with borrows and merges">
 <p class="fallback">A t = 2 B-tree with 14 keys: root 45; below it 15 and 30 on the left, 60 on the right; leaves 5 10, 20 25, 35 40, 50 and 70 80 90. Deleting 90 removes it from its leaf. Deleting 30 swaps it with its predecessor 25. Deleting 35 is a plain leaf delete. Deleting 60 swaps in 50, which empties a leaf, so it borrows 70 through the parent from its right sibling. Deleting 40 empties a leaf whose siblings are at the minimum, so it merges with 20 and pulls 25 down. Deleting 80 empties another leaf; the merge pulls 70 down, which empties the parent, whose merge pulls 45 down, which empties the root, and the tree drops from three levels to two: 15 45 over leaves 5 10, 20 25 and 50 70.</p>
 </bt-delete>
-<figcaption><b>fig 3</b>Step through six deletions. Green marks where the key was removed, ochre marks nodes changed by a borrow, a merge or the root shrinking.<span class="m">The same B-tree code as fig 2, with bottom-up deletion; the sequence was picked to show every case.</span></figcaption>
+<figcaption><b>fig 3</b>Step through six deletions. Green marks where the key was removed (or the merged node it ended up in), ochre marks nodes changed by a borrow, a merge or the root shrinking.<span class="m">The same B-tree code as fig 2, with bottom-up deletion; the sequence was picked to show every case.</span></figcaption>
 </figure>
 
 CLRS again does it in one pass downwards. Before stepping into a child it makes sure the child has at least t keys, borrowing or merging in advance, so a deletion never has to come back up. Its cases are numbered 1, 2a to 2c and 3a to 3b, and exercise P5 below works through them<sup><a href="#src-4">4</a></sup>.
@@ -147,6 +149,25 @@ Almost every database uses a **B+ tree**. All the records live in the leaves. Th
 
 SQLite's file format spells out both kinds. A "table b-tree" is keyed by the 64-bit rowid and stores all data in the leaves; an "index b-tree" stores only keys<sup><a href="#src-9">9</a></sup>. In InnoDB, index records are stored in the leaf pages<sup><a href="#src-10">10</a></sup>.
 
+## the B-tree family
+
+Most of what's called a B-tree in practice is a variant. The table is a map; the paragraphs under "what you can improve" and "case studies" explain each one.
+
+| variant | what changes | what it buys | used by |
+|---|---|---|---|
+| B+ tree | values only in leaves, leaves linked | shallower tree, cheap range scans | PostgreSQL, InnoDB, SQLite tables, WiredTiger |
+| B* tree | a full node shares keys with a sibling; two full nodes split into three | pages at least 2/3 full | Knuth's definition |
+| prefix B+ tree | internal nodes store the shortest separating prefix | more children per page | PostgreSQL's suffix truncation |
+| B-link tree | right-link and high key in every node | readers don't block on splits | PostgreSQL |
+| copy-on-write B-tree | a change copies the path up to the root | snapshots and crash safety | Btrfs, LMDB, APFS, CouchDB |
+| Bε-tree | internal nodes buffer pending updates | much cheaper inserts | TokuDB, BetrFS |
+| Bw-tree | updates prepended as deltas, pages swapped by compare-and-swap | no latches | SQL Server's in-memory engine |
+| cache-oblivious B-tree | a layout that works for every block size | no page size to tune | research |
+| counted B-tree | internal nodes store subtree sizes | k-th key and rank in O(log n) | exercise EX 4 |
+| maple tree | keys are non-overlapping ranges, read under RCU | lockless range lookups | Linux memory areas |
+
+The **LSM-tree** isn't a B-tree, but it's the usual alternative when writes dominate; RocksDB is the best-known implementation.
+
 ## how full the pages are
 
 A split leaves two half-full nodes. If keys arrive in random order those halves fill up again later, and Andrew Yao showed that under random insertions a B-tree of high order ends up about ln 2 ≈ 69% full on average<sup><a href="#src-11">11</a></sup>. Ascending keys are the bad case. Every insert lands in the rightmost leaf, every split leaves a left half that will never receive another key, and the tree settles at half full.
@@ -157,7 +178,7 @@ Databases special-case it. PostgreSQL's split code says: "If the page is the rig
 <bt-fill data-fig data-label="fig 5 · how full the pages end up">
 <p class="fallback">Average leaf fill after inserting 20,000 keys into leaves of 64 keys each. Random keys with 50/50 splits: 68%, close to Yao's ln 2. Ascending keys with 50/50 splits: 52%, so the tree needs 606 leaves. Ascending keys with PostgreSQL-style rightmost splits that keep the left page 90% full: 91%, 345 leaves.</p>
 </bt-fill>
-<figcaption><b>fig 5</b>Hover a bar for the number of leaves.<span class="m">A simulation of the leaf level only, run in your browser; 64 keys per leaf is illustrative.</span></figcaption>
+<figcaption><b>fig 5</b>Fewer leaves for the same keys means fuller pages.<span class="m">A simulation of the leaf level only, run in your browser; 64 keys per leaf is illustrative.</span></figcaption>
 </figure>
 
 Fewer leaves means fewer pages to read in a scan and fewer pages to cache. The reverse problem, pages emptied by deletions, has its own knob: InnoDB tries to merge a page with a neighbour when it falls below `MERGE_THRESHOLD`, 50% by default<sup><a href="#src-15">15</a></sup>.
@@ -228,7 +249,7 @@ For the maximum, every node is full with 2t − 1 keys and 2t children.
 </details>
 <details><summary>solution sketch</summary>
 
-n = 10^9: t = 2 gives h ≤ 28.9, t = 50 gives 5.1, t = 100 gives 4.35, so 28, 5 and 4. Maximum: level i has $$(2t)^i$$ nodes of 2t − 1 keys, and the sum over i = 0..h is $$(2t-1)\frac{(2t)^{h+1}-1}{2t-1} = (2t)^{h+1} - 1$$.
+n = 10^6: t = 2 gives h ≤ 18.9, t = 50 gives 3.35, t = 100 gives 2.85, so heights 18, 3 and 2. n = 10^9: 28.9, 5.1 and 4.35, so 28, 5 and 4. Maximum: level i has $$(2t)^i$$ nodes of 2t − 1 keys, and the sum over i = 0..h is $$(2t-1)\frac{(2t)^{h+1}-1}{2t-1} = (2t)^{h+1} - 1$$.
 
 </details>
 </div>
@@ -266,7 +287,7 @@ Fanout ≈ usable bytes / bytes per entry. Levels ≈ ⌈log_f(N)⌉ when leaves
 </details>
 <details><summary>solution sketch</summary>
 
-(8192 − 24) / (16 + 4) ≈ 408 entries; at 90% fill about 367. $$367^3 \approx 4.9 \cdot 10^7$$ and $$367^4 \approx 1.8 \cdot 10^{10}$$, so 4 levels. InnoDB: 16384 · 15/16 = 15360 usable bytes; with the same 20 bytes per entry that's about 768 entries, and again 4 levels for 10^9 rows. The top two levels are a few hundred pages, small enough to stay cached.
+(8192 − 24) / (16 + 4) ≈ 408 entries; at 90% fill about 367. $$367^3 \approx 4.9 \cdot 10^7$$ and $$367^4 \approx 1.8 \cdot 10^{10}$$, so 4 levels. InnoDB: 16384 · 15/16 = 15360 usable bytes; with the same 20 bytes per entry that's about 768 entries, and again 4 levels for 10^9 rows. Counting from the bottom: about 2.7 million leaves, 7,400 pages above them, 20 above those and the root. The top two levels are about 21 pages and the top three about 7,400 pages (60 MB), small enough to stay cached.
 
 </details>
 </div>
@@ -304,7 +325,7 @@ The CLRS rule: before stepping into a child, make sure it has at least t keys.
 </details>
 <details><summary>solution sketch</summary>
 
-Fig 3's first and third deletions are case 1 (leaf). The second is an internal key replaced by its predecessor, case 2a. The fourth and fifth need a borrow (3a) and a merge (3b), but bottom-up, after the fact. The last cascades two merges and shrinks the root, which CLRS would do on the way down by merging before descending.
+Fig 3's first and third deletions are case 1 (a key in a leaf). The second removes 30 from an internal node whose left child has t keys: case 2a, replace it with its predecessor 25. The fourth removes 60 from an internal node whose left child [50] has only t − 1 keys and whose right child [70 80] has t: CLRS uses case 2b and replaces 60 with its successor 70. The figure's code always takes the predecessor and then repairs the empty leaf with a borrow, and both routes end with [70] over [50] and [80]. The fifth is a merge, which CLRS does on the way down as case 3b. The last cascades two merges and shrinks the root; CLRS would merge before descending, at the root first.
 
 </details>
 </div>
@@ -342,7 +363,7 @@ After a split of the rightmost leaf, which half will ever see another key?
 </details>
 <details><summary>solution sketch</summary>
 
-Each split of the rightmost leaf leaves a left half of t − 1 keys that never grows again, so almost every leaf ends at the minimum: half full. Leaving the left page 90% full (or full, for InnoDB) puts the waste only in the one page still receiving keys. PostgreSQL's rule only triggers on the rightmost page, so descending keys get 50/50 splits. InnoDB's heuristic checks whether the insert lands next to the previous one, so it detects both directions; its manual says ascending or descending.
+With the bottom-up split from fig 2, a full rightmost leaf of 2t keys splits into t and t − 1, and the left half of t keys never receives another key. So almost every leaf ends with t of its 2t − 1 slots used: 2/3 full for t = 2 and close to half for large t. Leaving the left page 90% full (or full, for InnoDB) puts the waste only in the one page still receiving keys. PostgreSQL's rule only triggers on the rightmost page, so descending keys get 50/50 splits. InnoDB's heuristic checks whether the insert lands next to the previous one, so it detects both directions; its manual says ascending or descending.
 
 </details>
 </div>
