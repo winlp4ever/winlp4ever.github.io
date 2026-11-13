@@ -5,36 +5,58 @@ description: How a B-tree keeps a huge sorted index a few page reads deep, how s
 tags: [algorithms, data-structures, databases]
 category: code
 glyph: btree
-figures: 5
+figures: 6
 math: true
 ---
 
-Binary search trees count comparisons. On disk, comparisons are nearly free and what costs is the read: a binary tree over a billion keys is 30 levels deep, and if every level is a separate read from a spinning disk at about 10 ms each, one lookup takes 0.3 seconds<sup><a href="#src-1">1</a></sup>. A **B-tree** puts hundreds of keys in each node and sizes the node to one disk page, so the same billion keys sit four or five levels deep, and the top levels stay in memory.
+A **B-tree** is a search tree whose nodes hold many sorted keys and have many children, so even a huge tree is only a few levels deep. It was designed for data that lives on disk, and it's the usual index structure in databases and file systems.
 
 Rudolf Bayer and Edward McCreight described it at Boeing Scientific Research Laboratories in 1970. Their report kept an index of up to 100,000 keys on an IBM 360/44 with a 2311 disk, at an average of 9 transactions per second for 15,000 keys, and promised storage use "at least 50% but generally much higher"<sup><a href="#src-2">2</a></sup>. Nine years later Douglas Comer's survey was already called "The Ubiquitous B-Tree" and opened with "B-trees have become, de facto, a standard for file organization"<sup><a href="#src-3">3</a></sup>. PostgreSQL, MySQL, SQLite, MongoDB, LMDB, Btrfs, XFS and APFS store their data in B-trees today. Comer's footnote lists "balanced", "broad", "bushy" and "Boeing" as readings of the B, and suggests thinking of them as "Bayer"-trees<sup><a href="#src-3">3</a></sup>.
 
 This is the third lesson in a series. The [red-black tree lesson](/blog/red-black-trees/) covers the binary tree that turns out to be a B-tree in disguise, and the [segment tree lesson](/blog/segment-trees/) covers range queries over arrays.
 
-## a node is a page
+## why wide nodes
 
-CLRS describes a B-tree by its **minimum degree** t ≥ 2<sup><a href="#src-4">4</a></sup>:
+A disk doesn't hand back single keys. It reads and writes whole pages, a few kilobytes at a time, and one read from a spinning disk takes about 10 ms, long enough for millions of comparisons in memory. On disk, the cost of a search is the number of pages it reads.
 
-- every node except the root holds between t − 1 and 2t − 1 keys, in sorted order, and the root holds at least 1
-- an internal node with k keys has k + 1 children, and the keys separate the children's ranges: everything in child i lies between key i − 1 and key i
-- every leaf is at the same depth
+A binary search tree stored on disk puts one key in each node. Every step down the tree reads a page and uses a few bytes of it. Over a billion keys the tree is 30 levels deep, so a lookup is 30 reads, about 0.3 seconds<sup><a href="#src-1">1</a></sup>. A B-tree uses the whole page: it puts hundreds of sorted keys in one node, with a child pointer between each pair of neighbouring keys. One read then chooses among hundreds of branches instead of two, and a billion keys fit in four or five levels.
+
+Fig 1 shows the idea on fifteen keys. The binary tree needs up to four reads to find a key. The B-tree, with up to three keys per node, needs at most two.
+
+<figure class="wide">
+<bt-why data-fig data-label="fig 1 · the same keys, two trees">
+<p class="fallback">The keys 5, 10, …, 75 in two trees. The binary search tree has 40 at the root and is four levels deep; finding 35 reads 40, 20, 30 and 35. The B-tree has a root holding 20, 40 and 60 and four leaves holding 5 10 15, 25 30 35, 45 50 55 and 65 70 75; finding 35 reads the root, sees that 35 lies between 20 and 40, and reads the second leaf.</p>
+</bt-why>
+<figcaption><b>fig 1</b>Pick a key to search for. Green marks the nodes the search reads; each one is a page read. In the B-tree, the label under each leaf gives the range of keys it holds.<span class="m">Both trees hold the same 15 keys. The binary tree is the balanced one.</span></figcaption>
+</figure>
+
+To find 35, the B-tree reads its root, 20 | 40 | 60, and sees that 35 lies between 20 and 40. Every key between 20 and 40 is stored below the pointer between those two keys, so the search follows that pointer and ignores the other three subtrees. One read removed three quarters of the tree from the search. With 500 keys in a node, one read removes all but 1/501 of it.
+
+## the definition
+
+CLRS describes a B-tree by its **minimum degree**, a number t ≥ 2<sup><a href="#src-4">4</a></sup>. A B-tree with minimum degree t follows four rules, and each one has a job:
+
+1. **The keys in a node are sorted, and an internal node with k keys has k + 1 children.** The k keys cut the key range into k + 1 intervals, and child i holds exactly the keys in interval i. In fig 1 the root 20 | 40 | 60 has four children, holding the keys below 20, between 20 and 40, between 40 and 60, and above 60. This rule is what makes search work.
+2. **A node holds at most 2t − 1 keys.** t is chosen so that a full node fills one page.
+3. **Every node except the root holds at least t − 1 keys.** So nodes are never much less than half full: pages aren't wasted and the tree can't grow tall and thin. The root is exempt because a small tree may hold a single key.
+4. **All leaves are at the same depth.** No branch is deeper than another, so a search reads at most one page per level.
+
+The two bounds, t − 1 and 2t − 1, are chosen to fit together. When a node with 2t − 1 keys receives one more, it has 2t. Take out the middle key, and the rest splits into two nodes of t − 1 and t keys, both legal; the middle key goes up to the parent to separate them. In the other direction, a node that has dropped below t − 1 keys and a sibling at the minimum, together with the key that separates them in the parent, fit into one node of at most 2t − 1 keys. If the sibling has a key to spare, the node borrows one through the parent instead. Splits, merges and borrows are the whole balancing scheme, and the sections on insertion and deletion show them step by step.
+
+Fig 1's B-tree has t = 2, so every node holds 1 to 3 keys and has 2 to 4 children. That's the 2-3-4 tree from the red-black lesson, where a red-black tree is shown to be a 2-3-4 tree stored in binary nodes. Real B-trees use a t in the hundreds, chosen so a full node fills one page: 4 KB in SQLite, 8 KB in PostgreSQL, 16 KB in InnoDB.
 
 Other books count differently. Knuth's "order m" is the most children a node can have, and Bayer, McCreight and Comer use "order d" for the fewest keys in a node. They all describe the same tree<sup><a href="#src-1">1</a></sup>.
 
-With t = 2 a node has 2 to 4 children. That's the 2-3-4 tree from the red-black lesson, where a red-black tree is shown to be a 2-3-4 tree stored in binary nodes. Real B-trees use a t in the hundreds, chosen so a full node fills one page: 4 KB in SQLite, 8 KB in PostgreSQL, 16 KB in InnoDB.
+## how tall it gets
+
+The number of children per node decides the height. Fig 2 counts the levels needed for a million, a billion and a trillion keys.
 
 <figure class="wide">
-<bt-height data-fig data-label="fig 1 · how tall the tree gets">
+<bt-height data-fig data-label="fig 2 · how tall the tree gets">
 <p class="fallback">Levels needed to hold a billion keys with full nodes: 30 for a binary tree, 8 with 16 children per node, 5 with 128 and 4 with 512. For a million keys the numbers are 20, 5, 3 and 3; for a trillion, 40, 10, 6 and 5. With the top two levels cached in memory, the 512-way tree needs 2 page reads per lookup over a billion keys.</p>
 </bt-height>
-<figcaption><b>fig 1</b>Each block is one level, so one node read per lookup. Switch the number of keys.<span class="m">Levels computed as ⌈log_f(n + 1)⌉ for full nodes with f children.</span></figcaption>
+<figcaption><b>fig 2</b>Each block is one level, so one node read per lookup. Switch the number of keys.<span class="m">Levels computed as ⌈log_f(n + 1)⌉ for full nodes with f children.</span></figcaption>
 </figure>
-
-### the height bound
 
 The tree is tallest when every node is as empty as allowed. Then the root has 1 key and 2 children, and each level below has t times as many nodes as the one above, each with t − 1 keys. Counting keys level by level for a tree of height h<sup><a href="#src-4">4</a></sup>:
 
@@ -48,6 +70,14 @@ For a billion keys and t = 100 that's h ≤ 4, so at most five levels including 
 
 The cost model behind this is Aggarwal and Vitter's I/O model: memory holds M items, the disk moves blocks of B items, and an algorithm is charged per block transferred<sup><a href="#src-5">5</a></sup>. In that model a B-tree search costs $$O(\log_B N)$$ transfers, against $$O(\log_2 N)$$ for a binary tree<sup><a href="#src-6">6</a></sup>.
 
+## what the rules buy
+
+- **Few page reads.** The height grows like log_t n, so a search, an insert or a delete reads a handful of pages even for billions of keys.
+- **Balance with local repairs.** An insert or a delete changes only the nodes on one path from the root to a leaf, plus at most one sibling per level. Nothing is ever rebuilt.
+- **Sorted order.** The keys can be read back in order, so a range query ("all orders between March and May"), the smallest or largest key, or the first key after x costs one descent plus the pages that hold the answer. A hash index finds a single key quickly but keeps keys in no useful order, so it can't answer any of these.
+- **A floor on space use.** Every node except the root is at least about half full, the "at least 50%" in Bayer and McCreight's report<sup><a href="#src-2">2</a></sup>.
+- **Speed in memory too.** Memory moves into the CPU cache in small blocks, the same problem at a smaller scale, which is why Rust's standard library and Google's Abseil use B-trees for sorted maps in memory (see "in memory" under the improvements below).
+
 ## search
 
 Search works like a binary search tree with wider nodes. In each node, find the first key ≥ the target. If it's equal, done. Otherwise go down to the child just before that key. One node per level, so O(log_t n) node reads.
@@ -59,10 +89,10 @@ Inside a node there's a choice. Binary search costs $$O(\log t)$$ comparisons pe
 A new key always goes into a leaf, in sorted position. If the leaf now has 2t keys, one too many, it **splits** into two nodes of t and t − 1 keys, and the key between them moves up into the parent as their separator. If the parent is now too full, it splits the same way, and so on up. When the root splits, its middle key becomes a new root with two children. That's the only way a B-tree gets taller, which is why all leaves stay at the same depth<sup><a href="#src-3">3</a></sup>.
 
 <figure class="wide">
-<bt-insert data-fig data-label="fig 2 · inserting, with splits">
+<bt-insert data-fig data-label="fig 3 · inserting, with splits">
 <p class="fallback">A B-tree with t = 2 after inserting 12, 3, 27, 6, 42, 48, 24, 63, 15, 60, 33 and 57. The twelfth key, 57, goes into the leaf holding 48 and 60 and 63; that leaf overflows and splits, sending 60 up; the parent now holds 12, 27, 42 and 60, which is too many, so it splits too and 42 becomes a new root: the tree grows from two levels to three. With t = 3 the same twelve keys fit in two levels.</p>
 </bt-insert>
-<figcaption><b>fig 2</b>Drag to insert one key at a time; switch between t = 2 and t = 3. Green marks the leaf holding the new key and the node that took the last middle key; ochre marks the other nodes a split created.<span class="m">A real B-tree runs in the figure, with bottom-up splits. The keys are multiples of 3 in a fixed shuffled order.</span></figcaption>
+<figcaption><b>fig 3</b>Drag to insert one key at a time; switch between t = 2 and t = 3. Green marks the leaf holding the new key and the node that took the last middle key; ochre marks the other nodes a split created.<span class="m">A real B-tree runs in the figure, with bottom-up splits. The keys are multiples of 3 in a fixed shuffled order.</span></figcaption>
 </figure>
 
 CLRS writes insertion differently: on the way down, split every full node before stepping into it. The parent then always has room for a middle key, so one pass from root to leaf is enough and the code never walks back up<sup><a href="#src-4">4</a></sup>. The cost is that it sometimes splits a node that wouldn't have overflowed. In Python, with `T` the minimum degree:
@@ -125,10 +155,10 @@ Deleting from a leaf can leave it with t − 2 keys, one too few. There are two 
 If a merge takes the root's last key, the merged node becomes the root and the tree loses a level, the mirror of a root split. Deleting a key from an internal node first swaps it with its predecessor (the largest key in its left subtree, always in a leaf), so the actual removal always happens in a leaf.
 
 <figure class="wide">
-<bt-delete data-fig data-label="fig 3 · deleting, with borrows and merges">
+<bt-delete data-fig data-label="fig 4 · deleting, with borrows and merges">
 <p class="fallback">A t = 2 B-tree with 14 keys: root 45; below it 15 and 30 on the left, 60 on the right; leaves 5 10, 20 25, 35 40, 50 and 70 80 90. Deleting 90 removes it from its leaf. Deleting 30 swaps it with its predecessor 25. Deleting 35 is a plain leaf delete. Deleting 60 swaps in 50, which empties a leaf, so it borrows 70 through the parent from its right sibling. Deleting 40 empties a leaf whose siblings are at the minimum, so it merges with 20 and pulls 25 down. Deleting 80 empties another leaf; the merge pulls 70 down, which empties the parent, whose merge pulls 45 down, which empties the root, and the tree drops from three levels to two: 15 45 over leaves 5 10, 20 25 and 50 70.</p>
 </bt-delete>
-<figcaption><b>fig 3</b>Step through six deletions. Green marks where the key was removed (or the merged node it ended up in), ochre marks nodes changed by a borrow, a merge or the root shrinking.<span class="m">The same B-tree code as fig 2, with bottom-up deletion; the sequence was picked to show every case.</span></figcaption>
+<figcaption><b>fig 4</b>Step through six deletions. Green marks where the key was removed (or the merged node it ended up in), ochre marks nodes changed by a borrow, a merge or the root shrinking.<span class="m">The same B-tree code as fig 3, with bottom-up deletion; the sequence was picked to show every case.</span></figcaption>
 </figure>
 
 CLRS again does it in one pass downwards. Before stepping into a child it makes sure the child has at least t keys, borrowing or merging in advance, so a deletion never has to come back up. Its cases are numbered 1, 2a to 2c and 3a to 3b, and exercise P5 below works through them<sup><a href="#src-4">4</a></sup>.
@@ -138,10 +168,10 @@ CLRS again does it in one pass downwards. Before stepping into a child it makes 
 Almost every database uses a **B+ tree**. All the records live in the leaves. The internal nodes only hold copies of separator keys, which Comer calls "a roadmap", and the leaves are linked left to right into a "sequence set"<sup><a href="#src-3">3</a></sup>. Internal nodes hold no values, so they fit more keys per page and the tree gets shallower. A range query goes down once to the first key and then reads leaves sideways until it passes the end of the range.
 
 <figure class="wide">
-<bt-range data-fig data-label="fig 4 · a range scan in a B+ tree">
+<bt-range data-fig data-label="fig 5 · a range scan in a B+ tree">
 <p class="fallback">A B+ tree over keys 1 to 48: twelve leaves of four keys each (labelled by their first and last key), linked left to right, three internal nodes above them and a root. The range 7 to 30 (24 keys) goes down through the root and one internal node to the leaf holding 5 to 8, then follows the leaf links through the leaves up to 29 to 32: 2 internal nodes and 7 leaves, 9 page reads.</p>
 </bt-range>
-<figcaption><b>fig 4</b>Move the ends of the range. The walk down is green, the walk along the leaf links is ochre.<span class="m">A bulk-loaded tree with made-up sizes; real leaves hold hundreds of keys.</span></figcaption>
+<figcaption><b>fig 5</b>Move the ends of the range. The walk down is green, the walk along the leaf links is ochre.<span class="m">A bulk-loaded tree with made-up sizes; real leaves hold hundreds of keys.</span></figcaption>
 </figure>
 
 SQLite's file format spells out both kinds. A "table b-tree" is keyed by the 64-bit rowid and stores all data in the leaves; an "index b-tree" stores only keys<sup><a href="#src-9">9</a></sup>. In InnoDB, index records are stored in the leaf pages<sup><a href="#src-10">10</a></sup>.
@@ -172,10 +202,10 @@ A split leaves two half-full nodes. If keys arrive in random order those halves 
 Databases special-case it. PostgreSQL's split code says: "If the page is the rightmost page on its level, we instead try to arrange to leave the left split page fillfactor% full. In this way, when we are inserting successively increasing keys (consider sequences, timestamps, etc) we will end up with a tree whose pages are about fillfactor% full, instead of the 50% full result that we'd get without this special case"<sup><a href="#src-12">12</a></sup>. The default leaf fillfactor is 90<sup><a href="#src-13">13</a></sup>. InnoDB keeps 1/16 of each page free and detects a sequential pattern when the new record lands right after the previous insert on the same page. It then splits at the insertion point, and its manual says sequential inserts leave pages "about 15/16 full", random ones "from 1/2 to 15/16 full"<sup><a href="#src-10">10</a></sup><sup><a href="#src-14">14</a></sup>.
 
 <figure class="wide">
-<bt-fill data-fig data-label="fig 5 · how full the pages end up">
+<bt-fill data-fig data-label="fig 6 · how full the pages end up">
 <p class="fallback">Average leaf fill after inserting 20,000 keys into leaves of 64 keys each. Random keys with 50/50 splits: 68%, close to Yao's ln 2. Ascending keys with 50/50 splits: 52%, so the tree needs 606 leaves. Ascending keys with PostgreSQL-style rightmost splits that keep the left page 90% full: 91%, 345 leaves.</p>
 </bt-fill>
-<figcaption><b>fig 5</b>Fewer leaves for the same keys means fuller pages.<span class="m">A simulation of the leaf level only, run in your browser; 64 keys per leaf is illustrative.</span></figcaption>
+<figcaption><b>fig 6</b>Fewer leaves for the same keys means fuller pages.<span class="m">A simulation of the leaf level only, run in your browser; 64 keys per leaf is illustrative.</span></figcaption>
 </figure>
 
 Fewer leaves means fewer pages to read in a scan and fewer pages to cache. The reverse problem, pages emptied by deletions, has its own knob: InnoDB tries to merge a page with a neighbour when it falls below `MERGE_THRESHOLD`, 50% by default<sup><a href="#src-15">15</a></sup>.
@@ -294,7 +324,7 @@ PostgreSQL: (8192 − 24) / (16 + 4) ≈ 408 entries, about 367 at 90% fill. Cou
 <summary><span class="ex-n">P4</span><span class="ex-t">Insert by hand</span><span class="ex-d"><b>●●</b>○ by hand</span></summary>
 <div class="ex-b">
 
-CLRS 18.2-1: insert F S Q K C L H T V W M R N P A B X Y D Z E into an empty t = 2 B-tree, using the split-on-the-way-down rule. Draw the tree after each split. Then redo it with bottom-up splits as in fig 2 and compare the final trees.
+CLRS 18.2-1: insert F S Q K C L H T V W M R N P A B X Y D Z E into an empty t = 2 B-tree, using the split-on-the-way-down rule. Draw the tree after each split. Then redo it with bottom-up splits as in fig 3 and compare the final trees.
 
 <details><summary>hint</summary>
 
@@ -313,7 +343,7 @@ Check each step in the visualizer. The two final trees can differ: top-down spli
 <summary><span class="ex-n">P5</span><span class="ex-t">Delete cases</span><span class="ex-d"><b>●●</b>○ by hand</span></summary>
 <div class="ex-b">
 
-CLRS 18.3-1: delete C, P and V, in that order, from the tree in figure 18.8(f), and name the case used at each step. Then run fig 3's six deletions with the CLRS rules and compare your trees with the figure's.
+CLRS 18.3-1: delete C, P and V, in that order, from the tree in figure 18.8(f), and name the case used at each step. Then run fig 4's six deletions with the CLRS rules and compare your trees with the figure's.
 
 <details><summary>hint</summary>
 
@@ -360,7 +390,7 @@ After a split of the rightmost leaf, which half will ever see another key?
 </details>
 <details><summary>solution sketch</summary>
 
-With the bottom-up split from fig 2, a full rightmost leaf of 2t keys splits into t and t − 1, and the left half of t keys never receives another key. So almost every leaf ends with t of its 2t − 1 slots used: 2/3 full for t = 2 and close to half for large t. Leaving the left page 90% full (about 15/16 for InnoDB) puts the waste only in the one page still receiving keys. PostgreSQL's rule only triggers on the rightmost page, so descending keys get 50/50 splits. InnoDB's heuristic checks whether the insert lands next to the previous one, so it detects both directions; its manual says ascending or descending.
+With the bottom-up split from fig 3, a full rightmost leaf of 2t keys splits into t and t − 1, and the left half of t keys never receives another key. So almost every leaf ends with t of its 2t − 1 slots used: 2/3 full for t = 2 and close to half for large t. Leaving the left page 90% full (about 15/16 for InnoDB) puts the waste only in the one page still receiving keys. PostgreSQL's rule only triggers on the rightmost page, so descending keys get 50/50 splits. InnoDB's heuristic checks whether the insert lands next to the previous one, so it detects both directions; its manual says ascending or descending.
 
 </details>
 </div>
@@ -520,7 +550,7 @@ Readers take shared latches hand over hand. Writers take exclusive latches down 
 
 Comer's 17-page survey is the best short introduction to the whole family<sup><a href="#src-3">3</a></sup>. For the database side, PostgreSQL's nbtree README explains how a production B-tree handles concurrency, deletion and duplicates<sup><a href="#src-17">17</a></sup>.
 
-My recommendation: write insertion with bottom-up splits once, with a validator, and read fig 2 next to the red-black tree's insertion to see the same split from two sides. After that, the variants worth knowing first are the B+ tree, the rightmost-split rule and the B-link tree.
+My recommendation: write insertion with bottom-up splits once, with a validator, and read fig 3 next to the red-black tree's insertion to see the same split from two sides. After that, the variants worth knowing first are the B+ tree, the rightmost-split rule and the B-link tree.
 
 <details class="sources">
 <summary>sources</summary>
