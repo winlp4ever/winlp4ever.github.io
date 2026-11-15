@@ -5,7 +5,8 @@ description: How a red-black tree keeps a binary search tree balanced with one c
 tags: [algorithms, data-structures, competitive-programming]
 category: code
 glyph: rbtree
-figures: 4
+figures: 5
+updated: 2026-11-15
 math: true
 ---
 
@@ -122,7 +123,7 @@ void insert_fixup(Node*& root, Node* z) {
 <rb-insert data-fig data-label="fig 3 · inserting, step by step">
 <p class="fallback">The tree after inserting the keys 1, 2, 3 and so on in order, with the fix-up steps of the last insertion listed below it. After 8 keys the tree has height 4 (the bound 2·log2(9) is 6.3, a plain BST would have height 8). Inserting 8 went: uncle 5 is red, recolor 7, 5 and 6 and move up to 6; then rotate left at 2, recolor 4 black and 2 red. With 15 sorted keys the height is 6. A second mode inserts the keys 1 to 15 in a fixed random order (5, 14, 10, 13, 12, 2, 9, 4, 7, 6, 1, 8, 3, 15, 11) and ends with height 5.</p>
 </rb-insert>
-<figcaption><b>fig 3</b>Drag the slider to insert one key at a time. The new key has a green ring, nodes recoloured or rotated by this insertion have a dashed ring, and the steps are the ones the code above takes.<span class="m">The figure runs the same insert as the code; the random order is seeded.</span></figcaption>
+<figcaption><b>fig 3</b>Drag the slider to choose how many keys go in, then step through the last insertion: the walk down, the new red leaf, and each recolouring or rotation the code above makes. An ochre ring marks two reds in a row, a green ring a new key that broke nothing, a dashed ring the nodes a step recoloured or rotated.<span class="m">The figure runs the same insert as the code; the random order is seeded.</span></figcaption>
 </figure>
 
 The loop can climb O(log n) levels through the red-uncle case, but each rotation case ends it, so an insertion does **at most two rotations**. The recolouring is O(1) amortized over a sequence of operations, a result of Tarjan's<sup><a href="#src-6">6</a></sup><sup><a href="#src-7">7</a></sup>. Rotations are the expensive part in practice (they move pointers that other code may be holding, and in augmented trees they force recomputation), so a constant bound on them matters.
@@ -138,15 +139,22 @@ Deletion is where most people give up on implementing red-black trees, and the c
 3. w is black, its near child red and far child black: rotate at w, which moves to case 4.
 4. w is black with a red far child: rotate at the parent, recolour, done.
 
+<figure class="wide">
+<rb-delete data-fig data-label="fig 4 · deleting, step by step">
+<p class="fallback">Five deletions from a red-black tree built from the keys 45, 40, 20, 30, 25, 5, 60, 15, 50, 55, 10 and 35. Deleting 30 removes a black node whose red child takes its place and turns black. Deleting 25, which has two children, moves its successor into its place; the removed node was black and left a nil with an extra black, which goes through case 1 (red sibling, rotate), then case 2 (black sibling with black children, push the extra black up) to a red node that turns black. Deleting 45 runs case 3 and then case 4. Deleting 60 runs case 2 up to the root. Deleting 50 removes a red leaf, which needs no fix.</p>
+</rb-delete>
+<figcaption><b>fig 4</b>Pick a deletion, then step through it. An ochre ring marks the node carrying the extra black (a nil square when the extra black sits on an empty child), a dashed ring marks nodes the step recoloured or rotated.<span class="m">The figure runs CLRS's fix-up on a real tree; the five deletions were picked by a search so that between them every case runs.</span></figcaption>
+</figure>
+
 Cases 1, 3 and 4 end the loop after a constant number of steps, so a deletion does **at most three rotations**<sup><a href="#src-1">1</a></sup><sup><a href="#src-8">8</a></sup>. Exercise P2 below walks through a full sequence by hand.
 
 ## measured
 
 <figure class="wide">
-<rb-height data-fig data-label="fig 4 · height and rotations, measured">
+<rb-height data-fig data-label="fig 5 · height and rotations, measured">
 <p class="fallback">Heights measured by inserting n keys into the red-black tree above, for n from 2 to 16,384. With sorted keys the height grows to 26 at 16,384 keys, close to the bound 2·log2(n+1) = 28, with 1.00 rotations per insertion. With the same keys in random order the height is 17, against log2(n+1) = 14 for a perfectly balanced tree, with 0.59 rotations per insertion.</p>
 </rb-height>
-<figcaption><b>fig 4</b>The dashed line is the 2·log2(n+1) bound, the dotted line a perfectly balanced tree. Hover a point for the rotations per insertion.<span class="m">Computed in your browser by the code above: 32,766 insertions per order.</span></figcaption>
+<figcaption><b>fig 5</b>The dashed line is the 2·log2(n+1) bound, the dotted line a perfectly balanced tree. Hover a point for the rotations per insertion.<span class="m">Computed in your browser by the code above: 32,766 insertions per order.</span></figcaption>
 </figure>
 
 Sorted input gave the taller tree and stayed under the bound. It's also the case where the tree rotates on almost every insertion; random input rotates on about three insertions in five.
@@ -259,7 +267,7 @@ For (b), the fewest is when every node is black; the most is when black and red 
 <summary><span class="ex-n">P4</span><span class="ex-t">Count the rotations</span><span class="ex-d"><b>●●●</b> proof</span></summary>
 <div class="ex-b">
 
-Show that an insertion does at most 2 rotations and a deletion at most 3. Then explain why sorted insertion in fig 4 does about one rotation per key in the long run.
+Show that an insertion does at most 2 rotations and a deletion at most 3. Then explain why sorted insertion in fig 5 does about one rotation per key in the long run.
 
 <details><summary>hint</summary>
 

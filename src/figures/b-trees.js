@@ -1,4 +1,4 @@
-import { S, H, attr, rng, pills, entrance, Figure, define } from './core.js'
+import { S, H, attr, op, lerp, rng, pills, stepFigure, entrance, Figure, define } from './core.js'
 
 // ── a real B-tree with minimum degree t (CLRS): every node but the root holds
 // t−1 … 2t−1 keys. Insert splits bottom-up; delete borrows or merges bottom-up.
@@ -22,11 +22,11 @@ function insert(T, k, log = null) {
     if (path.length) {
       const [p, j] = path.pop();
       p.keys.splice(j, 0, up); p.kids.splice(j + 1, 0, right);
-      log?.push({ kind: 'split', node: p, made: [n, right], text: `node full: split it, ${up} moves up` });
+      log?.push({ kind: 'split', node: p, made: [n, right], up, text: `node full: split it, ${up} moves up` });
       n = p;
     } else {
       T.root = node([up], [n, right]);
-      log?.push({ kind: 'split', node: T.root, made: [n, right], text: `root full: split it, ${up} becomes the new root, the tree grows a level` });
+      log?.push({ kind: 'split', node: T.root, made: [n, right], up, grows: true, text: `root full: split it, ${up} becomes the new root, the tree grows a level` });
       break;
     }
   }
@@ -44,8 +44,9 @@ function remove(T, k, log = []) {
     path.push([n, i]); let m = n.kids[i];
     while (!leaf(m)) { path.push([m, m.kids.length - 1]); m = m.kids[m.kids.length - 1]; }
     const pred = m.keys[m.keys.length - 1];
-    log.push({ kind: 'swap', node: n, text: `${k} is in an inner node: replace it with its predecessor ${pred}` });
-    n.keys[i] = pred; m.keys.pop(); n = m;
+    n.keys[i] = pred; m.keys.pop();
+    log.push({ kind: 'swap', node: n, made: [m], k, pred, text: `${k} is in an inner node: replace it with its predecessor ${pred}` });
+    n = m;
   } else {
     n.keys.splice(i, 1);
     log.push({ kind: 'del', node: n, text: `remove ${k} from its leaf` });
@@ -54,26 +55,27 @@ function remove(T, k, log = []) {
   while (n !== T.root && n.keys.length < T.t - 1) { // underflow
     const [p, j] = path.pop(), L = p.kids[j - 1], R = p.kids[j + 1];
     if (L && L.keys.length > T.t - 1) {
-      n.keys.unshift(p.keys[j - 1]); p.keys[j - 1] = L.keys.pop(); if (n.kids) n.kids.unshift(L.kids.pop());
-      log.push({ kind: 'borrow', node: n, made: [L, p], text: `too few keys: borrow from the left sibling through the parent` }); return log;
+      const down = p.keys[j - 1];
+      n.keys.unshift(down); p.keys[j - 1] = L.keys.pop(); if (n.kids) n.kids.unshift(L.kids.pop());
+      log.push({ kind: 'borrow', node: n, made: [L, p], down, up: p.keys[j - 1], side: 'left', text: `too few keys: borrow from the left sibling through the parent` }); return log;
     }
     if (R && R.keys.length > T.t - 1) {
-      n.keys.push(p.keys[j]); p.keys[j] = R.keys.shift(); if (n.kids) n.kids.push(R.kids.shift());
-      log.push({ kind: 'borrow', node: n, made: [R, p], text: `too few keys: borrow through the parent from the right sibling` }); return log;
+      const down = p.keys[j];
+      n.keys.push(down); p.keys[j] = R.keys.shift(); if (n.kids) n.kids.push(R.kids.shift());
+      log.push({ kind: 'borrow', node: n, made: [R, p], down, up: p.keys[j], side: 'right', text: `too few keys: borrow through the parent from the right sibling` }); return log;
     }
     const [a, b, s] = L ? [L, n, j - 1] : [n, R, j]; // merge a, separator, b
     const sep = p.keys[s];
     a.keys = [...a.keys, sep, ...b.keys]; if (a.kids) a.kids = [...a.kids, ...b.kids];
     p.keys.splice(s, 1); p.kids.splice(s + 1, 1);
     if (first.node === b) first.node = a;
-    log.push({ kind: 'merge', node: a, made: [p], text: `too few keys, no sibling can spare one: merge, pulling ${sep} down` });
+    log.push({ kind: 'merge', node: a, made: [p], sep, text: `too few keys, no sibling can spare one: merge, pulling ${sep} down` });
     n = p;
   }
-  if (!T.root.keys.length && T.root.kids) { T.root = T.root.kids[0]; log.push({ kind: 'shrink', node: T.root, text: 'the root is empty: its only child becomes the root, the tree loses a level' }); }
+  if (!T.root.keys.length && T.root.kids) { T.root = T.root.kids[0]; log.push({ kind: 'shrink', node: T.root, made: [], text: 'the root is empty: its only child becomes the root, the tree loses a level' }); }
   return log;
 }
 const build = (t, keys) => { const T = { t, root: node() }; keys.forEach((k) => insert(T, k)); return T; };
-const depth = (T) => { let d = 1, n = T.root; while (n.kids) { d++; n = n.kids[0]; } return d; };
 
 // Lay out a tree: leaves left to right, parents centred over their children.
 const CELL = 22;
@@ -202,76 +204,178 @@ class BtHeight extends Figure {
   }
 }
 
+// ── figs 3 and 4 · one operation, step by step ───────────────────────────────
+// A recorder is a log that snapshots the tree every time insert or remove logs a
+// step, so each step becomes a frame. Frames keep a map from live nodes to their
+// copies, so a step can mark the nodes it touched.
+function snap(T) {
+  const map = new Map();
+  const cp = (n) => { const c = { keys: n.keys.slice(), kids: n.kids && n.kids.map(cp) }; map.set(n, c); return c; };
+  return { root: cp(T.root), map };
+}
+class Recorder extends Array {
+  static get [Symbol.species]() { return Array; }
+  push(e) { return super.push({ ...e, at: e.node, ...snap(this.T) }); } // remove() may repoint .node later; .at keeps the node as logged
+}
+const keyList = (n) => `[${n.keys.join(' ')}]`;
+const between = (n, i, k) => i === 0 ? `${k} < ${n.keys[0]}` : i === n.keys.length ? `${k} > ${n.keys.at(-1)}` : `${k} is between ${n.keys[i - 1]} and ${n.keys[i]}`;
+// Frames for the walk down: one per node read, with the new key riding beside it (insert)
+// or until the node holding k (delete).
+function walkFrames(T, k, find, lead) {
+  const out = [], trail = []; let n = T.root;
+  while (true) {
+    const i = childIdx(n, k), here = n.keys[i] === k;
+    trail.push(n);
+    let text;
+    if (!n.keys.length) text = `the tree is empty: ${k} becomes its only key`;
+    else if (find && here) text = `${keyList(n)} holds ${k}, ${n.kids ? 'in an inner node' : 'in a leaf'}`;
+    else if (!n.kids) text = `${keyList(n)} is a leaf: ${k} goes ${i === 0 ? `before ${n.keys[0]}` : i === n.keys.length ? `after ${n.keys.at(-1)}` : `between ${n.keys[i - 1]} and ${n.keys[i]}`}`;
+    else text = `${keyList(n)}: ${between(n, i, k)}, so follow pointer ${i + 1} of ${n.kids.length}`;
+    const { root, map } = snap(T);
+    out.push({ root, text: (out.length ? '' : lead) + text, marks: new Map(trail.map((m) => [map.get(m), 'path'])), ghost: find ? null : { k, node: map.get(n) } });
+    if ((find && here) || !n.kids) return out;
+    n = n.kids[i];
+  }
+}
+const mk = (e, pairs) => new Map(pairs.filter(([n]) => n).map(([n, c]) => [e.map.get(n) || n, c]));
+function insertFrames(t, keys, k) {
+  const T = build(t, keys), max = 2 * t - 1;
+  const out = walkFrames(T, k, false, `insert ${k}. `);
+  const rec = new Recorder(); rec.T = T;
+  insert(T, k, rec);
+  rec.forEach((e) => {
+    const n = e.map.get(e.at), over = n.keys.length > max;
+    if (e.kind === 'add') out.push({ root: e.root, marks: mk(e, [[e.at, over ? 'bad' : 'ok']]),
+      text: over ? `add ${k}: the leaf now holds ${n.keys.length} keys, one more than the maximum of ${max}` : `add ${k}: the leaf has room (${n.keys.length} of ${max} keys), so the insert is done` });
+    else {
+      const [a, b] = e.made.map((m) => e.map.get(m));
+      const head = `split around the middle key ${e.up}: ${keyList(a)} and ${keyList(b)} stay below it`;
+      out.push({ root: e.root, marks: mk(e, [[e.made[0], 'ok'], [e.made[1], 'ok'], [e.at, over ? 'bad' : 'ok']]),
+        text: e.grows ? `${head}, and ${e.up} becomes a new root: the tree is one level taller` : `${head}, and ${e.up} moves up into the parent. ` + (over ? `The parent now holds ${n.keys.length} keys, too many, so it splits next` : `The parent has room, so the insert is done`) });
+    }
+  });
+  return out;
+}
+function deleteFrames(T, k) {
+  const min = T.t - 1, out = walkFrames(T, k, true, `delete ${k}. `);
+  const rec = new Recorder(); rec.T = T;
+  remove(T, k, rec);
+  rec.forEach((e) => {
+    const n = e.map.get(e.at);
+    const isShort = n !== e.root && n.keys.length < min;
+    let text, marks;
+    if (e.kind === 'swap') {
+      const leaf = e.map.get(e.made[0]), low = leaf.keys.length < min;
+      text = `replace ${k} with its predecessor ${e.pred}, the largest key in its left subtree, and remove ${e.pred} from its leaf. ` + (low ? `That leaf now has ${leaf.keys.length} keys, fewer than the minimum of ${min}` : 'That leaf still has enough keys, so the delete is done');
+      marks = mk(e, [[e.at, 'ok'], [e.made[0], low ? 'bad' : 'ok']]);
+    }
+    else if (e.kind === 'del') { text = `remove ${k} from its leaf. ` + (isShort ? `The leaf now has ${n.keys.length} key${n.keys.length === 1 ? '' : 's'}, fewer than the minimum of ${min}` : 'The leaf still has enough keys, so the delete is done'); marks = mk(e, [[e.at, isShort ? 'bad' : 'ok']]); }
+    else if (e.kind === 'borrow') { text = `its ${e.side} sibling can spare a key: the separator ${e.down} comes down into the short node and ${e.up} goes up to replace it. Done`; marks = mk(e, [[e.at, 'ok'], ...e.made.map((m) => [m, 'ok'])]); }
+    else if (e.kind === 'merge') {
+      const p = e.map.get(e.made[0]), pShort = p !== e.root && p.keys.length < min;
+      text = `no sibling can spare a key: merge with a sibling, pulling the separator ${e.sep} down between them. ` + (pShort ? `The parent is now short, so the fix repeats one level up` : p === e.root && !p.keys.length ? 'The root is now empty' : 'The parent still has enough keys, so the delete is done');
+      marks = mk(e, [[e.at, 'ok'], [e.made[0], pShort || !p.keys.length ? 'bad' : 'ok']]);
+    } else { text = 'the empty root is removed and its only child becomes the root: the tree is one level shorter'; marks = mk(e, [[e.at, 'ok']]); }
+    out.push({ root: e.root, text, marks });
+  });
+  return out;
+}
+
+// Draw a frame, sliding from frame A when it's given: keys move to their new
+// places, boxes follow the node most of their keys came from.
+const BY0 = 54, BDY = 56;
+const GEOM = new WeakMap(); // a frame's layout never changes, so work it out once
+function geom(f) {
+  if (!GEOM.has(f)) GEOM.set(f, layoutFrame(f));
+  return GEOM.get(f);
+}
+function layoutFrame(f) {
+  const T = { root: f.root }, L = layout(T, 20, 560, BY0, BDY), keys = new Map(), owner = new Map();
+  L.levels.forEach((lv) => lv.forEach((n) => { const p = L.pos.get(n); n.keys.forEach((k, i) => { keys.set(k, { x: p.x + i * CELL + CELL / 2, y: p.y + 10 }); owner.set(k, n); }); }));
+  if (f.ghost && !keys.has(f.ghost.k)) { // beside the node being read, on its left when the right edge is near
+    const p = L.pos.get(f.ghost.node), x = p.x + p.w + 26 + CELL / 2 > 590 ? p.x - 26 : p.x + p.w + 26;
+    keys.set(f.ghost.k, { x, y: p.y + 10, ghost: true });
+  }
+  return { L, keys, owner };
+}
+function drawFrame(g, B, A = null, e = 1) {
+  g.replaceChildren();
+  const GB = geom(B), GA = A && geom(A);
+  const at = (k) => { const b = GB.keys.get(k), a = GA?.keys.get(k) || b; return { x: lerp(a.x, b.x, e), y: lerp(a.y, b.y, e) }; };
+  const box = new Map();
+  GB.L.levels.forEach((lv) => lv.forEach((n) => {
+    const pb = GB.L.pos.get(n); let pa = pb;
+    if (GA) { // the source node that held most of this node's keys
+      const count = new Map(); n.keys.forEach((k) => { const o = GA.owner.get(k); if (o) count.set(o, (count.get(o) || 0) + 1); });
+      const best = [...count].sort((x, y) => y[1] - x[1])[0];
+      if (best) pa = GA.L.pos.get(best[0]);
+    }
+    box.set(n, { x: lerp(pa.x, pb.x, e), y: lerp(pa.y, pb.y, e), w: lerp(pa.w, pb.w, e) });
+  }));
+  GB.L.levels.forEach((lv) => lv.forEach((n) => n.kids?.forEach((c, i) => {
+    const p = box.get(n), q = box.get(c), slot = p.w / Math.max(n.keys.length, 1);
+    S('line', { x1: p.x + i * slot, y1: p.y + 20, x2: q.x + q.w / 2, y2: q.y, class: 's-ink3', 'stroke-width': 1.2 }, g);
+  })));
+  const CLS = { path: 'f-panel s-ink', bad: 'f-panel s-ochre', ok: 'f-panel s-green' };
+  GB.L.levels.forEach((lv) => lv.forEach((n) => {
+    const p = box.get(n), m = B.marks?.get(n);
+    S('rect', { x: p.x, y: p.y, width: p.w, height: 20, rx: 4, class: CLS[m] || 'f-panel s-ink3', 'stroke-width': m ? 2.2 : 1.2, 'stroke-dasharray': m === 'bad' ? '4 3' : null }, g);
+    for (let i = 1; i < n.keys.length; i++) S('line', { x1: p.x + i * p.w / n.keys.length, x2: p.x + i * p.w / n.keys.length, y1: p.y + 3, y2: p.y + 17, class: 's-rule', 'stroke-width': 1 }, g);
+  }));
+  GB.keys.forEach((v, k) => {
+    const q = at(k);
+    if (v.ghost) S('rect', { x: q.x - CELL / 2, y: q.y - 10, width: CELL, height: 20, rx: 4, class: 'f-green s-green', 'stroke-width': 1.2 }, g);
+    S('text', { x: q.x, y: q.y + 4, class: v.ghost ? 'f-bg' : 't', 'font-size': 10.5, 'text-anchor': 'middle', 'font-weight': v.ghost ? 600 : 400, text: k }, g);
+  });
+  GA?.keys.forEach((v, k) => { // keys that this step removes fade out where they were
+    if (GB.keys.has(k)) return;
+    op(S('text', { x: v.x, y: v.y + 4, class: 't', 'font-size': 10.5, 'text-anchor': 'middle', text: k }, g), 1 - e);
+  });
+}
 // ── fig 3 · inserting, with splits ───────────────────────────────────────────
 // Multiples of 3 in a fixed shuffled order (written out, so every browser gets the same tree).
 const SEQ = [12, 3, 27, 6, 42, 48, 24, 63, 15, 60, 33, 57, 51, 36, 69, 45, 39, 21, 18, 9, 72, 54, 30, 66];
 class BtInsert extends Figure {
   build() {
-    const svg = this.svgRoot(600, 300, 'A B-tree after each insertion: keys go into a leaf, and a leaf that overflows splits in two and sends its middle key up to the parent');
+    const svg = this.svgRoot(600, 320, 'One insertion into a B-tree, step by step: the walk down to a leaf, the key added there, and the splits that send middle keys up when a node overflows');
     this.head = S('text', { x: 20, y: 24, class: 'sl', 'font-size': 11 }, svg);
-    this.g = S('g', {}, svg);
-    this.steps = [0, 1, 2, 3].map((i) => S('text', { x: 20, y: 236 + i * 17, class: 't2', 'font-size': 12.5 }, svg));
     this.t = 2; this.n = 12;
-    const bar = pills(this, [[2, 't = 2 (2-3-4 tree)'], [3, 't = 3']], 2, (v) => { this.t = v; this.paint(); });
-    const lab = H('label', { class: 'pill', text: 'keys ' }, bar);
+    const bar = pills(this, [[2, 't = 2 (2-3-4 tree)'], [3, 't = 3']], 2, (v) => { this.t = v; this.load(); });
+    const lab = H('label', { class: 'pill', text: 'key no. ' }, bar);
     this.out = H('span', { text: '12' }, lab);
-    const s = H('input', { type: 'range', min: 1, max: SEQ.length, value: 12, 'aria-label': 'number of keys inserted' }, bar);
-    s.oninput = () => { this.n = +s.value; this.paint(); };
-    this.paint();
+    const s = H('input', { type: 'range', min: 1, max: SEQ.length, value: 12, 'aria-label': 'which key of the sequence to insert' }, bar);
+    s.oninput = () => { this.n = +s.value; this.load(); };
+    stepFigure(this, svg, 266, drawFrame);
+    this.load();
   }
-  paint() {
-    const keys = SEQ.slice(0, this.n), T = build(this.t, keys.slice(0, -1)), log = insert(T, keys.at(-1), []);
+  load() {
+    const keys = SEQ.slice(0, this.n);
     this.out.textContent = this.n;
-    const L = layout(T, 20, 560, 50, 56), mark = new Map();
-    // ochre: every node a split produced; green: the leaf now holding the new key and the
-    // node that took the last middle key (green wins where they overlap)
-    const splits = log.filter((s) => s.kind === 'split');
-    splits.forEach((s) => s.made.forEach((m) => mark.set(m, 'side')));
-    if (splits.length) mark.set(splits.at(-1).node, 'main');
-    let x = T.root; const k = keys.at(-1);
-    while (x.kids) { const i = childIdx(x, k); if (x.keys[i] === k) break; x = x.kids[i]; }
-    mark.set(x, 'main');
-    drawTree(this.g, T, L, mark);
-    this.head.textContent = `${this.n} KEYS · t = ${this.t} · ${2 * this.t - 1} KEYS MAX PER NODE · ${depth(T)} LEVELS`;
-    const rows = [`insert ${keys.at(-1)}: ${log[0].text}`, ...log.slice(1).map((s) => '→ ' + s.text)];
-    this.steps.forEach((t, i) => { t.textContent = rows[i] || ''; });
+    this.frames = insertFrames(this.t, keys.slice(0, -1), keys.at(-1));
+    this.head.textContent = `INSERT ${keys.at(-1)} INTO ${this.n - 1} KEYS · t = ${this.t} · ${this.t - 1} TO ${2 * this.t - 1} KEYS PER NODE`;
+    this.step.set(this.frames.length);
   }
 }
 
 // ── fig 4 · deleting, with borrows and merges ────────────────────────────────
 const DEL0 = [10, 20, 30, 40, 50, 60, 70, 80, 90, 5, 15, 25, 35, 45];
 const DELS = [90, 30, 35, 60, 40, 80];
-function delSnaps() {
-  const T = build(2, DEL0), snaps = [];
-  const clone = (n) => ({ keys: n.keys.slice(), kids: n.kids && n.kids.map(clone) });
-  snaps.push({ root: clone(T.root), log: [{ text: `start: ${DEL0.length} keys, t = 2` }] });
-  DELS.forEach((k) => {
-    const log = remove(T, k);
-    // remember which nodes were touched by matching them in the clone
-    const ids = new Map(); const map = (a, b) => { ids.set(a, b); a.kids?.forEach((c, i) => map(c, b.kids[i])); };
-    const c = clone(T.root); map(T.root, c);
-    snaps.push({ root: c, log: log.map((s) => ({ ...s, node: ids.get(s.node), made: s.made?.map((m) => ids.get(m)).filter(Boolean) })), k });
-  });
-  return snaps;
-}
 class BtDelete extends Figure {
   build() {
-    const svg = this.svgRoot(600, 310, 'Deleting keys from a B-tree: a leaf that drops below the minimum borrows a key through its parent from a sibling, or merges with a sibling, which can shrink the tree');
+    const svg = this.svgRoot(600, 320, 'Deleting keys from a B-tree, step by step: a leaf that drops below the minimum borrows a key through its parent from a sibling, or merges with a sibling, which can shrink the tree');
     this.head = S('text', { x: 20, y: 24, class: 'sl', 'font-size': 11 }, svg);
-    this.g = S('g', {}, svg);
-    this.steps = [0, 1, 2, 3].map((i) => S('text', { x: 20, y: 232 + i * 17, class: 't2', 'font-size': 12.5 }, svg));
-    this.snaps = delSnaps();
-    pills(this, this.snaps.map((s, i) => [i, i ? `delete ${s.k}` : 'start']), 0, (v) => this.paint(v));
-    this.paint(0);
+    // the tree before each deletion, and the frames of that deletion
+    const T = build(2, DEL0);
+    this.ops = DELS.map((k) => ({ k, frames: deleteFrames(T, k) }));
+    pills(this, this.ops.map((o, i) => [i, `delete ${o.k}`]), 0, (v) => this.load(v));
+    stepFigure(this, svg, 266, drawFrame);
+    this.load(0);
   }
-  paint(k) {
-    const s = this.snaps[k], T = { t: 2, root: s.root }, L = layout(T, 20, 560, 54, 56), mark = new Map();
-    // ochre: every node a borrow, merge or shrink changed; green: where the key was removed
-    s.log.forEach((x) => { if (x.kind === 'merge' || x.kind === 'borrow' || x.kind === 'shrink') [x.node, ...(x.made || [])].forEach((m) => m && mark.set(m, 'side')); });
-    s.log.forEach((x) => { if ((x.kind === 'del' || x.kind === 'swap') && x.node) mark.set(x.node, 'main'); });
-    drawTree(this.g, T, L, mark);
-    this.head.textContent = k ? `DELETE ${s.k} · ${depth(T)} LEVELS` : `t = 2 · EVERY NODE BUT THE ROOT KEEPS AT LEAST ${T.t - 1} KEY`;
-    this.steps.forEach((t, i) => { t.textContent = s.log[i] ? (i ? '→ ' : '') + s.log[i].text : ''; });
+  load(i) {
+    const o = this.ops[i];
+    this.frames = o.frames;
+    this.head.textContent = `DELETION ${i + 1} OF ${DELS.length} · t = 2 · EVERY NODE BUT THE ROOT KEEPS AT LEAST 1 KEY`;
+    this.step.set(this.frames.length);
   }
 }
 
