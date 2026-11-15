@@ -140,6 +140,29 @@ export function hit(parent, tip, x, y, a, b) {
   c.addEventListener('pointerleave', (e) => { if (e.pointerType !== 'touch') tip.hide(); });
   return h;
 }
+// back / next through the frames of one operation, on a control row of its own.
+// set(n, i) loads n frames and shows frame i; on(i, from) paints frame i, coming from frame `from`
+// (null on a reload), so the figure can animate the change.
+export function stepper(fig, on) {
+  const bar = H('div', { class: 'fc' }, fig);
+  const prev = H('button', { class: 'pill', type: 'button', text: '← back', 'aria-label': 'previous step' }, bar);
+  const next = H('button', { class: 'pill', type: 'button', text: 'next →', 'aria-label': 'next step' }, bar);
+  const lab = H('span', { class: 'fc-l', style: 'text-align:left' }, bar);
+  const s = {
+    i: 0, n: 1,
+    set(n, i = 0) { s.n = n; s.show(i, null); },
+    show(i, from) {
+      s.i = clamp(i, 0, s.n - 1);
+      lab.textContent = `step ${s.i + 1} of ${s.n}`;
+      prev.disabled = s.i === 0; next.disabled = s.i === s.n - 1;
+      on(s.i, from);
+    },
+  };
+  prev.onclick = () => s.show(s.i - 1, s.i);
+  next.onclick = () => s.show(s.i + 1, s.i);
+  return s;
+}
+
 // tween a paint(k) function from 0 to 1, for toggles after the entrance
 export function tween(fig, paint, ms = 600) {
   if (STILL || REDUCED) return paint(1);

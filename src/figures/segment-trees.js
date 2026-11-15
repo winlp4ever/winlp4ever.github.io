@@ -1,4 +1,4 @@
-import { S, H, attr, op, rng, pills, Figure, define } from './core.js'
+import { S, H, attr, op, rng, pills, stepper, Figure, define } from './core.js'
 
 // Values for figs 1-4: sixteen small seeded integers.
 const r0 = rng(21), A = Array.from({ length: 16 }, () => 1 + Math.floor(r0() * 9));
@@ -96,26 +96,37 @@ class SgQuery extends Figure {
     this.E.forEach((e, i) => { if (e) e.txt.textContent = this.T[i]; });
     S('text', { x: 20, y: 24, class: 'sl', 'font-size': 11, text: 'EACH NODE STORES THE SUM OF ITS RANGE' }, svg);
     this.out = S('text', { x: 20, y: 312, class: 't2', 'font-size': 13 }, svg);
-    rangeCtl(this, 16, 3, 12, (l, r) => this.paint(l, r));
+    rangeCtl(this, 16, 3, 12, (l, r) => { this.l = l; this.r = r; if (this.step) this.load(l, r); });
+    this.step = stepper(this, (k) => this.paint(k));
+    this.load(this.l, this.r);
   }
-  paint(l, r) {
-    const st = [];
+  load(l, r) { // the walk, one visit at a time, in the order the recursion makes them
+    const visits = []; let total = 0;
     const q = (i, lo, hi) => {
-      if (r < lo || hi < l) { st[i] = 'out'; return 0; }
-      if (l <= lo && hi <= r) { st[i] = 'use'; return this.T[i]; }
-      st[i] = 'split'; const m = (lo + hi) >> 1;
+      const rng = `[${lo}, ${hi}]`;
+      if (r < lo || hi < l) { visits.push({ i, s: 'out', text: `node ${rng} misses [${l}, ${r}]: it adds 0 and the walk turns back`, total }); return 0; }
+      if (l <= lo && hi <= r) { total += this.T[i]; visits.push({ i, s: 'use', text: `node ${rng} lies inside [${l}, ${r}]: add its stored sum ${this.T[i]}, total ${total}`, total }); return this.T[i]; }
+      visits.push({ i, s: 'split', text: `node ${rng} is partly inside [${l}, ${r}]: ask both children`, total });
+      const m = (lo + hi) >> 1;
       return q(2 * i, lo, m) + q(2 * i + 1, m + 1, hi);
     };
-    const ans = q(1, 0, 15);
+    const ans = q(1, 0, 15), used = visits.filter((v) => v.s === 'use').length;
+    visits.push({ s: 'end', text: `sum [${l}, ${r}] = ${ans} · ${used} nodes used, ${visits.length} visited of 31 · a plain loop reads ${r - l + 1}` });
+    this.visits = visits;
+    this.step.set(visits.length, visits.length - 1); // open on the whole walk; step back to replay it
+  }
+  paint(k) {
+    const st = [];
+    this.visits.slice(0, k + 1).forEach((v) => { if (v.i) st[v.i] = v.s; });
+    const cur = this.visits[k].i;
     this.E.forEach((e, i) => {
       if (!e) return;
       const s = st[i];
-      attr(e.box, { class: s === 'use' ? 'f-green s-green' : s === 'split' ? 'f-panel s-ink' : 'f-panel s-rule', 'stroke-dasharray': s === 'out' ? '3 3' : 'none' });
+      attr(e.box, { class: (s === 'use' ? 'f-green ' : 'f-panel ') + (i === cur ? 's-ink' : s === 'use' ? 's-green' : s === 'split' ? 's-ink' : 's-rule'), 'stroke-dasharray': s === 'out' && i !== cur ? '3 3' : 'none', 'stroke-width': i === cur ? 2.8 : 1.4 });
       attr(e.txt, { class: s === 'use' ? 'f-bg' : 't' });
       op(e.g, s ? 1 : 0.35);
     });
-    const vis = st.filter(Boolean).length, used = st.filter((s) => s === 'use').length;
-    this.out.textContent = `sum [${l}, ${r}] = ${ans} · ${used} nodes used, ${vis} visited of 31 · a plain loop reads ${r - l + 1}`;
+    this.out.textContent = this.visits[k].text;
   }
 }
 
@@ -154,32 +165,48 @@ class SgUpdate extends Figure {
 // A real lazy tree (range add, range sum). Each op records the nodes it visited,
 // where it parked a tag, and which tags it pushed down.
 const OPS = [['add', 2, 11, 3], ['sum', 0, 5], ['add', 6, 13, 1], ['sum', 8, 8]];
+// Frames for each operation: one per node visited (and one per tag pushed down),
+// each with a copy of the sums and tags at that moment, then a closing frame.
 function runLazy() {
-  const n = 16, t = sums(A), tag = [], snaps = [{ t: t.slice(), tag: [], seen: [], park: [], push: [], text: 'start: no tags' }];
-  for (const [kind, l, r, v] of OPS) {
-    const seen = [], park = [], push = [];
+  const n = 16, t = sums(A), tag = [];
+  return OPS.map(([kind, l, r, v]) => {
+    const frames = [], seen = [], park = [], push = [];
+    const shot = (cur, text) => frames.push({ t: t.slice(), tag: tag.slice(), seen: seen.slice(), park: park.slice(), push: push.slice(), cur, text });
     const apply = (i, lo, hi, x) => { t[i] += x * (hi - lo + 1); if (lo < hi) tag[i] = (tag[i] || 0) + x; };
-    const down = (i, lo, hi) => { if (tag[i]) { const m = (lo + hi) >> 1; push.push(i); apply(2 * i, lo, m, tag[i]); apply(2 * i + 1, m + 1, hi, tag[i]); tag[i] = 0; } };
     const go = (i, lo, hi) => {
       seen.push(i);
-      if (r < lo || hi < l) return 0;
-      if (l <= lo && hi <= r) { if (kind === 'add') { apply(i, lo, hi, v); park.push(i); return 0; } return t[i]; }
-      down(i, lo, hi); const m = (lo + hi) >> 1;
+      const rg = `[${lo}, ${hi}]`;
+      if (r < lo || hi < l) { shot(i, `node ${rg} misses [${l}, ${r}]: nothing to do here`); return 0; }
+      if (l <= lo && hi <= r) {
+        if (kind === 'add') {
+          apply(i, lo, hi, v); park.push(i);
+          shot(i, `node ${rg} lies inside: its sum grows by ${v} × ${hi - lo + 1} = ${v * (hi - lo + 1)}` + (lo < hi ? `, and it keeps a +${tag[i]} tag for its children instead of visiting them` : ''));
+          return 0;
+        }
+        shot(i, `node ${rg} lies inside: its sum ${t[i]} is already correct, use it`);
+        return t[i];
+      }
+      if (tag[i]) {
+        const m = (lo + hi) >> 1, x = tag[i];
+        apply(2 * i, lo, m, x); apply(2 * i + 1, m + 1, hi, x); tag[i] = 0; push.push(i);
+        shot(i, `node ${rg} is partly inside and has a +${x} tag: push it down first, so both children's sums catch up`);
+      } else shot(i, `node ${rg} is partly inside: go down to both children`);
+      const m = (lo + hi) >> 1;
       const s = go(2 * i, lo, m) + go(2 * i + 1, m + 1, hi);
       t[i] = t[2 * i] + t[2 * i + 1];
       return s;
     };
+    shot(0, kind === 'add' ? `add ${v} to every number in [${l}, ${r}]` : `sum of [${l}, ${r}]`);
     const ans = go(1, 0, n - 1);
-    const text = kind === 'add'
-      ? `add ${v} to [${l}, ${r}]: ${park.length} nodes take a +${v} tag, ${seen.length} visited`
-      : `sum [${l}, ${r}] = ${ans}: ${push.length} tag${push.length === 1 ? '' : 's'} pushed down on the way, ${seen.length} visited`;
-    snaps.push({ t: t.slice(), tag: tag.slice(), seen, park, push, text });
-  }
-  return snaps;
+    shot(0, kind === 'add'
+      ? `done: ${park.length} nodes took a +${v} tag and ${seen.length} were visited. On the way back up, each partly covered node recomputed its sum from its two children`
+      : `sum [${l}, ${r}] = ${ans}: ${push.length} tag${push.length === 1 ? '' : 's'} pushed down on the way, ${seen.length} nodes visited`);
+    return { kind, l, r, v, frames };
+  });
 }
 class SgLazy extends Figure {
   build() {
-    const svg = this.svgRoot(600, 320, 'A segment tree with lazy tags: a range add parks a tag on the few nodes covering the range, and a later query pushes a tag one level down only where it has to pass through');
+    const svg = this.svgRoot(600, 336, 'A segment tree with lazy tags, step by step: a range add parks a tag on the few nodes covering the range, and a later operation pushes a tag one level down only where it has to pass through');
     this.N = treeNodes(16, 20, 560, 56, 50);
     this.E = drawTree(svg, this.N, 30);
     this.tags = this.N.map((o) => {
@@ -190,26 +217,30 @@ class SgLazy extends Figure {
       return { g, t };
     });
     this.lab = S('text', { x: 20, y: 24, class: 'sl', 'font-size': 11 }, svg);
-    this.out = S('text', { x: 20, y: 312, class: 't2', 'font-size': 13 }, svg);
-    this.snaps = runLazy();
-    pills(this, this.snaps.map((_, i) => [i, i ? `step ${i}` : 'start']), 0, (v) => this.paint(v));
-    this.paint(0);
+    this.lines = [0, 1].map((i) => S('text', { x: 20, y: 310 + i * 17, class: 't2', 'font-size': 12.5 }, svg));
+    this.ops = runLazy();
+    pills(this, this.ops.map((o, i) => [i, o.kind === 'add' ? `add ${o.v} to [${o.l}, ${o.r}]` : `sum [${o.l}, ${o.r}]`]), 0, (v) => this.load(v));
+    this.step = stepper(this, (k) => this.paint(this.ops[this.op].frames[k]));
+    this.load(0);
   }
-  paint(k) {
-    const s = this.snaps[k];
+  load(i) { this.op = i; this.lab.textContent = `OPERATION ${i + 1} OF ${OPS.length} · EACH STARTS WHERE THE LAST ONE LEFT THE TREE`; this.step.set(this.ops[i].frames.length); }
+  paint(s) {
     this.E.forEach((e, i) => {
       if (!e) return;
       e.txt.textContent = s.t[i];
-      const parked = s.park.includes(i), seen = s.seen.includes(i);
-      attr(e.box, { class: parked ? 'f-green s-green' : s.push.includes(i) ? 'f-panel s-ochre' : seen ? 'f-panel s-ink' : 'f-panel s-rule' });
+      const parked = s.park.includes(i), seen = s.seen.includes(i), cur = i === s.cur;
+      attr(e.box, { class: (parked ? 'f-green ' : 'f-panel ') + (cur ? 's-ink' : parked ? 's-green' : s.push.includes(i) ? 's-ochre' : seen ? 's-ink3' : 's-rule'), 'stroke-width': cur ? 2.8 : 1.4 });
       attr(e.txt, { class: parked ? 'f-bg' : 't' });
-      op(e.g, k === 0 || seen ? 1 : 0.4);
+      op(e.g, !s.seen.length || seen ? 1 : 0.4);
       const tg = this.tags[i];
       op(tg.g, s.tag[i] ? 1 : 0); tg.t.textContent = s.tag[i] ? '+' + s.tag[i] : '';
     });
-    this.lab.textContent = k ? `STEP ${k} OF ${OPS.length}` : 'RANGE ADD AND RANGE SUM, WITH LAZY TAGS';
-    this.out.textContent = s.text;
+    const rows = wrap(s.text); this.lines.forEach((t, j) => { t.textContent = rows[j] || ''; });
   }
+}
+function wrap(text, max = 76) {
+  const out = ['']; text.split(' ').forEach((w) => { if ((out.at(-1) + ' ' + w).trim().length > max) out.push(w); else out[out.length - 1] = (out.at(-1) + ' ' + w).trim(); });
+  return out;
 }
 
 // ── fig 5 · the sum tree in prioritized experience replay ────────────────────

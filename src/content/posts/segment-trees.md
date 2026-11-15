@@ -44,7 +44,7 @@ A query for [l, r] starts at the root and asks three questions of each node it r
 <sg-query data-fig data-label="fig 2 · a range query">
 <p class="fallback">A segment tree over the same sixteen numbers, five levels from the root (79) to the leaves. For the query [3, 12] the walk uses four nodes whose ranges fit inside: the leaf at 3, the node for 4 to 7, the node for 8 to 11 and the leaf at 12. Their sums give 53. It visits 15 of the 31 nodes in total; nodes it never reaches are faded and nodes it reaches but that miss the range are dashed.</p>
 </sg-query>
-<figcaption><b>fig 2</b>Green nodes are the ones whose stored sum is used. Outlined nodes are split, dashed ones are visited but miss the range. Try a range that starts at 1 and ends at 14.<span class="m">Same seeded numbers as fig 1.</span></figcaption>
+<figcaption><b>fig 2</b>Green nodes are the ones whose stored sum is used. Outlined nodes are split, dashed ones are visited but miss the range. The figure opens on the whole walk; step back to replay it one node at a time, with the heavy outline on the node being visited. Try a range that starts at 1 and ends at 14.<span class="m">Same seeded numbers as fig 1.</span></figcaption>
 </figure>
 
 ```cpp
@@ -125,7 +125,7 @@ Now the update itself covers a range: add 3 to every number in [2, 11]. Walking 
 <sg-lazy data-fig data-label="fig 4 · lazy tags">
 <p class="fallback">Four operations on the sixteen numbers. Step 1, add 3 to [2, 11]: three nodes take a +3 tag (the node for 2 and 3, the node for 4 to 7 and the node for 8 to 11) and nine nodes are visited. Step 2, sum of [0, 5] = 42: the query passes through the node for 4 to 7, so its tag is pushed down one level to its two children; seven nodes visited. Step 3, add 1 to [6, 13]: three more tags, eleven nodes visited. Step 4, sum of [8, 8] = 8: two tags are pushed down on the way to that leaf.</p>
 </sg-lazy>
-<figcaption><b>fig 4</b>Pick a step. Green nodes take a new tag, ochre-outlined nodes push their tag down to their children, and the ochre badge shows what a node's children still owe. Sums in each node are always correct for its own range.<span class="m">A real lazy tree runs these four operations; the counts are computed.</span></figcaption>
+<figcaption><b>fig 4</b>Pick an operation, then step through it node by node. The heavy outline is the node being visited, green nodes take a new tag, ochre-outlined nodes push their tag down to their children, and the ochre badge shows what a node's children still owe. A node's sum is correct for its own range once the walk has passed back up through it.<span class="m">A real lazy tree runs these four operations; the counts are computed.</span></figcaption>
 </figure>
 
 ```cpp

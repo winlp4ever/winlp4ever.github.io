@@ -1,4 +1,4 @@
-import { S, H, attr, op, seg, lerp, inout, rng, tween, pills, entrance, tooltip, hit, Figure, define } from './core.js'
+import { S, H, attr, op, seg, lerp, inout, rng, tween, pills, stepper, entrance, tooltip, hit, Figure, define } from './core.js'
 
 // ── a real red-black tree (CLRS insert), logging every fix-up step ───────────
 // Nodes: { k, red, l, r, p }. Missing children are null and count as black.
@@ -17,24 +17,25 @@ function insert(T, k, log = null) { // log: an array to record the steps, or nul
   while (x) { y = x; x = k < x.k ? x.l : x.r; }
   let z = { k, red: true, l: null, r: null, p: y };
   if (!y) T.root = z; else if (k < y.k) y.l = z; else y.r = z;
-  log?.push({ kind: 'new', keys: [k] });
+  log?.push({ kind: 'new', keys: [k], k, p: y && y.k, bad: !!(y && y.red) });
   while (z.p && z.p.red) {
     const p = z.p, g = p.p, left = p === g.l, u = left ? g.r : g.l;
     if (u && u.red) { // case 1: red uncle, push the red up
       p.red = false; u.red = false; g.red = true;
-      log?.push({ kind: 'recolor', keys: [p.k, u.k, g.k], text: `uncle ${u.k} is red: recolor ${p.k}, ${u.k}, ${g.k} and move up to ${g.k}` });
+      log?.push({ kind: 'recolor', keys: [p.k, u.k, g.k], p: p.k, u: u.k, g: g.k, gp: g.p && g.p.k, bad: !!(g.p && g.p.red), text: `uncle ${u.k} is red: recolor ${p.k}, ${u.k}, ${g.k} and move up to ${g.k}` });
       z = g;
       continue;
     }
     if (z === (left ? p.r : p.l)) { // case 2: inner child, rotate it to the outside
-      log?.push({ kind: 'rotate', keys: [p.k, z.k], text: `${z.k} is an inner child: rotate ${left ? 'left' : 'right'} at ${p.k}` });
+      const zk = z.k;
       z = p; rotate(T, z, left ? 'left' : 'right');
+      log?.push({ kind: 'inner', keys: [p.k, zk], z: zk, p: p.k, dir: left ? 'left' : 'right', text: `${zk} is an inner child: rotate ${left ? 'left' : 'right'} at ${p.k}` });
     }
     const pp = z.p; // case 3: outer child, rotate the grandparent the other way
     pp.red = false; g.red = true; rotate(T, g, left ? 'right' : 'left');
-    log?.push({ kind: 'rotate', keys: [g.k, pp.k], text: `rotate ${left ? 'right' : 'left'} at ${g.k}, recolor ${pp.k} black and ${g.k} red` });
+    log?.push({ kind: 'outer', keys: [g.k, pp.k], g: g.k, pp: pp.k, z: z.k, dir: left ? 'right' : 'left', text: `rotate ${left ? 'right' : 'left'} at ${g.k}, recolor ${pp.k} black and ${g.k} red` });
   }
-  if (T.root.red) { T.root.red = false; log?.push({ kind: 'recolor', keys: [T.root.k], text: `root ${T.root.k} turns black` }); }
+  if (T.root.red) { T.root.red = false; log?.push({ kind: 'root', keys: [T.root.k], k: T.root.k, text: `root ${T.root.k} turns black` }); }
   return log;
 }
 const build = (keys) => { const T = { root: null }; keys.forEach((k) => insert(T, k)); return T; };
@@ -145,6 +146,166 @@ class RbRotate extends Figure {
   }
 }
 
+// ── deletion (CLRS fix-up, with null children). A node with two children takes
+// its successor's key, and the successor's node is removed instead. Every step is
+// logged with the "extra black" x (or its parent and side, when x is nil).
+const red = (n) => !!(n && n.red);
+function remove(T, k, log = []) {
+  let z = T.root;
+  while (z && z.k !== k) z = k < z.k ? z.l : z.r;
+  if (!z) return log;
+  if (z.l && z.r) { let y = z.r; while (y.l) y = y.l; log.push({ kind: 'succ', k, s: y.k }); z.k = y.k; z = y; }
+  const x = z.l || z.r, xp = z.p, left = xp ? xp.l === z : false;
+  if (!xp) T.root = x; else if (left) xp.l = x; else xp.r = x;
+  if (x) x.p = xp;
+  log.push({ kind: 'cut', k: z.k, wasRed: z.red, child: x && x.k, x, xp, left: !x && !z.red && xp ? left : null });
+  if (!z.red) fixup(T, x, xp, left, log);
+  return log;
+}
+function fixup(T, x, xp, left, log) {
+  const side = (L) => (L ? 'left' : 'right');
+  while (x !== T.root && !red(x)) {
+    if (x) { xp = x.p; left = x === xp.l; }
+    let w = left ? xp.r : xp.l;
+    if (red(w)) {
+      w.red = false; xp.red = true; rotate(T, xp, side(left));
+      log.push({ kind: 'c1', w: w.k, xp: xp.k, dir: side(left), x, xpN: xp, left }); w = left ? xp.r : xp.l;
+    }
+    const near = left ? w.l : w.r, far = left ? w.r : w.l;
+    if (!red(near) && !red(far)) {
+      w.red = true; x = xp;
+      log.push({ kind: 'c2', w: w.k, xp: xp.k, xpRed: xp.red, atRoot: xp === T.root, x });
+      continue;
+    }
+    if (!red(far)) {
+      near.red = false; w.red = true; rotate(T, w, side(!left));
+      log.push({ kind: 'c3', w: w.k, c: near.k, dir: side(!left), x, xpN: xp, left }); w = left ? xp.r : xp.l;
+    }
+    const f = left ? w.r : w.l;
+    w.red = xp.red; xp.red = false; f.red = false; rotate(T, xp, side(left));
+    log.push({ kind: 'c4', w: w.k, xp: xp.k, f: f.k, dir: side(left) });
+    x = T.root;
+  }
+  if (x && x.red) { x.red = false; log.push({ kind: 'end', x: x.k }); }
+}
+
+// ── figs 3 and 4 · one operation, step by step ───────────────────────────────
+// A frame is a copy of the tree, rings by key, an optional key waiting to go in
+// (ghost) and an optional extra black (on a node, or on a nil drawn for it).
+function copyTree(T, extra) {
+  const cp = (n) => n && { k: n.k, red: n.red, l: cp(n.l), r: cp(n.r) };
+  const root = cp(T.root);
+  if (extra && !extra.x && extra.xp && extra.left != null) { // put a nil leaf where the extra black sits
+    const find = (n) => (n.k === extra.xp.k ? n : find(extra.xp.k < n.k ? n.l : n.r));
+    const p = find(root), nil = { k: 'nil', nil: true, l: null, r: null };
+    if (extra.left) p.l = nil; else p.r = nil;
+  }
+  return root;
+}
+class Rec extends Array {
+  static get [Symbol.species]() { return Array; }
+  push(e) { return super.push({ ...e, root: copyTree(this.T, 'x' in e ? { x: e.x, xp: e.xpN || e.xp, left: e.left } : null) }); }
+}
+const CW2 = 18; // width of one in-order rank, so trees of any size share a scale
+function rbGeom(f) {
+  const L = layout({ root: f.root }, 0, 1, 0, 0), n = L.length, step = Math.min(38, 540 / Math.max(n - 1, 1));
+  const x0 = 300 - (step * (n - 1)) / 2, at = new Map();
+  L.forEach((o) => at.set(o.n.k, { x: x0 + o.i * step, y: 60 + o.d * 40, n: o.n }));
+  if (f.ghost && f.ghost.near != null) { const q = at.get(f.ghost.near); at.set(f.ghost.k, { x: q.x + (f.ghost.k < f.ghost.near ? -20 : 20), y: q.y + 34, ghost: true }); }
+  return at;
+}
+function drawRb(g, B, A = null, e = 1) {
+  g.replaceChildren();
+  const GB = rbGeom(B), GA = A && rbGeom(A);
+  const pos = (k) => { const b = GB.get(k), a = GA?.get(k) || b; return { x: lerp(a.x, b.x, e), y: lerp(a.y, b.y, e) }; };
+  GB.forEach((o, k) => [o.n?.l, o.n?.r].forEach((c) => { if (!c) return; const p = pos(k), q = pos(c.k); S('line', { x1: p.x, y1: p.y, x2: q.x, y2: q.y, class: 's-ink3', 'stroke-width': 1.2 }, g); }));
+  GA?.forEach((o, k) => { // removed this step: fade out where it was
+    if (GB.has(k) || o.ghost || o.n.nil) return;
+    const el = nodeEl(g, k); attr(el.g, { transform: `translate(${o.x} ${o.y})` }); paintNode(el, o.n.red); op(el.g, 1 - e);
+  });
+  const RING = { new: 's-green', bad: 's-ochre', touch: 's-ink' };
+  GB.forEach((o, k) => {
+    const p = pos(k), m = B.marks?.get(k);
+    if (o.n?.nil) {
+      const q = S('g', { transform: `translate(${p.x} ${p.y})` }, g);
+      S('rect', { x: -7, y: -7, width: 14, height: 14, rx: 2, class: 'f-ink s-ochre', 'stroke-width': 2.4 }, q);
+      S('text', { y: 20, class: 't3', 'font-size': 9.5, 'text-anchor': 'middle', text: 'nil' }, q);
+    } else {
+      const el = nodeEl(g, k); attr(el.g, { transform: `translate(${p.x} ${p.y})` });
+      const before = GA?.get(k)?.n, isRed = o.ghost ? true : e < 0.5 && before ? before.red : o.n.red;
+      paintNode(el, isRed, RING[m] || 's-bg');
+      if (m === 'touch') attr(el.c, { 'stroke-dasharray': '3 2.5' });
+      if (o.ghost) op(el.g, 0.75);
+    }
+    if (B.extra === k) S('text', { x: p.x + 17, y: p.y - 9, class: 'f-ochre', 'font-size': 10.5, 'font-weight': 700, text: '+black' }, g);
+  });
+}
+function wrapText(text, max = 76) {
+  const out = ['']; text.split(' ').forEach((w) => { if ((out.at(-1) + ' ' + w).trim().length > max) out.push(w); else out[out.length - 1] = (out.at(-1) + ' ' + w).trim(); });
+  return out;
+}
+function rbStepFigure(fig, svg, y) {
+  fig.g = S('g', {}, svg);
+  fig.lines = [0, 1, 2].map((i) => S('text', { x: 20, y: y + i * 17, class: 't2', 'font-size': 12.5 }, svg));
+  fig.step = stepper(fig, (i, from) => {
+    const B = fig.frames[i], A = from == null ? null : fig.frames[from];
+    const rows = wrapText(B.text); fig.lines.forEach((t, j) => { t.textContent = rows[j] || ''; });
+    if (A) tween(fig, (e) => drawRb(fig.g, B, A, e), 650); else drawRb(fig.g, B);
+  });
+}
+const ring = (pairs) => new Map(pairs.filter(([k]) => k != null));
+function pathTo(T, k) { const out = []; let n = T.root; while (n) { out.push(n.k); if (n.k === k) break; n = k < n.k ? n.l : n.r; } return out; }
+function insertFrames(keys, k) {
+  const T = build(keys), path = pathTo(T, k), near = path.at(-1);
+  const out = [{ root: copyTree(T), ghost: { k, near }, marks: ring(path.map((q) => [q, 'touch'])),
+    text: near == null ? `insert ${k} into the empty tree` : `insert ${k}: walk down as in a binary search tree, ${path.join(' → ')}, and hang it ${k < near ? 'left' : 'right'} of ${near}` }];
+  const rec = new Rec(); rec.T = T;
+  insert(T, k, rec);
+  rec.forEach((e) => {
+    let text, marks;
+    if (e.kind === 'new') {
+      text = `${k} goes in as a red leaf, so no path gains a black node (rule 5 holds). ` + (e.bad ? `But its parent ${e.p} is red too: two reds in a row break rule 4` : e.p == null ? 'It is the root' : `Its parent ${e.p} is black, so no rule breaks: done`);
+      marks = ring([[k, e.bad ? 'bad' : 'new'], [e.bad ? e.p : null, 'bad']]);
+    } else if (e.kind === 'recolor') {
+      text = `the uncle ${e.u} is red: make ${e.p} and ${e.u} black and ${e.g} red. Every path through ${e.g} keeps its black count. ` + (e.bad ? `${e.g}'s parent ${e.gp} is red, so the fix continues from ${e.g}` : `${e.g}'s parent is black or ${e.g} is the root, so the loop stops`);
+      marks = ring([[e.p, 'touch'], [e.u, 'touch'], [e.g, e.bad ? 'bad' : 'touch'], [e.bad ? e.gp : null, 'bad']]);
+    } else if (e.kind === 'inner') {
+      text = `the uncle is black and ${e.z} is an inner child: rotate ${e.dir} at ${e.p}. Now ${e.p} hangs below ${e.z} on the outside, still red under red`;
+      marks = ring([[e.z, 'bad'], [e.p, 'bad']]);
+    } else if (e.kind === 'outer') {
+      text = `the uncle is black and ${e.z} is an outer child: rotate ${e.dir} at ${e.g}, make ${e.pp} black and ${e.g} red. ${e.pp} now sits on top with two red children: done`;
+      marks = ring([[e.g, 'touch'], [e.pp, 'touch']]);
+    } else { text = `the root ${e.k} is red: make it black (rule 2). Every path gains one black node, so rule 5 still holds`; marks = ring([[e.k, 'touch']]); }
+    out.push({ root: e.root, text, marks });
+  });
+  return out;
+}
+function deleteFrames(T, k) {
+  const path = pathTo(T, k);
+  const out = [{ root: copyTree(T), marks: ring(path.map((q) => [q, 'touch'])), text: `delete ${k}: find it as in a binary search tree, ${path.join(' → ')}` }];
+  const rec = new Rec(); rec.T = T;
+  remove(T, k, rec);
+  rec.forEach((e) => {
+    let text, marks, extra = null;
+    if (e.kind === 'succ') { text = `${k} has two children. Its successor ${e.s}, the smallest key in its right subtree, has at most one child: ${e.s} will take ${k}'s place, and ${e.s}'s old node is the one removed`; marks = ring([[k, 'touch'], [e.s, 'touch']]); }
+    else if (e.kind === 'cut') {
+      const who = `the node that held ${e.k}`;
+      if (e.wasRed) text = `remove ${who}. It was red, so no path loses a black node: done`;
+      else if (e.child != null && !rec.some((q) => q.kind !== 'cut' && q.kind !== 'succ' && q.kind !== 'end')) text = `remove ${who}, a black node. Its child ${e.child} takes its place and carries the missing black`;
+      else text = `remove ${who}, a black node. Every path through it is now one black short. The ${e.child == null ? 'nil' : 'node'} that took its place carries an "extra black"`;
+      extra = e.wasRed ? null : e.child ?? 'nil';
+      marks = ring([[e.child, extra != null ? 'bad' : null]]);
+    } else if (e.kind === 'c1') { text = `case 1: x's sibling ${e.w} is red. Rotate ${e.dir} at ${e.xp} and swap the colours of ${e.w} and ${e.xp}. x now has a black sibling`; marks = ring([[e.w, 'touch'], [e.xp, 'touch']]); extra = e.x ? e.x.k : 'nil'; }
+    else if (e.kind === 'c2') { text = `case 2: sibling ${e.w} is black with two black children. Make ${e.w} red, which takes a black off its side too, and move the extra black up to ${e.xp}` + (e.xpRed ? `. ${e.xp} is red, so it absorbs it next` : e.atRoot ? `, the root, where it disappears` : `, which is black, so the fix continues there`); marks = ring([[e.w, 'touch'], [e.xp, 'bad']]); extra = e.xp; }
+    else if (e.kind === 'c3') { text = `case 3: sibling ${e.w} is black, its near child ${e.c} red and its far child black. Rotate ${e.dir} at ${e.w} and swap the colours of ${e.w} and ${e.c}. Now the far child is red: case 4`; marks = ring([[e.w, 'touch'], [e.c, 'touch']]); extra = e.x ? e.x.k : 'nil'; }
+    else if (e.kind === 'c4') { text = `case 4: sibling ${e.w} is black with a red far child ${e.f}. Rotate ${e.dir} at ${e.xp}, give ${e.w} the colour of ${e.xp}, and make ${e.xp} and ${e.f} black. The extra black is absorbed: done`; marks = ring([[e.w, 'touch'], [e.xp, 'touch'], [e.f, 'touch']]); }
+    else { text = `${e.x} carries the extra black and is red: make it black. The black count is back on every path: done`; marks = ring([[e.x, 'touch']]); }
+    if (extra != null && extra !== 'nil') marks.set(extra, 'bad');
+    out.push({ root: e.root, text, marks, extra });
+  });
+  return out;
+}
+
 // ── fig 3 · insert, step by step ────────────────────────────────────────────
 const SEQ = {
   sorted: Array.from({ length: 15 }, (_, i) => i + 1),
@@ -152,39 +313,44 @@ const SEQ = {
 };
 class RbInsert extends Figure {
   build() {
-    const svg = this.svgRoot(600, 350, 'A red-black tree after each insertion, with the fix-up steps of the last insert listed and the touched nodes outlined');
-    this.svg = svg; this.layer = S('g', {}, svg);
+    const svg = this.svgRoot(600, 340, 'One insertion into a red-black tree, step by step: the new key goes in as a red leaf, then the fix-up recolours or rotates until no red node has a red parent');
     this.head = S('text', { x: 20, y: 24, class: 'sl', 'font-size': 11 }, svg);
-    this.steps = [0, 1, 2, 3, 4].map((i) => S('text', { x: 20, y: 274 + i * 17, class: 't2', 'font-size': 12.5 }, svg));
     this.seq = 'sorted'; this.n = 8;
-    const bar = pills(this, [['sorted', 'keys 1, 2, 3, …'], ['random', 'random order']], 'sorted', (v) => { this.seq = v; this.paint(); });
+    const bar = pills(this, [['sorted', 'keys 1, 2, 3, …'], ['random', 'random order']], 'sorted', (v) => { this.seq = v; this.load(); });
     const lab = H('label', { class: 'pill', text: 'keys ' }, bar);
     this.out = H('span', { text: '8' }, lab);
     const s = H('input', { type: 'range', min: 1, max: 15, value: 8, 'aria-label': 'number of keys inserted' }, bar);
-    s.oninput = () => { this.n = +s.value; this.paint(); };
-    this.paint();
+    s.oninput = () => { this.n = +s.value; this.load(); };
+    rbStepFigure(this, svg, 288);
+    this.load();
   }
-  paint() {
-    const keys = SEQ[this.seq].slice(0, this.n), T = build(keys.slice(0, -1)), log = insert(T, keys.at(-1), []);
+  load() {
+    const keys = SEQ[this.seq].slice(0, this.n), T = build(keys);
     this.out.textContent = this.n;
-    const L = layout(T, 30, 540, 56, 38), at = new Map(L.map((o) => [o.n, o]));
-    const touched = new Set(log.flatMap((s) => s.keys));
-    this.layer.replaceChildren();
-    L.forEach((o) => { if (o.n.p) { const p = at.get(o.n.p); S('line', { x1: p.x, y1: p.y, x2: o.x, y2: o.y, class: 's-ink3', 'stroke-width': 1.2 }, this.layer); } });
-    L.forEach((o) => {
-      const e = nodeEl(this.layer, o.n.k);
-      attr(e.g, { transform: `translate(${o.x} ${o.y})` });
-      const isNew = o.n.k === keys.at(-1), hit = !isNew && touched.has(o.n.k);
-      paintNode(e, o.n.red, isNew ? 's-green' : hit ? 's-ink' : 's-bg');
-      if (hit) attr(e.c, { 'stroke-dasharray': '3 2.5' });
-    });
+    this.frames = insertFrames(keys.slice(0, -1), keys.at(-1));
     const h = height(T.root), bound = 2 * Math.log2(this.n + 1);
-    this.head.textContent = `${this.n} KEYS · HEIGHT ${h} · BOUND 2·LOG2(N+1) = ${bound.toFixed(1)} · PLAIN BST: ${this.seq === 'sorted' ? this.n : height(plainBst(keys))}`;
-    const lines = log.filter((s) => s.text).map((s) => s.text);
-    const all = [`insert ${keys.at(-1)} as a red leaf${lines.length ? '' : ': its parent is black, done'}`, ...lines];
-    // one step per row; 15 keys never need more than 5, but fold the middle just in case
-    const rows = all.length <= 5 ? all : [...all.slice(0, 3), `… ${all.length - 4} more steps`, all.at(-1)];
-    this.steps.forEach((t, i) => { t.textContent = rows[i] ? (i ? '→ ' : '') + rows[i] : ''; });
+    this.head.textContent = `AFTER ${this.n} KEYS · HEIGHT ${h} · BOUND 2·LOG2(N+1) = ${bound.toFixed(1)} · PLAIN BST: ${this.seq === 'sorted' ? this.n : height(plainBst(keys))}`;
+    this.step.set(this.frames.length);
+  }
+}
+
+// ── fig 4 · delete, step by step ────────────────────────────────────────────
+// Five deletions from a twelve-key tree, picked so that between them every case runs.
+const RBD0 = [45, 40, 20, 30, 25, 5, 60, 15, 50, 55, 10, 35], RBDELS = [30, 25, 45, 60, 50];
+class RbDelete extends Figure {
+  build() {
+    const svg = this.svgRoot(600, 340, 'Deletions from a red-black tree, step by step: removing a black node leaves an extra black, which the fix-up pushes up or absorbs with recolourings and rotations');
+    this.head = S('text', { x: 20, y: 24, class: 'sl', 'font-size': 11 }, svg);
+    const T = build(RBD0);
+    this.ops = RBDELS.map((k) => ({ k, frames: deleteFrames(T, k) }));
+    pills(this, this.ops.map((o, i) => [i, `delete ${o.k}`]), 0, (v) => this.load(v));
+    rbStepFigure(this, svg, 288);
+    this.load(0);
+  }
+  load(i) {
+    this.frames = this.ops[i].frames;
+    this.head.textContent = `DELETION ${i + 1} OF ${RBDELS.length} · EACH STARTS FROM THE TREE THE LAST ONE LEFT`;
+    this.step.set(this.frames.length);
   }
 }
 function plainBst(keys) {
@@ -193,7 +359,7 @@ function plainBst(keys) {
   return T.root;
 }
 
-// ── fig 4 · measured height and rotations ────────────────────────────────────
+// ── fig 5 · measured height and rotations ────────────────────────────────────
 // Real inserts of n keys, sorted or shuffled (seeded), for n = 2^1 … 2^14.
 const NS = Array.from({ length: 14 }, (_, i) => 2 ** (i + 1));
 function measure(order) {
@@ -254,4 +420,4 @@ class RbHeight extends Figure {
   }
 }
 
-define({ 'rb-234': Rb234, 'rb-rotate': RbRotate, 'rb-insert': RbInsert, 'rb-height': RbHeight });
+define({ 'rb-234': Rb234, 'rb-rotate': RbRotate, 'rb-insert': RbInsert, 'rb-delete': RbDelete, 'rb-height': RbHeight });
