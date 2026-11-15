@@ -5,10 +5,11 @@ import { S, H, attr, rng, pills, entrance, Figure, define } from './core.js'
 // Every step is logged so the figures can show what happened.
 const node = (keys = [], kids = null) => ({ keys, kids });
 const leaf = (n) => !n.kids;
+const childIdx = (n, k) => { let i = 0; while (i < n.keys.length && n.keys[i] < k) i++; return i; }; // first key ≥ k
 function insert(T, k, log = null) {
   const path = []; let n = T.root, i;
   while (true) {
-    i = 0; while (i < n.keys.length && n.keys[i] < k) i++;
+    i = childIdx(n, k);
     if (leaf(n)) break;
     path.push([n, i]); n = n.kids[i];
   }
@@ -34,7 +35,7 @@ function insert(T, k, log = null) {
 function remove(T, k, log = []) {
   const path = []; let n = T.root, i;
   while (true) {
-    i = 0; while (i < n.keys.length && n.keys[i] < k) i++;
+    i = childIdx(n, k);
     if (i < n.keys.length && n.keys[i] === k) break;
     if (leaf(n)) { log.push({ kind: 'none', text: `${k} is not in the tree` }); return log; }
     path.push([n, i]); n = n.kids[i];
@@ -105,7 +106,71 @@ function drawTree(g, T, L, mark = new Map()) {
   }));
 }
 
-// ── fig 1 · how tall the tree gets ───────────────────────────────────────────
+// ── fig 1 · the same keys in a binary tree and in a B-tree ──────────────────
+// Fifteen keys, 5 … 75. The binary tree is the balanced one; the B-tree has t = 2.
+const WHY = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75];
+const WHY_B = { t: 2, root: node([20, 40, 60], [10, 30, 50, 70].map((m) => node([m - 5, m, m + 5]))) };
+const WHY_RANGES = ['< 20', '20 to 40', '40 to 60', '> 60'];
+class BtWhy extends Figure {
+  build() {
+    const svg = this.svgRoot(600, 392, 'The same fifteen keys stored as a binary search tree, four levels deep, and as a B-tree with up to three keys per node, two levels deep; a search reads one node per level');
+    S('text', { x: 20, y: 24, class: 'sl', 'font-size': 11, text: 'BINARY SEARCH TREE · 1 KEY PER NODE · 4 LEVELS' }, svg);
+    this.readsA = S('text', { x: 580, y: 24, class: 't', 'font-size': 12.5, 'text-anchor': 'end' }, svg);
+    this.gA = S('g', {}, svg);
+    this.stepA = S('text', { x: 20, y: 192, class: 't2', 'font-size': 12.5 }, svg);
+    S('line', { x1: 20, x2: 580, y1: 210, y2: 210, class: 's-rule', 'stroke-width': 1 }, svg);
+    S('text', { x: 20, y: 236, class: 'sl', 'font-size': 11, text: 'B-TREE, t = 2 · UP TO 3 KEYS PER NODE · 2 LEVELS' }, svg);
+    this.readsB = S('text', { x: 580, y: 236, class: 't', 'font-size': 12.5, 'text-anchor': 'end' }, svg);
+    this.gB = S('g', {}, svg);
+    this.stepB = S('text', { x: 20, y: 378, class: 't2', 'font-size': 12.5 }, svg);
+    // both trees are fixed: lay them out once
+    this.bst = [];
+    const place = (lo, hi, d) => { // a node over WHY[lo..hi)
+      if (lo >= hi) return null;
+      const m = (lo + hi) >> 1, n = { key: WHY[m], x: 55 + (m / 2) * 70, y: 44 + d * 36 };
+      n.l = place(lo, m, d + 1); n.r = place(m + 1, hi, d + 1); this.bst.push(n); return n;
+    };
+    this.bstRoot = place(0, WHY.length, 0);
+    this.L = layout(WHY_B, 20, 560, 256, 56);
+    this.k = 35;
+    pills(this, [[35, 'find 35'], [70, 'find 70'], [5, 'find 5'], [42, 'find 42 (missing)']], 35, (v) => { this.k = v; this.paint(); });
+    this.paint();
+  }
+  paint() {
+    const k = this.k;
+    // binary tree: node i of level d sits over its slice of the sorted keys
+    const g = this.gA; g.replaceChildren();
+    const nodes = this.bst, path = []; let c = this.bstRoot;
+    while (c) { path.push(c); if (c.key === k) break; c = k < c.key ? c.l : c.r; }
+    const on = new Set(path);
+    nodes.forEach((n) => [n.l, n.r].forEach((ch) => ch && S('line', { x1: n.x, y1: n.y + 10, x2: ch.x, y2: ch.y - 10, class: on.has(n) && on.has(ch) ? 's-green' : 's-ink3', 'stroke-width': on.has(n) && on.has(ch) ? 2 : 1.2 }, g)));
+    nodes.forEach((n) => {
+      S('rect', { x: n.x - 13, y: n.y - 10, width: 26, height: 20, rx: 4, class: on.has(n) ? 'f-panel s-green' : 'f-panel s-ink3', 'stroke-width': on.has(n) ? 2 : 1.2 }, g);
+      S('text', { x: n.x, y: n.y + 4, class: 't', 'font-size': 10.5, 'text-anchor': 'middle', 'font-weight': n.key === k ? 700 : 400, text: n.key }, g);
+    });
+    const found = path.at(-1).key === k;
+    this.readsA.textContent = `${path.length} page read${path.length > 1 ? 's' : ''}`;
+    this.stepA.textContent = path.map((n) => n.key).join(' → ') + (found ? `: found ${k}` : `: ${k} is not there`);
+    // B-tree
+    const L = this.L, r = WHY_B.root, i = childIdx(r, k);
+    const hitRoot = r.keys[i] === k, leafN = hitRoot ? null : r.kids[i];
+    const mark = new Map([[r, 'main']]); if (leafN) mark.set(leafN, 'main');
+    drawTree(this.gB, WHY_B, L, mark);
+    const p = L.pos.get(r);
+    r.kids.forEach((ch, j) => {
+      const q = L.pos.get(ch), x1 = p.x + j * CELL, x2 = q.x + q.w / 2;
+      if (ch === leafN) S('line', { x1, y1: p.y + 20, x2, y2: q.y, class: 's-green', 'stroke-width': 2 }, this.gB);
+      S('text', { x: x2, y: q.y + 36, class: ch === leafN ? 't' : 't3', 'font-size': 10.5, 'text-anchor': 'middle', text: 'keys ' + WHY_RANGES[j] }, this.gB);
+    });
+    const reads = leafN ? 2 : 1;
+    this.readsB.textContent = `${reads} page read${reads > 1 ? 's' : ''}`;
+    const span = i === 0 ? `${k} < ${r.keys[0]}` : i === r.keys.length ? `${k} > ${r.keys.at(-1)}` : `${k} is between ${r.keys[i - 1]} and ${r.keys[i]}`;
+    this.stepB.textContent = hitRoot ? `[${r.keys.join(' ')}]: found ${k}`
+      : `[${r.keys.join(' ')}]: ${span}, child ${i + 1} → [${leafN.keys.join(' ')}]: ` + (leafN.keys.includes(k) ? `found ${k}` : `${k} is not there`);
+  }
+}
+
+// ── fig 2 · how tall the tree gets ───────────────────────────────────────────
 const FAN = [2, 16, 128, 512];
 class BtHeight extends Figure {
   build() {
@@ -137,7 +202,7 @@ class BtHeight extends Figure {
   }
 }
 
-// ── fig 2 · inserting, with splits ───────────────────────────────────────────
+// ── fig 3 · inserting, with splits ───────────────────────────────────────────
 // Multiples of 3 in a fixed shuffled order (written out, so every browser gets the same tree).
 const SEQ = [12, 3, 27, 6, 42, 48, 24, 63, 15, 60, 33, 57, 51, 36, 69, 45, 39, 21, 18, 9, 72, 54, 30, 66];
 class BtInsert extends Figure {
@@ -164,7 +229,7 @@ class BtInsert extends Figure {
     splits.forEach((s) => s.made.forEach((m) => mark.set(m, 'side')));
     if (splits.length) mark.set(splits.at(-1).node, 'main');
     let x = T.root; const k = keys.at(-1);
-    while (x.kids) { let i = 0; while (i < x.keys.length && x.keys[i] < k) i++; if (x.keys[i] === k) break; x = x.kids[i]; }
+    while (x.kids) { const i = childIdx(x, k); if (x.keys[i] === k) break; x = x.kids[i]; }
     mark.set(x, 'main');
     drawTree(this.g, T, L, mark);
     this.head.textContent = `${this.n} KEYS · t = ${this.t} · ${2 * this.t - 1} KEYS MAX PER NODE · ${depth(T)} LEVELS`;
@@ -173,7 +238,7 @@ class BtInsert extends Figure {
   }
 }
 
-// ── fig 3 · deleting, with borrows and merges ────────────────────────────────
+// ── fig 4 · deleting, with borrows and merges ────────────────────────────────
 const DEL0 = [10, 20, 30, 40, 50, 60, 70, 80, 90, 5, 15, 25, 35, 45];
 const DELS = [90, 30, 35, 60, 40, 80];
 function delSnaps() {
@@ -210,7 +275,7 @@ class BtDelete extends Figure {
   }
 }
 
-// ── fig 4 · range scans in a B+ tree ─────────────────────────────────────────
+// ── fig 5 · range scans in a B+ tree ─────────────────────────────────────────
 // Keys 1..48 bulk-loaded into leaves of 4, internal nodes of up to 4 children.
 // Leaves hold every key and link to their right neighbour.
 const LEAF = Array.from({ length: 12 }, (_, i) => [1, 2, 3, 4].map((j) => i * 4 + j));
@@ -249,7 +314,7 @@ class BtRange extends Figure {
   }
 }
 
-// ── fig 5 · how full the pages end up ───────────────────────────────────────
+// ── fig 6 · how full the pages end up ───────────────────────────────────────
 // Leaves only (internal nodes don't change the picture): capacity C keys per leaf.
 // 'half' splits a full leaf 50/50; 'right' splits the rightmost leaf so the left
 // page keeps 90% (PostgreSQL's default leaf fillfactor for rightmost splits).
@@ -286,4 +351,4 @@ class BtFill extends Figure {
   }
 }
 
-define({ 'bt-height': BtHeight, 'bt-insert': BtInsert, 'bt-delete': BtDelete, 'bt-range': BtRange, 'bt-fill': BtFill });
+define({ 'bt-why': BtWhy, 'bt-height': BtHeight, 'bt-insert': BtInsert, 'bt-delete': BtDelete, 'bt-range': BtRange, 'bt-fill': BtFill });
