@@ -40,7 +40,7 @@ $$
 
 For a million keys that's at most 40 levels, against a million for the sorted plain BST.
 
-**Complexity of search.** A search is the plain BST search and never looks at the colours. It compares against one node per level, so at most $$2\log_2(n+1)$$ comparisons, O(log n), with O(1) extra memory. The colour costs one bit per node, often hidden in a spare bit of a pointer, so the tree takes O(n) memory like any BST.
+Search is the plain BST search and never looks at the colours. It compares against one node per level, so at most $$2\log_2(n+1)$$ comparisons, O(log n), with O(1) extra memory. The colour costs one bit per node, often hidden in a spare bit of a pointer, so the tree takes O(n) memory like any BST.
 
 ## a red-black tree is a 2-3-4 tree
 
@@ -85,7 +85,7 @@ void rotate_left(Node*& root, Node* x) {
 // rotate_right is the mirror image: swap every l and r
 ```
 
-**Complexity.** A rotation is O(1): it changes three links and never breaks the search order. Insertion uses at most two of them and deletion at most three.
+A rotation is O(1): it moves three parent-child links (six pointer writes, counting the parent pointers) and never breaks the search order. Insertion uses at most two of them and deletion at most three.
 
 ## insertion
 
@@ -128,7 +128,7 @@ void insert_fixup(Node*& root, Node* z) {
 <figcaption><b>fig 3</b>Drag the slider to choose how many keys go in, then step through the last insertion: the walk down, the new red leaf, and each recolouring or rotation the code above makes. An ochre ring marks two reds in a row, a green ring a new key that broke nothing, a dashed ring the nodes a step recoloured or rotated.<span class="m">The figure runs the same insert as the code; the random order is seeded.</span></figcaption>
 </figure>
 
-**Complexity.** An insertion takes O(log n) time in the worst case. The walk down to the new leaf is O(log n), by the height bound. The fix-up can climb O(log n) levels through the red-uncle case, recolouring three nodes each time, but each rotation case ends it, so an insertion does **at most two rotations**. Over a sequence of operations the recolouring is O(1) amortized, a result of Tarjan's<sup><a href="#src-6">6</a></sup><sup><a href="#src-7">7</a></sup>. The fix-up needs O(1) extra memory, since it follows parent pointers instead of a stack. Rotations are the expensive part in practice (they move pointers that other code may be holding, and in augmented trees they force recomputation), so a constant bound on them matters.
+An insertion takes O(log n) time in the worst case. The walk down to the new leaf is O(log n), by the height bound. The fix-up can climb O(log n) levels through the red-uncle case, recolouring three nodes each time, but each rotation case ends it, so an insertion does **at most two rotations**. Over a sequence of operations the recolouring is O(1) amortized, a result of Tarjan's<sup><a href="#src-6">6</a></sup><sup><a href="#src-7">7</a></sup>. The fix-up needs O(1) extra memory, since it follows parent pointers instead of a stack. Rotations are the expensive part in practice (they move pointers that other code may be holding, and in augmented trees they force recomputation), so a constant bound on them matters.
 
 Watch the sorted sequence in fig 3, the input that turns a plain BST into a list. Every insertion lands at the right end and the outer-child case keeps firing on the right spine. 15 keys take 6 levels, against 15 for the plain BST and 4 for a perfectly balanced tree.
 
@@ -148,7 +148,7 @@ Deletion is where most people give up on implementing red-black trees, and the c
 <figcaption><b>fig 4</b>Pick a deletion, then step through it. An ochre ring marks the node carrying the extra black (a nil square when the extra black sits on an empty child), a dashed ring marks nodes the step recoloured or rotated.<span class="m">The figure runs CLRS's fix-up on a real tree; the five deletions were picked by a search so that between them every case runs.</span></figcaption>
 </figure>
 
-**Complexity.** A deletion takes O(log n) time in the worst case. Finding the key and its successor is one walk down, O(log n). In the fix-up, case 2 can climb one level at a time up to the root, O(log n) recolourings. Cases 1, 3 and 4 end the loop after a constant number of steps (case 1 leads to case 2 with a red parent, which stops, or to case 3 or 4), so a deletion does **at most three rotations**<sup><a href="#src-1">1</a></sup><sup><a href="#src-8">8</a></sup>. Like insertion, it needs O(1) extra memory. Exercise P2 below walks through a full sequence by hand.
+A deletion takes O(log n) time in the worst case. Finding the key and its successor is one walk down, O(log n). In the fix-up, case 2 can climb one level at a time up to the root, O(log n) recolourings. Cases 1, 3 and 4 end the loop after a constant number of steps (case 1 leads to case 2 with a red parent, which stops, or to case 3 or 4), so a deletion does **at most three rotations**<sup><a href="#src-1">1</a></sup><sup><a href="#src-8">8</a></sup>. Like insertion, it needs O(1) extra memory. Exercise P2 below walks through a full sequence by hand.
 
 ## measured
 
