@@ -1,4 +1,4 @@
-import { S, H, attr, op, seg, lerp, inout, rng, tween, pills, stepper, entrance, tooltip, hit, Figure, define } from './core.js'
+import { S, H, attr, op, seg, lerp, inout, rng, tween, pills, stepFigure, entrance, tooltip, hit, Figure, define } from './core.js'
 
 // ── a real red-black tree (CLRS insert), logging every fix-up step ───────────
 // Nodes: { k, red, l, r, p }. Missing children are null and count as black.
@@ -207,11 +207,16 @@ class Rec extends Array {
   push(e) { return super.push({ ...e, root: copyTree(this.T, 'x' in e ? { x: e.x, xp: e.xpN || e.xp, left: e.left } : null) }); }
 }
 const CW2 = 18; // width of one in-order rank, so trees of any size share a scale
+const RB_GEOM = new WeakMap(); // a frame's layout never changes, so work it out once
 function rbGeom(f) {
+  if (RB_GEOM.has(f)) return RB_GEOM.get(f);
   const L = layout({ root: f.root }, 0, 1, 0, 0), n = L.length, step = Math.min(38, 540 / Math.max(n - 1, 1));
+  // levels share the space above the step text (y 288), the ghost one level below its node
+  const deep = Math.max(0, ...L.map((o) => o.d)) + (f.ghost ? 1 : 0), dy = Math.min(40, 200 / Math.max(deep, 1));
   const x0 = 300 - (step * (n - 1)) / 2, at = new Map();
-  L.forEach((o) => at.set(o.n.k, { x: x0 + o.i * step, y: 60 + o.d * 40, n: o.n }));
-  if (f.ghost && f.ghost.near != null) { const q = at.get(f.ghost.near); at.set(f.ghost.k, { x: q.x + (f.ghost.k < f.ghost.near ? -20 : 20), y: q.y + 34, ghost: true }); }
+  L.forEach((o) => at.set(o.n.k, { x: x0 + o.i * step, y: 60 + o.d * dy, n: o.n }));
+  if (f.ghost && f.ghost.near != null) { const q = at.get(f.ghost.near); at.set(f.ghost.k, { x: q.x + (f.ghost.k < f.ghost.near ? -20 : 20), y: q.y + dy * 0.85, ghost: true }); }
+  RB_GEOM.set(f, at);
   return at;
 }
 function drawRb(g, B, A = null, e = 1) {
@@ -238,19 +243,6 @@ function drawRb(g, B, A = null, e = 1) {
       if (o.ghost) op(el.g, 0.75);
     }
     if (B.extra === k) S('text', { x: p.x + 17, y: p.y - 9, class: 'f-ochre', 'font-size': 10.5, 'font-weight': 700, text: '+black' }, g);
-  });
-}
-function wrapText(text, max = 76) {
-  const out = ['']; text.split(' ').forEach((w) => { if ((out.at(-1) + ' ' + w).trim().length > max) out.push(w); else out[out.length - 1] = (out.at(-1) + ' ' + w).trim(); });
-  return out;
-}
-function rbStepFigure(fig, svg, y) {
-  fig.g = S('g', {}, svg);
-  fig.lines = [0, 1, 2].map((i) => S('text', { x: 20, y: y + i * 17, class: 't2', 'font-size': 12.5 }, svg));
-  fig.step = stepper(fig, (i, from) => {
-    const B = fig.frames[i], A = from == null ? null : fig.frames[from];
-    const rows = wrapText(B.text); fig.lines.forEach((t, j) => { t.textContent = rows[j] || ''; });
-    if (A) tween(fig, (e) => drawRb(fig.g, B, A, e), 650); else drawRb(fig.g, B);
   });
 }
 const ring = (pairs) => new Map(pairs.filter(([k]) => k != null));
@@ -295,10 +287,10 @@ function deleteFrames(T, k) {
       else text = `remove ${who}, a black node. Every path through it is now one black short. The ${e.child == null ? 'nil' : 'node'} that took its place carries an "extra black"`;
       extra = e.wasRed ? null : e.child ?? 'nil';
       marks = ring([[e.child, extra != null ? 'bad' : null]]);
-    } else if (e.kind === 'c1') { text = `case 1: x's sibling ${e.w} is red. Rotate ${e.dir} at ${e.xp} and swap the colours of ${e.w} and ${e.xp}. x now has a black sibling`; marks = ring([[e.w, 'touch'], [e.xp, 'touch']]); extra = e.x ? e.x.k : 'nil'; }
-    else if (e.kind === 'c2') { text = `case 2: sibling ${e.w} is black with two black children. Make ${e.w} red, which takes a black off its side too, and move the extra black up to ${e.xp}` + (e.xpRed ? `. ${e.xp} is red, so it absorbs it next` : e.atRoot ? `, the root, where it disappears` : `, which is black, so the fix continues there`); marks = ring([[e.w, 'touch'], [e.xp, 'bad']]); extra = e.xp; }
-    else if (e.kind === 'c3') { text = `case 3: sibling ${e.w} is black, its near child ${e.c} red and its far child black. Rotate ${e.dir} at ${e.w} and swap the colours of ${e.w} and ${e.c}. Now the far child is red: case 4`; marks = ring([[e.w, 'touch'], [e.c, 'touch']]); extra = e.x ? e.x.k : 'nil'; }
-    else if (e.kind === 'c4') { text = `case 4: sibling ${e.w} is black with a red far child ${e.f}. Rotate ${e.dir} at ${e.xp}, give ${e.w} the colour of ${e.xp}, and make ${e.xp} and ${e.f} black. The extra black is absorbed: done`; marks = ring([[e.w, 'touch'], [e.xp, 'touch'], [e.f, 'touch']]); }
+    } else if (e.kind === 'c1') { text = `case 1: the extra black's sibling ${e.w} is red. Rotate ${e.dir} at ${e.xp} and swap the colours of ${e.w} and ${e.xp}. The extra black now has a black sibling`; marks = ring([[e.w, 'touch'], [e.xp, 'touch']]); extra = e.x ? e.x.k : 'nil'; }
+    else if (e.kind === 'c2') { text = `case 2: the sibling ${e.w} is black with two black children. Make ${e.w} red, which takes a black off its side too, and move the extra black up to ${e.xp}` + (e.xpRed ? `. ${e.xp} is red, so it absorbs it next` : e.atRoot ? `, the root, where it disappears` : `, which is black, so the fix continues there`); marks = ring([[e.w, 'touch'], [e.xp, 'bad']]); extra = e.xp; }
+    else if (e.kind === 'c3') { text = `case 3: the sibling ${e.w} is black, its near child ${e.c} red and its far child black. Rotate ${e.dir} at ${e.w} and swap the colours of ${e.w} and ${e.c}. Now the far child is red: case 4`; marks = ring([[e.w, 'touch'], [e.c, 'touch']]); extra = e.x ? e.x.k : 'nil'; }
+    else if (e.kind === 'c4') { text = `case 4: the sibling ${e.w} is black with a red far child ${e.f}. Rotate ${e.dir} at ${e.xp}, give ${e.w} the colour of ${e.xp}, and make ${e.xp} and ${e.f} black. The extra black is absorbed: done`; marks = ring([[e.w, 'touch'], [e.xp, 'touch'], [e.f, 'touch']]); }
     else { text = `${e.x} carries the extra black and is red: make it black. The black count is back on every path: done`; marks = ring([[e.x, 'touch']]); }
     if (extra != null && extra !== 'nil') marks.set(extra, 'bad');
     out.push({ root: e.root, text, marks, extra });
@@ -321,7 +313,7 @@ class RbInsert extends Figure {
     this.out = H('span', { text: '8' }, lab);
     const s = H('input', { type: 'range', min: 1, max: 15, value: 8, 'aria-label': 'number of keys inserted' }, bar);
     s.oninput = () => { this.n = +s.value; this.load(); };
-    rbStepFigure(this, svg, 288);
+    stepFigure(this, svg, 288, drawRb);
     this.load();
   }
   load() {
@@ -344,7 +336,7 @@ class RbDelete extends Figure {
     const T = build(RBD0);
     this.ops = RBDELS.map((k) => ({ k, frames: deleteFrames(T, k) }));
     pills(this, this.ops.map((o, i) => [i, `delete ${o.k}`]), 0, (v) => this.load(v));
-    rbStepFigure(this, svg, 288);
+    stepFigure(this, svg, 288, drawRb);
     this.load(0);
   }
   load(i) {

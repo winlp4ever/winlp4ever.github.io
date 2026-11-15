@@ -1,4 +1,4 @@
-import { S, H, attr, op, lerp, rng, pills, stepper, tween, entrance, Figure, define } from './core.js'
+import { S, H, attr, op, lerp, rng, pills, stepFigure, entrance, Figure, define } from './core.js'
 
 // ── a real B-tree with minimum degree t (CLRS): every node but the root holds
 // t−1 … 2t−1 keys. Insert splits bottom-up; delete borrows or merges bottom-up.
@@ -76,7 +76,6 @@ function remove(T, k, log = []) {
   return log;
 }
 const build = (t, keys) => { const T = { t, root: node() }; keys.forEach((k) => insert(T, k)); return T; };
-const depth = (T) => { let d = 1, n = T.root; while (n.kids) { d++; n = n.kids[0]; } return d; };
 
 // Lay out a tree: leaves left to right, parents centred over their children.
 const CELL = 22;
@@ -228,7 +227,8 @@ function walkFrames(T, k, find, lead) {
     const i = childIdx(n, k), here = n.keys[i] === k;
     trail.push(n);
     let text;
-    if (find && here) text = `${keyList(n)} holds ${k}, ${n.kids ? 'in an inner node' : 'in a leaf'}`;
+    if (!n.keys.length) text = `the tree is empty: ${k} becomes its only key`;
+    else if (find && here) text = `${keyList(n)} holds ${k}, ${n.kids ? 'in an inner node' : 'in a leaf'}`;
     else if (!n.kids) text = `${keyList(n)} is a leaf: ${k} goes ${i === 0 ? `before ${n.keys[0]}` : i === n.keys.length ? `after ${n.keys.at(-1)}` : `between ${n.keys[i - 1]} and ${n.keys[i]}`}`;
     else text = `${keyList(n)}: ${between(n, i, k)}, so follow pointer ${i + 1} of ${n.kids.length}`;
     const { root, map } = snap(T);
@@ -284,10 +284,18 @@ function deleteFrames(T, k) {
 // Draw a frame, sliding from frame A when it's given: keys move to their new
 // places, boxes follow the node most of their keys came from.
 const BY0 = 54, BDY = 56;
+const GEOM = new WeakMap(); // a frame's layout never changes, so work it out once
 function geom(f) {
+  if (!GEOM.has(f)) GEOM.set(f, layoutFrame(f));
+  return GEOM.get(f);
+}
+function layoutFrame(f) {
   const T = { root: f.root }, L = layout(T, 20, 560, BY0, BDY), keys = new Map(), owner = new Map();
   L.levels.forEach((lv) => lv.forEach((n) => { const p = L.pos.get(n); n.keys.forEach((k, i) => { keys.set(k, { x: p.x + i * CELL + CELL / 2, y: p.y + 10 }); owner.set(k, n); }); }));
-  if (f.ghost && !keys.has(f.ghost.k)) { const p = L.pos.get(f.ghost.node); keys.set(f.ghost.k, { x: p.x + p.w + 26, y: p.y + 10, ghost: true }); }
+  if (f.ghost && !keys.has(f.ghost.k)) { // beside the node being read, on its left when the right edge is near
+    const p = L.pos.get(f.ghost.node), x = p.x + p.w + 26 + CELL / 2 > 590 ? p.x - 26 : p.x + p.w + 26;
+    keys.set(f.ghost.k, { x, y: p.y + 10, ghost: true });
+  }
   return { L, keys, owner };
 }
 function drawFrame(g, B, A = null, e = 1) {
@@ -324,21 +332,6 @@ function drawFrame(g, B, A = null, e = 1) {
     op(S('text', { x: v.x, y: v.y + 4, class: 't', 'font-size': 10.5, 'text-anchor': 'middle', text: k }, g), 1 - e);
   });
 }
-// split a step's text into lines of at most `max` characters
-function wrap(text, max = 76) {
-  const out = ['']; text.split(' ').forEach((w) => { if ((out.at(-1) + ' ' + w).trim().length > max) out.push(w); else out[out.length - 1] = (out.at(-1) + ' ' + w).trim(); });
-  return out;
-}
-function stepFigure(fig, svg, y) {
-  fig.g = S('g', {}, svg);
-  fig.lines = [0, 1, 2].map((i) => S('text', { x: 20, y: y + i * 17, class: 't2', 'font-size': 12.5 }, svg));
-  fig.step = stepper(fig, (i, from) => {
-    const B = fig.frames[i], A = from == null ? null : fig.frames[from];
-    const rows = wrap(B.text); fig.lines.forEach((t, j) => { t.textContent = rows[j] || ''; });
-    if (A) tween(fig, (e) => drawFrame(fig.g, B, A, e), 650); else drawFrame(fig.g, B);
-  });
-}
-
 // ── fig 3 · inserting, with splits ───────────────────────────────────────────
 // Multiples of 3 in a fixed shuffled order (written out, so every browser gets the same tree).
 const SEQ = [12, 3, 27, 6, 42, 48, 24, 63, 15, 60, 33, 57, 51, 36, 69, 45, 39, 21, 18, 9, 72, 54, 30, 66];
@@ -352,7 +345,7 @@ class BtInsert extends Figure {
     this.out = H('span', { text: '12' }, lab);
     const s = H('input', { type: 'range', min: 1, max: SEQ.length, value: 12, 'aria-label': 'which key of the sequence to insert' }, bar);
     s.oninput = () => { this.n = +s.value; this.load(); };
-    stepFigure(this, svg, 266);
+    stepFigure(this, svg, 266, drawFrame);
     this.load();
   }
   load() {
@@ -373,9 +366,9 @@ class BtDelete extends Figure {
     this.head = S('text', { x: 20, y: 24, class: 'sl', 'font-size': 11 }, svg);
     // the tree before each deletion, and the frames of that deletion
     const T = build(2, DEL0);
-    this.ops = DELS.map((k) => { const before = snap(T).root; return { k, frames: deleteFrames(T, k), before }; });
+    this.ops = DELS.map((k) => ({ k, frames: deleteFrames(T, k) }));
     pills(this, this.ops.map((o, i) => [i, `delete ${o.k}`]), 0, (v) => this.load(v));
-    stepFigure(this, svg, 266);
+    stepFigure(this, svg, 266, drawFrame);
     this.load(0);
   }
   load(i) {

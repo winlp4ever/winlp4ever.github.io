@@ -1,4 +1,4 @@
-import { S, H, attr, op, rng, pills, stepper, Figure, define } from './core.js'
+import { S, H, attr, op, rng, pills, stepper, wrap, Figure, define } from './core.js'
 
 // Values for figs 1-4: sixteen small seeded integers.
 const r0 = rng(21), A = Array.from({ length: 16 }, () => 1 + Math.floor(r0() * 9));
@@ -238,10 +238,7 @@ class SgLazy extends Figure {
     const rows = wrap(s.text); this.lines.forEach((t, j) => { t.textContent = rows[j] || ''; });
   }
 }
-function wrap(text, max = 76) {
-  const out = ['']; text.split(' ').forEach((w) => { if ((out.at(-1) + ' ' + w).trim().length > max) out.push(w); else out[out.length - 1] = (out.at(-1) + ' ' + w).trim(); });
-  return out;
-}
+
 
 // ── fig 5 · the sum tree in prioritized experience replay ────────────────────
 // Eight transitions with priorities; sample by drawing u in [0, total) and walking down.

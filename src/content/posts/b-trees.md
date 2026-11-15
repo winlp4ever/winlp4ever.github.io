@@ -6,7 +6,7 @@ tags: [algorithms, data-structures, databases]
 category: code
 glyph: btree
 figures: 6
-updated: 2026-11-13
+updated: 2026-11-15
 math: true
 ---
 

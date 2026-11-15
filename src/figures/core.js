@@ -150,17 +150,40 @@ export function stepper(fig, on) {
   const lab = H('span', { class: 'fc-l', style: 'text-align:left' }, bar);
   const s = {
     i: 0, n: 1,
-    set(n, i = 0) { s.n = n; s.show(i, null); },
+    set(n, i = 0) { cancelAnimationFrame(fig._tw); s.n = n; s.show(i, null); },
     show(i, from) {
       s.i = clamp(i, 0, s.n - 1);
       lab.textContent = `step ${s.i + 1} of ${s.n}`;
+      const had = document.activeElement;
       prev.disabled = s.i === 0; next.disabled = s.i === s.n - 1;
+      // a disabled button drops keyboard focus: hand it to the other one
+      if (had === prev && prev.disabled && !next.disabled) next.focus();
+      if (had === next && next.disabled && !prev.disabled) prev.focus();
       on(s.i, from);
     },
   };
   prev.onclick = () => s.show(s.i - 1, s.i);
   next.onclick = () => s.show(s.i + 1, s.i);
   return s;
+}
+
+// split a sentence into lines of at most `max` characters
+export function wrap(text, max = 76) {
+  const out = [''];
+  text.split(' ').forEach((w) => { if ((out.at(-1) + ' ' + w).trim().length > max) out.push(w); else out[out.length - 1] = (out.at(-1) + ' ' + w).trim(); });
+  return out;
+}
+// A figure that steps through fig.frames: a layer for the drawing, `rows` lines of
+// step text from y down, and a stepper. draw(g, B, A, e) draws frame B, sliding from
+// frame A (null on a reload) at progress e.
+export function stepFigure(fig, svg, y, draw, rows = 3) {
+  fig.g = S('g', {}, svg);
+  fig.lines = Array.from({ length: rows }, (_, i) => S('text', { x: 20, y: y + i * 17, class: 't2', 'font-size': 12.5 }, svg));
+  fig.step = stepper(fig, (i, from) => {
+    const B = fig.frames[i], A = from == null ? null : fig.frames[from];
+    const r = wrap(B.text); fig.lines.forEach((t, j) => { t.textContent = r[j] || ''; });
+    if (A) tween(fig, (e) => draw(fig.g, B, A, e), 650); else draw(fig.g, B, null, 1);
+  });
 }
 
 // tween a paint(k) function from 0 to 1, for toggles after the entrance
