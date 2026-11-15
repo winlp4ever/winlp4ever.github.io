@@ -77,9 +77,11 @@ An insert or a delete changes only the nodes on one path from the root to a leaf
 
 ## search
 
-Search works like a binary search tree with wider nodes. In each node, find the first key ≥ the target. If it's equal, done. Otherwise go down to the child just before that key. One node per level, so O(log_t n) node reads.
+Search works like a binary search tree with wider nodes. In each node, find the first key ≥ the target. If it's equal, done. Otherwise go down to the child just before that key.
 
 Inside a node there's a choice. Binary search costs $$O(\log t)$$ comparisons per node and O(log n) in total, whatever t is. Linear search costs O(t) per node but reads memory in order, which caches and prefetchers like. Rust's `BTreeMap` uses linear search with nodes of at most 11 keys, and its documentation says that's "generally worse than a BST" in comparisons, but "in practice, however, performance is excellent"<sup><a href="#src-7">7</a></sup><sup><a href="#src-8">8</a></sup>.
+
+**Complexity.** A search reads one node per level, so $$O(\log_t n)$$ node reads, which is $$O(\log_B N)$$ block transfers on disk. Comparisons are $$O(\log n)$$ in total with binary search inside each node, or $$O(t \log_t n)$$ with linear search. It needs O(1) extra memory beyond the node being read.
 
 ## insertion and splits
 
@@ -140,7 +142,7 @@ def insert(root, k):
     return root
 ```
 
-Both versions read and write O(h) nodes and do O(t·h) work moving keys inside nodes. On disk, the node reads dominate.
+**Complexity.** Both versions read $$O(\log_t n)$$ nodes on the way down and write $$O(\log_t n)$$ nodes in the worst case, when every node on the path splits. Each split copies about t keys, so the work in memory is $$O(t \log_t n)$$. On disk, the node reads dominate. The worst case is rare: every split creates one new node, and a tree built only by insertions has at most about $$n / (t-1)$$ nodes, so n insertions do at most about $$n / (t-1)$$ splits in total, less than one split per insertion on average.
 
 ## deletion: borrow or merge
 
@@ -160,9 +162,13 @@ If a merge takes the root's last key, the merged node becomes the root and the t
 
 CLRS again does it in one pass downwards. Before stepping into a child it makes sure the child has at least t keys, borrowing or merging in advance, so a deletion never has to come back up. Its cases are numbered 1, 2a to 2c and 3a to 3b, and exercise P5 below works through them<sup><a href="#src-4">4</a></sup>.
 
+**Complexity.** Finding the key and, for an internal node, its predecessor is one walk from the root to a leaf, $$O(\log_t n)$$ node reads. The fix-up then climbs back up: a borrow ends it, and a merge can repeat once per level, so the worst case touches $$O(\log_t n)$$ nodes plus one sibling per level. Each borrow or merge moves O(t) keys and child pointers, which makes the work in memory $$O(t \log_t n)$$.
+
 ## B+ trees and range scans
 
 Almost every database uses a **B+ tree**. All the records live in the leaves. The internal nodes only hold copies of separator keys, which Comer calls "a roadmap", and the leaves are linked left to right into a "sequence set"<sup><a href="#src-3">3</a></sup>. Internal nodes hold no values, so they fit more keys per page and the tree gets shallower. A range query goes down once to the first key and then reads leaves sideways until it passes the end of the range.
+
+**Complexity.** A range scan that returns k keys costs $$O(\log_B N + k/B)$$ block transfers: one descent, then one leaf per B results. Without the leaf links, a scan has to climb back up and come down again between leaves.
 
 <figure class="wide">
 <bt-range data-fig data-label="fig 5 · a range scan in a B+ tree">

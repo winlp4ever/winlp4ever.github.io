@@ -74,7 +74,7 @@ Look at the nodes the walk reaches on one level. They form a contiguous run, bec
 
 So a query visits at most $$4\log_2 n$$ nodes, and at most two per level are used whole, which bounds the answer by $$2\log_2 n$$ stored sums. In fig 2 the worst range on 16 leaves uses 6 stored sums and visits 15 nodes. That's the case where l and r sit one position inside the edges of the array, like [1, 14].
 
-Building is O(n): every node is computed once from its two children.
+**Complexity.** A query takes O(log n) time: at most four nodes per level over $$\log_2 n + 1$$ levels. The recursion is O(log n) deep, so it needs O(log n) stack. Building takes O(n) time, since every node is computed once from its two children, and the tree takes 2n − 1 nodes, stored in an array of up to 4n slots.
 
 ## updates
 
@@ -96,6 +96,8 @@ void update(int v, int lo, int hi, int i, long long x) {
     t[v] = t[2 * v] + t[2 * v + 1];
 }
 ```
+
+**Complexity.** A point update takes O(log n) time: one leaf and its $$\log_2 n$$ ancestors, each recomputed in O(1) from its two children. It visits exactly one node per level, whatever i is.
 
 The array has 4n slots because with heap numbering and n not a power of two, the deepest leaf can get an index close to 4n. The tree itself has only 2n − 1 nodes; the rest of the array is gaps<sup><a href="#src-2">2</a></sup>. Exercise P2 below asks you to prove the 4n bound.
 
@@ -155,7 +157,7 @@ void add(int v, int lo, int hi, int l, int r, long long x) {
 // query is the same as before, with push(v, lo, hi) before recursing
 ```
 
-Both range add and range query now cost O(log n). The hard part in harder problems is composing tags. If the tree supports both "add x" and "set to x", a node can hold a pending set and a pending add at once, and the order matters: a new set wipes any pending add, while a new add on top of a pending set changes the set's value. Exercise 11 (CSES Range Updates and Sums) drills this.
+**Complexity.** Range add and range query both take O(log n) time. The add stops at the same nodes as a query, at most four per level, and does O(1) work at each: apply a tag, push one tag down, or recompute a sum. A push touches only the two children of a node the walk already visits, so it adds a constant per node. The tags take one more array of the same size, so memory doubles but stays O(n). Without the tags, a range add would reach every leaf in the range, O(n). The hard part in harder problems is composing tags. If the tree supports both "add x" and "set to x", a node can hold a pending set and a pending add at once, and the order matters: a new set wipes any pending add, while a new add on top of a pending set changes the set's value. Exercise 11 (CSES Range Updates and Sums) drills this.
 
 ## searching inside the tree
 
@@ -173,7 +175,7 @@ int first_prefix_at_least(long long k) {   // all values >= 0
 }
 ```
 
-A binary search over positions that calls a range query at each step would cost $$O(\log^2 n)$$. The descent gets O(log n) because the sums it needs are already sitting in the nodes it walks through. The same trick on a max tree finds the first position with a value at least x (exercise 6), and on a tree of 0s and 1s finds the k-th remaining element (exercise 7).
+**Complexity.** The descent takes O(log n) time and O(1) extra memory. A binary search over positions that calls a range query at each step would cost $$O(\log^2 n)$$. The descent gets O(log n) because the sums it needs are already sitting in the nodes it walks through. The same trick on a max tree finds the first position with a value at least x (exercise 6), and on a tree of 0s and 1s finds the k-th remaining element (exercise 7).
 
 ## complexity, next to the alternatives
 
