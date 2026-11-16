@@ -195,8 +195,8 @@
 .ex pre { font-size: 13px; }
 @media (max-width: 640px) { .ex > .ex-b { padding-left: 18px; } .ex > summary { flex-wrap: wrap; row-gap: 2px; } }
 
-/* a footnote placed at the end of the section that marks it with * */
-.fn { margin: 1.6em 0 0; padding-top: 0.8em; border-top: 1px solid var(--rule); font-size: 14px; color: var(--ink-2); }
-.fn:target { color: var(--ink); }
-.fn > a:first-child { text-decoration: none; margin-right: 0.2em; }
-sup > a[href^="#fn-"], .fn > a:first-child { font-size: 1.25em; font-weight: 600; text-decoration: none; border: 0; background: none; }
+/* a * footnote at the end of the section that marks it (see AUTHORING.md) */
+.prose .fn { margin: 1.6em 0 1.1em; padding-top: 0.8em; border-top: 1px solid var(--rule); font-size: 14px; color: var(--ink-2); }
+.prose .fn:target { color: var(--ink); }
+.prose .fn > a:first-child, .prose sup > a[href^="#fn-"] { font-weight: 600; text-decoration: none; border: 0; background: none; }
+.prose .fn > a:first-child { margin-right: 0.2em; }

@@ -6,7 +6,7 @@ tags: [algorithms, data-structures, competitive-programming]
 category: code
 glyph: rbtree
 figures: 5
-updated: 2026-11-15
+updated: 2026-11-16
 math: true
 ---
 
@@ -16,7 +16,7 @@ A balanced tree fixes the height at O(log n) whatever the order. The red-black t
 
 ## five rules
 
-The rules as stated in chapter 13 of CLRS, the textbook *Introduction to Algorithms* by Cormen, Leiserson, Rivest and Stein, named by its authors' initials<sup><a href="#src-1">1</a></sup>:
+The rules as stated in chapter 13 of CLRS<sup><a href="#src-1">1</a></sup>, the textbook *Introduction to Algorithms* by Cormen, Leiserson, Rivest and Stein, named after its authors' initials:
 
 1. Every node is red or black.
 2. The root is black.
