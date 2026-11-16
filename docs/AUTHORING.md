@@ -43,6 +43,7 @@ Markup inside the Markdown (raw HTML block, blank lines around it):
 - Element names need a hyphen and must be unique across the site: prefix them with a short post code (`tf-`, `kv-`, `cost-`, `es-`, `lc-`, `site-`, `om-`, `ln-`, `ms-`, `ml-`, `ah-`, `rv-`, `pd-`, `cr-`, `sat-`, `cv-`, `hn-`, `rb-`, `sg-`, `bt-`).
 - Number figures in order; the label and the caption number must match.
 - Sidenotes: `<span class="sn">…</span>` inside a paragraph (margin note on wide screens, inline on phones).
+- Asterisk footnotes, for a longer aside on a term: `<sup><a href="#fn-x" id="fnref-x" aria-label="footnote: …">*</a></sup>` after the word, and `<p class="fn" id="fn-x"><a href="#fnref-x" aria-label="back to the text">*</a> …</p>` at the end of that section. Use `*`, not a number, so it isn't mistaken for a source.
 - A callout: `<div class="note"><span class="label">rule of thumb</span>…</div>` (use rarely).
 
 Module shape (`src/figures/<slug>.js`):

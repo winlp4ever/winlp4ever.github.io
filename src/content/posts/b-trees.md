@@ -6,7 +6,7 @@ tags: [algorithms, data-structures, databases]
 category: code
 glyph: btree
 figures: 6
-updated: 2026-11-15
+updated: 2026-11-16
 math: true
 ---
 
@@ -18,7 +18,7 @@ This is the third lesson in a series. The [red-black tree lesson](/blog/red-blac
 
 ## why wide nodes
 
-A disk doesn't hand back single keys. It reads and writes whole pages, a few kilobytes at a time, and one read from a spinning disk takes about 10 ms, long enough for millions of comparisons in memory. On disk, the cost of a search is the number of pages it reads.
+A disk doesn't hand back single keys. It reads and writes whole pages<sup><a href="#fn-page" id="fnref-page" aria-label="footnote: what a page is">*</a></sup>, a few kilobytes at a time, and one read from a spinning disk takes about 10 ms, long enough for millions of comparisons in memory. On disk, the cost of a search is the number of pages it reads.
 
 A binary search tree stored on disk puts one key in each node. Every step down the tree reads a page and uses a few bytes of it. Over a billion keys the tree is 30 levels deep, so a lookup is 30 reads, about 0.3 seconds<sup><a href="#src-1">1</a></sup>. A B-tree uses the whole page: it puts hundreds of sorted keys in one node, with a child pointer before the first key, between each pair of neighbours and after the last. One read then chooses among hundreds of branches instead of two, and a billion keys fit in four or five levels. Every search starts at the root, so the top levels are read constantly and stay cached in memory, and only the lower levels cost a disk read.
 
@@ -33,9 +33,11 @@ Fig 1 shows the idea on fifteen keys. The binary tree needs up to four reads to 
 
 To find 35, the B-tree reads its root, 20 | 40 | 60, and sees that 35 lies between 20 and 40. Every key between 20 and 40 is stored below the pointer between those two keys, so the search follows that pointer and ignores the other three subtrees. In a node with 500 keys, the same step keeps one subtree out of 501.
 
+<p class="fn" id="fn-page"><a href="#fnref-page" aria-label="back to the text">*</a> A <b>page</b> is the fixed-size block that a database or file system reads from disk and writes back as one unit. The software picks its size, a few kilobytes; the next section gives the sizes SQLite, PostgreSQL and InnoDB use. The hardware works in blocks too: a disk sector holds 512 bytes or 4 KB, and the operating system moves memory to and from disk in pages of usually 4 KB (16 KB on Apple Silicon Macs). To read one key, the database reads the whole page that holds it into memory, and the other keys on that page come along at no extra cost. An SSD reads a page far faster than a spinning disk, but each read costs much more than a memory access, so the same design pays off on SSDs.</p>
+
 ## the definition
 
-CLRS describes a B-tree by its **minimum degree**, a number t ≥ 2<sup><a href="#src-4">4</a></sup>. A B-tree with minimum degree t follows four rules, and each one has a job:
+CLRS, the textbook *Introduction to Algorithms* by Cormen, Leiserson, Rivest and Stein (named after its authors' initials), describes a B-tree in chapter 18 by its **minimum degree**, a number t ≥ 2<sup><a href="#src-4">4</a></sup>. A B-tree with minimum degree t follows four rules, and each one has a job:
 
 1. The keys in a node are sorted, and an internal node with k keys has k + 1 children. The k keys cut the key range into k + 1 intervals, and child i holds exactly the keys in interval i. In fig 1 the root 20 | 40 | 60 has four children, holding the keys below 20, between 20 and 40, between 40 and 60, and above 60. Search depends on this rule.
 2. A node holds at most 2t − 1 keys. t is chosen so that a full node fills one page.
