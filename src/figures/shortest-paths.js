@@ -132,7 +132,7 @@ class SpBfs extends Figure {
     this.G = makeGrid(32, 16, 17, 28, 8, [[8, 2, 8, 13], [16, 0, 16, 9], [16, 12, 16, 15], [23, 3, 23, 15], [9, 7, 13, 7]])
     this.L = board(svg, this.G); this.ends = { s: 2 * 32 + 3, t: 13 * 32 + 29 }
     this.rings = S('g', {}, this.L.under); this.line = S('path', { class: 'f-none s-green', 'stroke-width': 2.5, 'stroke-linejoin': 'round' }, this.L.over)
-    this.nums = S('g', { class: 't3', 'font-size': 8, 'text-anchor': 'middle' }, this.L.over)
+    this.nums = S('g', { class: 't3', 'font-size': 10, 'text-anchor': 'middle' }, this.L.over)
     this.numEls = Array.from({ length: this.G.W * this.G.H }, (_, c) => S('text', { x: cx(this.G, c), y: cy(this.G, c) + 3 }, this.nums))
     this.rows = textRows(svg, 28, 300, 2)
     editable(this, this.G, this.ends, (live) => { this.load(); this.seek(this.duration); if (!live) replay(this) })
@@ -141,7 +141,7 @@ class SpBfs extends Figure {
   load() {
     const G = this.G, { s, t } = this.ends, d = new Int32Array(G.W * G.H).fill(-1), par = new Int32Array(G.W * G.H).fill(-1), q = [s]; d[s] = 0
     for (let h = 0; h < q.length; h++) { const c = q[h]; moves(G, c, false, (j) => { if (d[j] < 0) { d[j] = d[c] + 1; par[j] = c; q.push(j) } }) }
-    this.d = d; this.q = q; this.max = d[q.at(-1)]; this.nt = d[t] >= 0 ? q.filter((c) => d[c] <= d[t]).length : 0; this.path = pathTo(par, t, d[t] >= 0); this.L.ends(s, t); this.L.paint()
+    this.d = d; this.q = q; this.max = d[q.at(-1)]; this.nt = d[t] >= 0 ? q.indexOf(t) + 1 : 0; this.lastK = -1; this.path = pathTo(par, t, d[t] >= 0); this.L.ends(s, t); this.L.paint()
     // one path per ring parity, rebuilt per frame from the cells reached so far
     this.rings.replaceChildren(); this.ringP = [0, 1].map((k) => S('path', { class: 'f-green', opacity: k ? .32 : .18 }, this.rings))
     this.numEls.forEach((t, c) => { t.textContent = d[c] >= 0 ? d[c] : '' })
@@ -149,21 +149,23 @@ class SpBfs extends Figure {
   label() { return `distance ${this.shownD ?? 0}` }
   render(t) {
     if (!this.d) return
-    const G = this.G, k = Math.floor(clamp(t / (this.duration - 1)) * (this.max + 1)), parts = [[], []]
+    const G = this.G, k = Math.floor(clamp(t / (this.duration - 1)) * (this.max + 1))
+    if (k === this.lastK) return; this.lastK = k
+    const parts = [[], []]
     this.numEls.forEach((el, c) => { const on = this.d[c] >= 0 && this.d[c] < k; if (on) parts[this.d[c] % 2].push(c); el.style.display = on ? '' : 'none' })
     this.ringP.forEach((p, i) => p.setAttribute('d', sqD(G, parts[i])))
     const reached = this.d[this.ends.t] >= 0 && this.d[this.ends.t] < k
     this.line.setAttribute('d', reached ? polyD(G, this.path) : ''); this.shownD = Math.max(0, k - 1)
-    const n = this.q.filter((c) => this.d[c] < k).length, nt = this.nt
+    const n = parts[0].length + parts[1].length, nt = this.nt
     say(this.rows, reached
-      ? `The target is ${this.d[this.ends.t]} steps away. Before reaching it the search went through ${fmt(nt)} cells, every one of them no farther than the target. Drag to draw walls, or drag the dot and the diamond.`
+      ? `The target is ${this.d[this.ends.t]} steps away. It was cell number ${fmt(nt)} to come off the queue; every cell before it is no farther away. Drag to draw walls, or drag the dot and the diamond.`
       : this.d[this.ends.t] < 0 && k > this.max ? `Every reachable cell is numbered, and the target isn't among them: the walls cut it off.`
         : `Ring ${Math.max(0, k - 1)}: ${fmt(n)} cells so far. Every cell in a ring is one step farther than the ring before.`)
   }
 }
 
 // ── the road sketch for figs 2 and 10: towns and roads, lengths rounded and illustrative ──
-const TOWNS = [['Rotterdam', 92, 282, 12, 4, 'start'], ['Den Haag', 58, 214, -12, -12, 'end'], ['Amsterdam', 148, 128, -12, -12, 'end'], ['Utrecht', 180, 222, -12, -10, 'end'], ['Amersfoort', 244, 190, 2, 26, 'start'], ['Arnhem', 318, 254, 12, 4, 'start'], ['Zwolle', 330, 140, 12, 4, 'start'], ['Leeuwarden', 246, 40, -12, -6, 'end'], ['Groningen', 380, 70, 12, 4, 'start']]
+const TOWNS = [['Rotterdam', 92, 282, 12, 4, 'start'], ['Den Haag', 58, 214, -12, -12, 'end'], ['Amsterdam', 148, 128, -12, -12, 'end'], ['Utrecht', 180, 222, -12, -10, 'end'], ['Amersfoort', 244, 190, 2, 26, 'start'], ['Arnhem', 318, 254, 12, 4, 'start'], ['Zwolle', 330, 140, 12, 4, 'start'], ['Leeuwarden', 246, 40, -12, -6, 'end'], ['Groningen', 380, 70, 0, -26, 'middle']]
 // [a, b, km, lanes each way, chance the road is open]
 const ROADS = [[0, 1, 25, 3, .99], [0, 3, 60, 3, .97], [1, 2, 60, 2, .98], [2, 3, 45, 3, .96], [3, 4, 25, 3, .98], [3, 5, 65, 2, .97], [2, 4, 50, 2, .99],
   [4, 6, 70, 2, .95], [5, 6, 70, 2, .99], [2, 7, 140, 1, .9], [6, 8, 90, 2, .96], [7, 8, 60, 2, .98], [6, 7, 95, 1, .97]]
@@ -172,8 +174,8 @@ function roadMap(svg, roads, onEdge) {
     const [a, b] = r, A = TOWNS[a], B = TOWNS[b], mx = (A[1] + B[1]) / 2, my = (A[2] + B[2]) / 2
     const line = S('line', { x1: A[1], y1: A[2], x2: B[1], y2: B[2], class: 's-rule', 'stroke-width': 2.2 }, g)
     const tag = S('g', { style: onEdge ? 'cursor:pointer' : '' }, svg)
-    const bg = S('rect', { x: mx - 15, y: my - 8, width: 30, height: 15, rx: 4, class: 'f-panel s-rule', 'stroke-width': .8 }, tag)
-    const tx = S('text', { x: mx, y: my + 3.5, class: 't2', 'font-size': 10.5, 'text-anchor': 'middle' }, tag)
+    const bg = S('rect', { x: mx - 17, y: my - 9, width: 34, height: 17, rx: 4, class: 'f-panel s-rule', 'stroke-width': .8 }, tag)
+    const tx = S('text', { x: mx, y: my + 4, class: 't2', 'font-size': 12, 'text-anchor': 'middle' }, tag)
     if (onEdge) tag.addEventListener('click', () => onEdge(i))
     return { line, bg, tx }
   })
@@ -247,7 +249,7 @@ class SpNegative extends Figure {
     const svg = this.svgRoot(600, 340, 'A graph with a negative edge where Dijkstra gives the wrong answer and Bellman-Ford does not')
     S('defs', {}, svg).innerHTML = '<marker id="sp-ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto"><path d="M0 0L10 5L0 10z" class="f-ink2"/></marker>'
     this.eg = S('g', {}, svg); this.ng = S('g', {}, svg)
-    this.tbl = S('g', {}, svg); this.rows = textRows(svg, 20, 290, 3)
+    this.rows = textRows(svg, 20, 290, 3)
     this.mode = 'dij'; this.cycle = false
     pills(this, [['dij', 'Dijkstra'], ['bf', 'Bellman-Ford'], ['cyc', 'Bellman-Ford, with a negative cycle']], 'dij', (v) => { this.mode = v === 'cyc' ? 'bf' : v; this.cycle = v === 'cyc'; this.load() })
     this.step = stepper(this, (i) => this.show(i))
@@ -317,7 +319,9 @@ class SpAstar extends Figure {
   }
   load() {
     const G = this.G, [hf, w] = H4[this.h], { s, t } = this.ends
-    this.r = bestFirst(G, s, t, (c) => hf(G, c, t), w); this.best = this.h === 'octile' || this.h === 'none' || this.h === 'euclid' ? this.r.cost : bestFirst(G, s, t, (c) => octile(G, c, t)).cost
+    this.r = bestFirst(G, s, t, (c) => hf(G, c, t), w); this.best = w === 1 ? this.r.cost : bestFirst(G, s, t, (c) => octile(G, c, t)).cost
+    const seen = new Map(); for (const c of this.r.order) seen.set(c, (seen.get(c) || 0) + 1)
+    this.cells = seen.size; this.again = [...seen.values()].filter((v) => v > 1).length
     this.L.ends(s, t); this.L.paint()
   }
   label() { return `${fmt(this.k || 0)} cells` }
@@ -327,7 +331,7 @@ class SpAstar extends Figure {
     this.vis.setAttribute('d', sqD(G, o.slice(0, k))); this.front.setAttribute('d', k < o.length ? sqD(G, o.slice(Math.max(0, k - 6), k), 1) : '')
     const end = k >= o.length, ok = this.r.path.length > 0
     this.line.setAttribute('d', end ? polyD(G, this.r.path) : '')
-    const name = H4[this.h][2], over = ok ? (this.r.cost / this.best - 1) * 100 : 0, cells = new Set(o).size, looked = cells < o.length ? `${fmt(cells)} cells looked at, ${fmt(o.length - cells)} of them twice` : `${fmt(cells)} cells looked at`
+    const name = H4[this.h][2], over = ok ? (this.r.cost / this.best - 1) * 100 : 0, cells = this.cells, looked = this.again ? `${fmt(cells)} cells looked at, ${fmt(this.again)} of them more than once (${fmt(o.length)} in all)` : `${fmt(cells)} cells looked at`
     say(this.rows, !end ? `${name}: ${fmt(k)} cells finished so far, each picked by its cost so far plus ${this.h === 'none' ? 'nothing' : this.h === 'greedy' ? 'twice the guess' : 'the guess'}.`
       : !ok ? `No path: the walls close the target off. ${name} still looked at ${fmt(cells)} cells to be sure.`
         : `${name}: ${looked}, path length ${this.r.cost.toFixed(1)}${over > .05 ? `, ${over.toFixed(1)}% longer than the shortest` : ', the shortest there is'}. Drag to draw walls, or move the dot and the diamond.`, 76)
@@ -491,7 +495,7 @@ class SpMulti extends Figure {
     const col = this.S.map(() => -1); col.forEach((_, k) => { let c = 0; while ([...touch[k]].some((o) => col[o] === c)) c++; col[k] = c })
     const parts = [[], [], [], [], [], []]; for (let i = 0; i < n; i++) if (own[i] >= 0) parts[col[own[i]]].push(i)
     this.shade.forEach((p, k) => p.setAttribute('d', sqD(G, parts[k]))); this.edge.setAttribute('d', edge.join(''))
-    this.src.replaceChildren(); this.S.forEach((s, k) => { S('circle', { cx: cx(G, s), cy: cy(G, s), r: 7, class: 'f-ink' }, this.src); S('text', { x: cx(G, s), y: cy(G, s) + 3.5, class: 'f-bg', 'font-size': 9.5, 'text-anchor': 'middle', text: k + 1 }, this.src) })
+    this.src.replaceChildren(); this.S.forEach((s, k) => { S('circle', { cx: cx(G, s), cy: cy(G, s), r: 9, class: 'f-ink' }, this.src); S('text', { x: cx(G, s), y: cy(G, s) + 4, class: 'f-bg', 'font-size': 12, 'text-anchor': 'middle', text: k + 1 }, this.src) })
     const far = Math.max(0, ...Array.from(g).filter((v) => v < Infinity))
     say(this.rows, this.S.length ? `${this.S.length} source${this.S.length > 1 ? 's' : ''}, one search. Every open cell belongs to its nearest source; the farthest cell from any of them is ${far.toFixed(1)} steps away.` : 'No sources. Click the map to add some, up to six.', 76)
   }
@@ -553,12 +557,12 @@ function dijkstraCount(side, kind, seed) {
 class SpQueues extends Figure {
   build() {
     const svg = this.svgRoot(600, 336, 'Basic steps Dijkstra takes with three kinds of queue, against graph size, on log scales')
-    this.svgEl = svg; this.idleText = 'interactive'; this.tip = tooltip(svg)
+    this.idleText = 'interactive'; this.tip = tooltip(svg)
     this.sides = [8, 16, 32, 64]; this.rows = textRows(svg, 20, 300, 2)
   }
   onVisible(v) { if (v && !this.drawn) { this.drawn = true; this.draw() } }
   draw() {
-    const svg = this.svgEl, X0 = 70, X1 = 560, Y0 = 20, Y1 = 250, kinds = [['array', 'scan an array', 's-ink2', 'f-ink2'], ['heap', 'binary heap', 's-green', 'f-green'], ['bucket', 'buckets (Dial)', 's-ochre', 'f-ochre']]
+    const svg = this.svg, X0 = 70, X1 = 560, Y0 = 20, Y1 = 250, kinds = [['array', 'scan an array', 's-ink2', 'f-ink2'], ['heap', 'binary heap', 's-green', 'f-green'], ['bucket', 'buckets (Dial)', 's-ochre', 'f-ochre']]
     const data = kinds.map(([k]) => this.sides.map((sd) => [sd * sd, dijkstraCount(sd, k, 7 + sd)]))
     const lx = (v) => X0 + (Math.log10(v) - 1.7) / (Math.log10(5000) - 1.7) * (X1 - X0), ly = (v) => Y1 - (Math.log10(v) - 2) / (Math.log10(3e7) - 2) * (Y1 - Y0)
     for (const v of [100, 300, 1e3, 3e3]) { S('line', { x1: lx(v), x2: lx(v), y1: Y0, y2: Y1, class: 's-rule', 'stroke-width': .6 }, svg); S('text', { x: lx(v), y: Y1 + 16, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: fmt(v) }, svg) }

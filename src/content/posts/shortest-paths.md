@@ -27,7 +27,7 @@ When every edge costs 1, the distance is the number of steps, and **breadth-firs
 
 <figure class="wide">
 <sp-bfs data-fig data-label="fig 1 · breadth-first search">
-<p class="fallback">A grid of 32 × 16 cells with a few walls. Breadth-first search starts at the dot near the top left and numbers every cell with its number of steps from the dot, ring by ring. The diamond near the bottom right is 55 steps away, round the walls; 458 cells are no farther than that and get finished first. Walls can be drawn and the ends moved, and the search reruns.</p>
+<p class="fallback">A grid of 32 × 16 cells with a few walls. Breadth-first search starts at the dot near the top left and numbers every cell with its number of steps from the dot, ring by ring. The diamond near the bottom right is 55 steps away, round the walls; It is the 456th cell to come off the queue. Walls can be drawn and the ends moved, and the search reruns.</p>
 </sp-bfs>
 <figcaption><b>fig 1</b>The search spreads in rings of equal distance; each cell shows its number of steps from the dot. Drag on the grid to draw or erase walls, or drag the dot and the diamond. On a touch screen, tap a cell to toggle a wall, or tap the dot or the diamond and then a cell to move it.<span class="m">Moves go to the 4 neighbours, every move costs 1.</span></figcaption>
 </figure>
@@ -75,7 +75,7 @@ def dijkstra(graph, source):
     return dist
 ```
 
-Python's heap has no way to lower an entry's key, so the code pushes a new entry and skips the old one when it comes out. A finished node is never touched again, which is the rule the proof below rests on, and the figures run the same code. The queue can then hold up to E entries instead of V, which costs a little memory and nothing else.
+Python's heap has no way to lower an entry's key, so the code pushes a new entry and skips the old one when it comes out. A finished node is never touched again, which is the rule the proof below rests on. Fig 2 runs the same rule, with a plain scan for the smallest instead of a heap, which is easier to show. The queue can then hold up to E entries instead of V, which costs a little memory and nothing else.
 
 ### why it's right
 
@@ -130,7 +130,7 @@ On a grid the guess is a distance that ignores the walls. With moves in 8 direct
 
 <figure class="wide">
 <sp-astar data-fig data-label="fig 5 · the A* playground">
-<p class="fallback">A 40 × 20 grid with walls, from a dot on the left to a diamond on the right, round the walls. With no guess (Dijkstra) the search finishes 453 cells; with the straight-line guess 314; with the octile guess 275; with the octile guess doubled, 150, and 41 of them twice, because a guess that overestimates can finish a cell before its cheapest way in turns up, and the search then has to finish it again. All four find a path of length 44.2 here, which is the shortest; the doubled guess is only guaranteed to be within twice the shortest.</p>
+<p class="fallback">A 40 × 20 grid with walls, from a dot on the left to a diamond on the right, round the walls. With no guess (Dijkstra) the search finishes 453 cells; with the straight-line guess 314; with the octile guess 275; with the octile guess doubled, 150, of which 31 are finished more than once, 191 times in all: a guess that overestimates can finish a cell before its cheapest way in turns up, and then the search has to finish it again. All four find a path of length 44.2 here, which is the shortest; the doubled guess is only guaranteed to be within twice the shortest.</p>
 </sp-astar>
 <figcaption><b>fig 5</b>Pick a guess and watch the cells A* finishes, in purple, with the newest in ochre. Drag on the grid to draw or erase walls, or drag the dot and the diamond.<span class="m">Moves in 8 directions, a diagonal only past two open cells; straight moves cost 1 and diagonals √2.</span></figcaption>
 </figure>
@@ -360,7 +360,7 @@ State (city, used). Each flight u → v with cost c gives (u, 0) → (v, 0) with
 <summary><span class="ex-n">E3</span><span class="ex-t">Shortest Routes II</span><span class="ex-d"><b>●</b>○○ CSES 1672</span></summary>
 <div class="ex-b">
 
-[CSES 1672](https://cses.fi/problemset/task/1672): up to 500 cities and 10⁵ queries for the distance between two of them. Floyd-Warshall once, then answer each query from the table.
+[CSES 1672](https://cses.fi/problemset/task/1672): up to 500 cities and 10⁵ queries for the distance between two of them. Roads go both ways and the same two cities can have several roads, so fill the table with the shortest road between each pair, in both directions. Then Floyd-Warshall once, and answer each query from the table.
 
 </div>
 </details>
@@ -388,7 +388,7 @@ A node improved in round V is reached through a negative cycle. After V steps ba
 <summary><span class="ex-n">E5</span><span class="ex-t">Investigation</span><span class="ex-d"><b>●●</b>○ CSES 1202</span></summary>
 <div class="ex-b">
 
-[CSES 1202](https://cses.fi/problemset/task/1202): besides the shortest distance from 1 to n, find how many shortest routes there are, and the fewest and the most flights a shortest route can use.
+[CSES 1202](https://cses.fi/problemset/task/1202): besides the shortest distance from 1 to n, find how many shortest routes there are, modulo 10⁹ + 7, and the fewest and the most flights a shortest route can use.
 
 <details><summary>hint</summary>
 
@@ -397,7 +397,7 @@ The nodes come off Dijkstra's queue in order of distance, so a node's counts are
 </details>
 <details><summary>solution sketch</summary>
 
-Keep count, minimum flights and maximum flights per node. When relaxing u → v: if the new distance is smaller, copy u's values (plus one flight); if it's equal, add u's count and update the minimum and the maximum. Process each node once, when it's finished.
+Keep count, minimum flights and maximum flights per node. When relaxing u → v: if the new distance is smaller, copy u's values (plus one flight); if it's equal, add u's count (modulo 10⁹ + 7) and update the minimum and the maximum. Process each node once, when it's finished.
 
 </details>
 </div>
