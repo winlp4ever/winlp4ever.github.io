@@ -41,6 +41,8 @@ One more rule: a diagonal step is allowed only when both cells beside it are fre
 
 ## dijkstra and A*
 
+This section is the short version. The [shortest paths lesson](/blog/shortest-paths/) goes through both searches and their relatives in depth, with a figure to play with for each one.
+
 **Dijkstra's algorithm** keeps a queue of cells ordered by the cost of the cheapest way found to them so far. It takes the cheapest cell off the queue, and that cell's cost is now final: every other cell in the queue costs more, so no path through them can come back cheaper. Then it looks at the cell's neighbours and puts them in the queue with their new costs. When the target comes off the queue, its path is the cheapest one<sup><a href="#src-1">1</a></sup>. The cells it finishes form rings of equal cost around the start, so it spreads evenly in every direction, including away from the target.
 
 **A\*** ranks the cells by the cost so far plus a guess of the cost left to the target. Peter Hart, Nils Nilsson and Bertram Raphael proved in 1968 that if the guess never comes out higher than the real cost, A* still finds the cheapest path<sup><a href="#src-2">2</a></sup>. On a grid with 8 directions the usual guess is the octile distance: walk diagonally until you're level with the target, then straight. With dx and dy the distances across and down, and every cell costing the cheapest ground, the road:
