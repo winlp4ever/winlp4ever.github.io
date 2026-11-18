@@ -35,12 +35,12 @@ in the same units as the step costs (a straight step on road is 2 × 10 × 100 =
 
 <figure class="wide">
 <pf-search data-fig data-label="fig 1 · Dijkstra and A* on the same map">
-<p class="fallback">A 96 × 60 cell map with a road, a brook crossed by a bridge and a ford, a wood, a marsh, five houses, a bent lane between two thin walls, a walled garden with no gate and a long diagonal wall. Both searches go from the south-west corner to a target east of the brook. Dijkstra looks at 4,425 of the 5,341 free cells before it reaches the target. A* looks at 1,137. Both return the same path: along the road, over the bridge and round the marsh.</p>
+<p class="fallback">A 96 × 60 cell map with a road, a brook crossed by a bridge and a ford, a wood, a marsh, five houses, a bent lane between two thin walls, a walled garden with no gate and a long diagonal wall. Both searches go from the south-west corner to a target east of the brook. Dijkstra looks at 4,425 of the 5,341 free cells before it reaches the target. A* looks at 1,137. Both return paths of the same cost, along the road, over the bridge and round the marsh; a few cells differ where two steps cost the same.</p>
 </pf-search>
 <figcaption><b>fig 1</b>Pick a search and watch the cells it looks at, cheapest first. The wide grey band is the road and the winding one the brook, ochre is marsh, the faint patch is wood, and solid cells are walls and houses.<span class="m">Both searches run on the map in your browser. The map is made up.</span></figcaption>
 </figure>
 
-Both searches return the same path; A* gets there after a quarter of the work. With a binary heap as the queue, each search costs O(n log n) for n cells looked at, and each cell checks at most 8 neighbours. Its memory is O(n): a cost and a parent per cell.
+Both searches return paths of the same cost; A* gets there after a quarter of the work. With a binary heap as the queue, each search costs O(n log n) for n cells looked at, and each cell checks at most 8 neighbours. Its memory is O(n): a cost and a parent per cell.
 
 The guess is what makes A* fast, and costly ground makes the guess weak. It has to assume road all the way, or it could guess too high. On the small map open ground costs 30% more than road, so a cell off the straight line can't be ruled out until the search has spent that 30% somewhere. A* ends up looking at every cell inside an oval around the straight line. The oval gets wider as the trip gets longer, so the work grows about with the square of the distance: a trip twice as long costs about four times as much.
 

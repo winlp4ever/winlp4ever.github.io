@@ -1,6 +1,6 @@
 // Pathfinding for games: one small costed map, the searches on it, how games cut
 // it up, and the block / area / door planner, all computed live in the browser.
-import { S, H, attr, clamp, pills, stepper, wrap, Figure, define } from './core.js'
+import { S, H, attr, clamp, pills, stepper, wrap, Figure, define, STILL, REDUCED } from './core.js'
 
 // ── the map: 96 × 60 cells, cost per cell (0 = blocked), kind per cell for drawing ──
 const W = 96, HH = 60, N = W * HH, B = 12, BW = W / B, BH = HH / B
@@ -44,7 +44,7 @@ function ground() {
   line(4, 32, 22, 10)                                                                                    // a long diagonal wall
   return { cost, kind }
 }
-const G0 = ground(), C = G0.cost
+const G0 = ground(), C = G0.cost, FREE = C.reduce((s, c) => s + (c ? 1 : 0), 0)
 
 // ── moves and searches ──
 const DX = [1, -1, 0, 0, 1, 1, -1, -1], DY = [0, 0, 1, -1, 1, -1, 1, -1]
@@ -123,6 +123,14 @@ function label(sameBlock) {
 
 // ── prepare: regions, areas, doors (two nodes each), links inside every block ──
 const PREP = {}
+// a shade per area such that areas that touch never share one (greedy over the adjacency)
+function shades(area, n) {
+  const adj = Array.from({ length: n }, () => new Set())
+  for (let i = 0; i < N; i++) if (C[i]) for (const j of [i + 1, i + W]) if (j < N && (j !== i + 1 || j % W) && C[j] && area[j] !== area[i]) { adj[area[i]].add(area[j]); adj[area[j]].add(area[i]) }
+  const col = new Int8Array(n).fill(-1)
+  for (let a = 0; a < n; a++) { let c = 0; while ([...adj[a]].some((b) => col[b] === c)) c++; col[a] = c }
+  return col
+}
 function prepare(splitAtCost) {
   if (PREP[splitAtCost]) return PREP[splitAtCost]
   const region = label(false), area = label(true), nodes = [], opens = []
@@ -151,7 +159,7 @@ function prepare(splitAtCost) {
     for (const q of ns.slice(i + 1)) if (done[nodes[q]] === gen) { const w = g[nodes[q]]; adj[p].push([q, w]); adj[q].push([p, w]); links.push([p, q]) }
   }))
   for (let n = 0; n < M; n += 2) { const w = (C[nodes[n]] + C[nodes[n + 1]]) * 100; adj[n].push([n + 1, w]); adj[n + 1].push([n, w]) }
-  return PREP[splitAtCost] = { region: region.lab, regions: region.n, area: area.lab, areas: area.n, nodes, adj, byBlock, links, opens }
+  return PREP[splitAtCost] = { region: region.lab, regions: region.n, area: area.lab, areas: area.n, shade: shades(area.lab, area.n), nodes, adj, byBlock, links, opens }
 }
 
 // the nearest free cell in region r, searching outward from cell t
@@ -234,6 +242,8 @@ const sq = (i, inset = 0) => `M${X0 + (i % W) * PX + inset} ${Y0 + ((i / W) | 0)
 const cellsD = (list) => list.map((i) => sq(i)).join('')
 const polyD = (cells) => cells.length ? 'M' + cells.map((c) => `${px(c)} ${py(c)}`).join('L') : ''
 const fmtN = (n) => Math.round(n).toLocaleString('en-US')
+// '3.1 % more than' / '1.5 % less than' / 'the same as'
+const pctOf = (a, b) => { if (!b) return 'the same as'; const d = (a / b - 1) * 100; return Math.abs(d) < .05 ? 'the same as' : d > 0 ? `${d.toFixed(1)} % more than` : `${(-d).toFixed(1)} % less than` }
 const metres = (c) => (c / (OPEN * 200)).toFixed(0) // a cost in "metres of open ground"
 
 // the ground, one path per kind of cell (runs merged along each row)
@@ -278,28 +288,31 @@ class PfSearch extends Figure {
     marks(svg)(START, FAR)
     this.rows = textRows(svg, MAPH + Y0 + 20, 3)
     this.mode = 'astar'
-    pills(this, [['dijkstra', 'Dijkstra'], ['astar', 'A*']], 'astar', (v) => { this.mode = v; this.load(); this.seek(0); this.play() })
+    pills(this, [['dijkstra', 'Dijkstra'], ['astar', 'A*']], 'astar', (v) => { this.mode = v; this.load(); if (STILL || REDUCED) this.seek(this.duration); else { this.seek(0); this.play() } })
     this.load()
   }
   load() {
     const r = search(C, START, FAR, -1, this.mode === 'astar')
     this.vis.replaceChildren(); this.chunks = []
-    for (let k = 0; k < r.order.length; k += 120) this.chunks.push(S('path', { d: cellsD(r.order.slice(k, k + 120)) }, this.vis))
+    for (let k = 0; k < r.order.length; k += 120) { const d = cellsD(r.order.slice(k, k + 120)); this.chunks.push([S('path', { d }, this.vis), d]) }
     this.r = r; this.line.setAttribute('d', polyD(r.path))
   }
   label(t) { return `${fmtN(this.shown || 0)} cells` }
   render(t) {
     if (!this.r) return
     const n = this.r.order.length, k = Math.round(clamp(t / (this.duration - 1)) * n)
-    this.chunks.forEach((c, i) => { c.style.display = i * 120 < k ? '' : 'none' })
-    const last = this.chunks[Math.floor((k - 1) / 120)]
-    if (last && k < n) last.setAttribute('d', cellsD(this.r.order.slice(Math.floor((k - 1) / 120) * 120, k)))
-    else if (last) last.setAttribute('d', cellsD(this.r.order.slice(Math.floor((n - 1) / 120) * 120)))
+    // every chunk is set from k alone, so any frame draws the same whatever came before
+    this.chunks.forEach(([p, full], i) => {
+      const a = i * 120, want = k >= a + 120 || k >= n ? 'full' : k > a ? 'part' : 'none'
+      p.style.display = want === 'none' ? 'none' : ''
+      if (want === 'full' && p._k !== 'full') { p.setAttribute('d', full); p._k = 'full' }
+      if (want === 'part' && p._k !== k) { p.setAttribute('d', cellsD(this.r.order.slice(a, k))); p._k = k }
+    })
     this.shown = k
     this.line.style.display = k >= n ? '' : 'none'
-    const name = this.mode === 'astar' ? 'A*' : 'Dijkstra', free = C.reduce((s, c) => s + (c ? 1 : 0), 0)
+    const name = this.mode === 'astar' ? 'A*' : 'Dijkstra'
     say(this.rows, k >= n
-      ? `${name} looked at ${fmtN(n)} of the ${fmtN(free)} free cells. The path costs as much as ${metres(this.r.cost)} m of open ground; it takes the road, the bridge and goes round the marsh.`
+      ? `${name} looked at ${fmtN(n)} of the ${fmtN(FREE)} free cells. The path costs as much as ${metres(this.r.cost)} m of open ground; it takes the road, the bridge and goes round the marsh.`
       : `${name}: ${fmtN(k)} cells looked at so far, cheapest first${this.mode === 'astar' ? ', each ranked by its cost so far plus a guess of the cost left' : ''}.`)
   }
 }
@@ -383,9 +396,9 @@ class PfGames extends Figure {
       S('path', { d: d.join(''), class: 'f-none s-green', 'stroke-width': 1.1 }, L)
       say(this.rows, `A flow field: one Dijkstra from the target over every cell, then each cell points to its cheapest neighbour. Any number of units can follow it from anywhere. One in nine arrows drawn; the garden gets none.`)
     } else {
-      const P = prepare(true), d = [[], [], []], garden = []
-      for (let i = 0; i < N; i++) if (C[i]) (P.region[i] !== P.region[START] ? garden : d[P.area[i] % 3]).push(sq(i))
-      d.forEach((x, k) => S('path', { d: x.join(''), class: 'f-green', opacity: .1 + .12 * k }, L))
+      const P = prepare(true), d = [[], [], [], []], garden = []
+      for (let i = 0; i < N; i++) if (C[i]) (P.region[i] !== P.region[START] ? garden : d[P.shade[P.area[i]]]).push(sq(i))
+      d.forEach((x, k) => S('path', { d: x.join(''), class: 'f-green', opacity: .08 + .1 * k }, L))
       S('path', { d: garden.join(''), class: 'f-ochre', opacity: .6 }, L)
       grid(L)
       say(this.rows, `Each 12 × 12 block is split into areas, the ground you can walk all over without leaving the block: ${P.areas} areas in ${BW * BH} blocks. Joined across block edges they make ${P.regions} regions; the garden (ochre) is its own, so "can't get there" is one lookup.`)
@@ -411,8 +424,7 @@ class PfPrepare extends Figure {
   }
   show(i) {
     const L = this.layer, P = prepare(true); L.replaceChildren()
-    const free = C.reduce((s, c) => s + (c ? 1 : 0), 0)
-    if (i === 0) return say(this.rows, `The input: ${fmtN(N)} cells, ${fmtN(free)} of them free. Each free cell has a cost: road 10, open ground 13, wood 22, ford 26, marsh 30. A diagonal step needs both cells beside it free, so no one squeezes between two wall cells.`)
+    if (i === 0) return say(this.rows, `The input: ${fmtN(N)} cells, ${fmtN(FREE)} of them free. Each free cell has a cost: road 10, open ground 13, wood 22, ford 26, marsh 30. A diagonal step needs both cells beside it free, so no one squeezes between two wall cells.`)
     if (i === 1) {
       const d = []; for (let c = 0; c < N; c++) if (C[c] && P.region[c] !== P.region[START]) d.push(sq(c))
       S('path', { d: d.join(''), class: 'f-ochre', opacity: .6 }, L)
@@ -420,15 +432,15 @@ class PfPrepare extends Figure {
     }
     grid(L)
     if (i === 2) {
-      const d = [[], [], []], split = new Set()
-      for (let c = 0; c < N; c++) if (C[c]) d[P.area[c] % 3].push(sq(c))
-      d.forEach((x, k) => S('path', { d: x.join(''), class: 'f-green', opacity: .1 + .12 * k }, L))
+      const d = [[], [], [], []], split = new Set()
+      for (let c = 0; c < N; c++) if (C[c]) d[P.shade[P.area[c]]].push(sq(c))
+      d.forEach((x, k) => S('path', { d: x.join(''), class: 'f-green', opacity: .08 + .1 * k }, L))
       P.byBlock.forEach((_, b) => { const seenA = new Set(); for (let y = 0; y < B; y++) for (let x = 0; x < B; x++) { const c = cellAt((b % BW) * B + x, ((b / BW) | 0) * B + y); if (C[c]) seenA.add(P.area[c]) } if (seenA.size > 1) split.add(b) })
       S('path', { d: [...split].map((b) => `M${X0 + (b % BW) * B * PX} ${Y0 + ((b / BW) | 0) * B * PX}h${B * PX}v${B * PX}h${-B * PX}z`).join(''), class: 'f-none s-ochre', 'stroke-width': 1.6 }, L)
       return say(this.rows, `2. Blocks and areas: the map is cut into 12 × 12 blocks, and each block is flood-filled on its own, as if its edges were walls. ${P.areas} areas in ${BW * BH} blocks; the ${split.size} outlined blocks hold more than one, because a wall, a house or the brook cuts them.`)
     }
     if (i === 3) {
-      S('path', { d: P.opens.map(([a, b, z]) => { const v = b - a >= W; const mx = (px(a) + px(z)) / 2, my = (py(a) + py(z)) / 2; return v ? `M${mx} ${my - PX / 2}V${py(b) + PX / 2}` : `M${mx - PX / 2} ${my}H${px(b) + PX / 2}` }).join(''), class: 'f-none s-ochre', 'stroke-width': 3, opacity: .8 }, L)
+      S('path', { d: P.opens.map(([a, b, z]) => { const v = z - a === 1; const mx = (px(a) + px(z)) / 2, my = (py(a) + py(z)) / 2; return v ? `M${mx} ${my - PX / 2}V${py(b) + PX / 2}` : `M${mx - PX / 2} ${my}H${px(b) + PX / 2}` }).join(''), class: 'f-none s-ochre', 'stroke-width': 3, opacity: .8 }, L)
       S('path', { d: doorsD(P), class: 'f-ink' }, L)
       return say(this.rows, `3. Doors: along every block edge, a run of free cells facing free cells is an opening (ochre). It ends at a blocked cell, a change of area, or a change of ground cost. Each opening gets one door in its middle: ${P.nodes.length / 2} doors, two nodes each.`)
     }
@@ -449,12 +461,7 @@ class PfPlan extends Figure {
     this.rows = textRows(svg, MAPH + Y0 + 20, 4)
     this.split = true; this.pick = null; [this.s, this.t] = PRESETS.far
     pills(this, [['far', 'across the brook'], ['lane', 'into the lane'], ['garden', 'into the garden']], 'far', (v) => { [this.s, this.t] = PRESETS[v]; this.load() })
-    const bar = H('div', { class: 'fc' }, this)
-    const rule = [[true, 'doors split at cost changes'], [false, 'one door per opening']].map(([v, l]) => {
-      const b = H('button', { class: 'pill', type: 'button', text: l, 'aria-pressed': String(v) }, bar)
-      b.onclick = () => { rule.forEach((x) => x.setAttribute('aria-pressed', String(x === b))); this.split = v; this.load() }
-      return b
-    })
+    pills(this, [[true, 'doors split at cost changes'], [false, 'one door per opening']], true, (v) => { this.split = v; this.load() }, H('div', { class: 'fc' }, this))
     this.step = stepper(this, (i) => this.show(i))
     svg.style.cursor = 'crosshair'
     svg.addEventListener('click', (e) => {
@@ -466,9 +473,10 @@ class PfPlan extends Figure {
   }
   load() {
     if (!C[this.s]) this.s = nearest(prepare(this.split), this.s, prepare(this.split).region[START])
-    this.P = prepare(this.split); this.r = plan(this.P, this.s, this.t); this.step.set(5, 4)
+    this.pick = null; this.P = prepare(this.split); this.r = plan(this.P, this.s, this.t); this.step.set(5, 4)
   }
   show(i) {
+    this.pick = null
     const L = this.layer, P = this.P, r = this.r; L.replaceChildren(); this.mark(r.s, r.t0)
     const node = (n) => P.nodes[n], dot = (c, cls, rad = 2.6) => `M${px(c) - rad} ${py(c)}a${rad} ${rad} 0 1 0 ${2 * rad} 0a${rad} ${rad} 0 1 0 ${-2 * rad} 0`
     if (r.moved) S('path', { d: dot(r.t, '', 4) + `M${px(r.t0)} ${py(r.t0)}L${px(r.t)} ${py(r.t)}`, class: 'f-none s-ochre', 'stroke-width': 1.6, 'stroke-dasharray': '3 2' }, L)
@@ -489,13 +497,13 @@ class PfPlan extends Figure {
     if (i === 3) {
       S('path', { d: cellsD(r.stepLooked), class: 'f-green', opacity: .25 }, L)
       S('path', { d: polyD(r.cells), class: 'f-none s-green', 'stroke-width': 1.6, 'stroke-linejoin': 'round' }, L)
-      return say(this.rows, `4. The steps: for each link of the route, an exact A* over cells from door to door, inside that one block. ${fmtN(r.stepLooked.length)} cells looked at in all, against ${fmtN(r.exact.order.length)} for one A* over the whole map.`)
+      return say(this.rows, `4. The steps: for each link of the route, an exact A* over cells from door to door, inside that one block. ${fmtN(r.stepLooked.length)} cells looked at in all, against ${fmtN(r.exact.order.length)} for one A* over the whole map. Before straightening the steps cost ${pctOf(r.stepsCost, r.exact.cost)} the exact path.`)
     }
     const pts = r.straight.pts
     S('path', { d: polyD(r.exact.path), class: 'f-none s-ink2', 'stroke-width': 1.4, 'stroke-dasharray': '4 3' }, L)
     S('path', { d: polyD(pts), class: 'f-none s-green', 'stroke-width': 2.6, 'stroke-linejoin': 'round' }, L)
-    const diff = (r.straight.cost / r.exact.cost - 1) * 100
-    say(this.rows, `5. Straighten: skip points while the straight line is clear and costs at most 5 % more than the steps it replaces. ${pts.length - 1} straight legs, costing ${diff >= 0 ? diff.toFixed(1) + ' % more' : (-diff).toFixed(1) + ' % less'} than the exact cell path (dashed), which can only move in 8 directions.`)
+    say(this.rows, r.exact.cost === 0 ? '5. The start and the target are the same cell: nothing to walk.'
+      : `5. Straighten: skip points while the straight line is clear and costs at most 5 % more than the steps it replaces. ${pts.length - 1} straight legs, costing ${pctOf(r.straight.cost, r.exact.cost)} the exact cell path (dashed), which can only move in 8 directions.`)
   }
 }
 

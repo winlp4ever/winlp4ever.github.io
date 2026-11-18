@@ -97,9 +97,9 @@ export function entrance(fig, paint, ms = 900) {
   };
 }
 // a row of toggle pills in the figure's control bar (created on first use)
-export function pills(fig, items, value, on) {
+export function pills(fig, items, value, on, bar) {
   fig.idleText = 'interactive';
-  const bar = fig.querySelector('.fc') || H('div', { class: 'fc' }, fig);
+  bar = bar || fig.querySelector('.fc') || H('div', { class: 'fc' }, fig);
   const btns = items.map(([v, label]) => {
     const b = H('button', { class: 'pill', type: 'button', text: label, 'aria-pressed': String(v === value) }, bar);
     b.onclick = () => { btns.forEach((x) => x.setAttribute('aria-pressed', String(x === b))); on(v); };
