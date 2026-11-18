@@ -92,7 +92,7 @@ Each node is finished once and each edge relaxed once, so the cost depends on th
 
 <figure class="wide">
 <sp-queues data-fig data-label="fig 3 · what the queue costs">
-<p class="fallback">Basic steps Dijkstra takes on square grid graphs of 64, 256, 1,024 and 4,096 nodes. At 4,096 nodes, scanning an array for the smallest takes 16,793,344 steps, a binary heap 76,837 and buckets 21,570. The array's count grows with the square of the size; the other two grow about in proportion to it.</p>
+<p class="fallback">Basic steps Dijkstra takes on square grid graphs of 64, 256, 1,024 and 4,096 nodes. At 4,096 nodes, scanning an array for the smallest takes 16,793,344 steps, a binary heap 76,388 and buckets 21,525. The array's count grows with the square of the size; the other two grow about in proportion to it.</p>
 </sp-queues>
 <figcaption><b>fig 3</b>Basic steps (comparisons, scans and relaxations) Dijkstra takes on grid graphs of growing size, with three kinds of queue. Hover a point for the numbers.<span class="m">Counted in your browser on square grids with random weights from 1 to 9; both scales are logarithmic.</span></figcaption>
 </figure>
@@ -371,7 +371,7 @@ State (city, used). Each flight u → v with cost c gives (u, 0) → (v, 0) with
 
 <details><summary>hint</summary>
 
-Run V rounds of Bellman-Ford from a virtual start joined to every node with weight 0. Take a node improved in the last round and walk its "comes from" links V times.
+Start every distance at 0, which is the same as a virtual start joined to every node with weight 0, and run V rounds of Bellman-Ford. With every distance starting at 0, a shortest path needs at most V − 1 edges, so a change in round V means a negative cycle. Take a node changed in round V and walk its "comes from" links V times.
 
 </details>
 <details><summary>solution sketch</summary>

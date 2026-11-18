@@ -1,6 +1,6 @@
 // Shortest paths: every figure runs the real algorithm in the browser, on small
 // grids or on a sketch of Dutch roads (the problem Dijkstra first solved).
-import { S, H, attr, clamp, pills, stepper, wrap, tooltip, hit, Figure, define, STILL, REDUCED } from './core.js'
+import { S, H, attr, clamp, rng, pills, stepper, wrap, tooltip, hit, Figure, define, STILL, REDUCED } from './core.js'
 
 // ── a binary heap, ties broken by insertion order so every run is the same ──
 class Heap {
@@ -21,8 +21,23 @@ class Heap {
   get size() { return this.a.length }
 }
 const fmt = (n) => Math.round(n).toLocaleString('en-US')
-const say = (rows, text, max = 76) => { const r = wrap(text, max); rows.forEach((t, j) => { t.textContent = r[j] || '' }) }
-const textRows = (svg, x, y, n) => Array.from({ length: n }, (_, i) => S('text', { x, y: y + i * 17, class: 't2', 'font-size': 12.5 }, svg))
+// lines of text under a drawing: as many rows as the text needs, and the viewBox grows to fit them
+function textRows(svg, x, y, n) { const rows = []; Object.assign(rows, { svg, x, y }); while (rows.length < n) addRow(rows); return rows }
+const addRow = (rows) => rows.push(S('text', { x: rows.x, y: rows.y + rows.length * 17, class: 't2', 'font-size': 12.5 }, rows.svg))
+function say(rows, text, max = 76) {
+  const r = wrap(text, max); while (rows.length < r.length) addRow(rows)
+  rows.forEach((t, j) => { t.textContent = r[j] || '' })
+  const vb = rows.svg.viewBox.baseVal, need = rows.y + rows.length * 17
+  if (vb.height < need) vb.height = need
+}
+// replay a timeline figure, or jump to its end when motion is off
+const replay = (fig) => { if (STILL || REDUCED) fig.seek(fig.duration); else { fig.seek(0); fig.play() } }
+// the grid cell under a pointer event, or -1
+function cellOf(svg, G, e) {
+  const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const q = p.matrixTransform(svg.getScreenCTM().inverse())
+  const x = Math.floor((q.x - G.x0) / G.cs), y = Math.floor((q.y - G.y0) / G.cs)
+  return x >= 0 && y >= 0 && x < G.W && y < G.H ? y * G.W + x : -1
+}
 
 // ── grids: cells, walls drawn by dragging, searches on them ──
 const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]], D8 = [...D4, [1, 1], [1, -1], [-1, 1], [-1, -1]]
@@ -71,30 +86,34 @@ function board(svg, G) {
   L.ends = (s, t) => { attr(L.s, { cx: cx(G, s), cy: cy(G, s) }); const r = G.cs * .5; attr(L.t, { d: `M${cx(G, t)} ${cy(G, t) - r}l${r} ${r}l${-r} ${r}l${-r}${-r}z` }) }
   L.paint(); return L
 }
-// mouse or pen: drag to draw or erase walls, or drag the start and the target.
-// touch: tap a cell to toggle a wall, tap the dot or the diamond and then a cell to move it;
-// a swipe scrolls the page as usual. done(live) after each change.
+// mouse: drag to draw or erase walls, or drag the start and the target. Touch and pen:
+// tap a cell to toggle a wall; tap the dot or the diamond (a ring shows it) and then a cell
+// to move it. Swipes scroll the page as usual. done(live) after each change.
 function editable(fig, G, ends, done) {
-  const svg = fig.svg; let mode = null, tap = null, armed = null
-  const cellAt = (e) => { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const q = p.matrixTransform(svg.getScreenCTM().inverse()); const x = Math.floor((q.x - G.x0) / G.cs), y = Math.floor((q.y - G.y0) / G.cs); return x >= 0 && y >= 0 && x < G.W && y < G.H ? y * G.W + x : -1 }
+  const svg = fig.svg, ring = S('circle', { r: 0, class: 'f-none s-ochre', 'stroke-width': 2.5 }, svg)
+  let mode = null, last = -1, tap = null, armed = null
+  const arm = (k) => { armed = k; if (k) attr(ring, { cx: cx(G, ends[k]), cy: cy(G, ends[k]), r: G.cs * .9 }); else attr(ring, { r: 0 }) }
+  // every cell on the straight line between two cells, so a fast drag leaves no gaps
+  const line = (a, b) => { const out = [], ax = a % G.W, ay = (a / G.W) | 0, bx = b % G.W, by = (b / G.W) | 0, n = Math.max(Math.abs(bx - ax), Math.abs(by - ay)); for (let i = 1; i <= n; i++) out.push(Math.round(ay + (by - ay) * i / n) * G.W + Math.round(ax + (bx - ax) * i / n)); return out }
   svg.style.touchAction = 'manipulation'; svg.style.cursor = 'crosshair'
   svg.addEventListener('pointerdown', (e) => {
-    const c = cellAt(e); if (c < 0) return
-    if (e.pointerType === 'touch') { tap = c; return }
-    mode = c === ends.s ? 's' : c === ends.t ? 't' : G.b[c] ? 0 : 1
+    const c = cellOf(svg, G, e); if (c < 0) return
+    if (e.pointerType !== 'mouse') { tap = c; return }
+    mode = c === ends.s ? 's' : c === ends.t ? 't' : G.b[c] ? 0 : 1; last = c
     if (mode === 0 || mode === 1) G.b[c] = mode
     svg.setPointerCapture(e.pointerId); done(true)
   })
   svg.addEventListener('pointermove', (e) => {
-    if (mode == null) return; const c = cellAt(e); if (c < 0) return
-    if (mode === 's' || mode === 't') { if (!G.b[c] && c !== ends[mode === 's' ? 't' : 's'] && c !== ends[mode]) { ends[mode] = c; done(true) } }
-    else if (c !== ends.s && c !== ends.t && G.b[c] !== mode) { G.b[c] = mode; done(true) }
+    if (mode == null) return; const c = cellOf(svg, G, e); if (c < 0 || c === last) return
+    if (mode === 's' || mode === 't') { if (!G.b[c] && c !== ends[mode === 's' ? 't' : 's']) { ends[mode] = c; done(true) } }
+    else { let changed = false; for (const k of line(last, c)) if (k !== ends.s && k !== ends.t && G.b[k] !== mode) { G.b[k] = mode; changed = true } if (changed) done(true) }
+    last = c
   })
   svg.addEventListener('pointerup', (e) => {
-    if (e.pointerType === 'touch') {
-      const c = cellAt(e); if (c < 0 || c !== tap) return; tap = null
-      if (armed) { if (!G.b[c] && c !== ends.s && c !== ends.t) ends[armed] = c; armed = null }
-      else if (c === ends.s || c === ends.t) { armed = c === ends.s ? 's' : 't'; return }
+    if (e.pointerType !== 'mouse') {
+      const c = cellOf(svg, G, e); if (c < 0 || c !== tap) return; tap = null
+      if (armed) { if (!G.b[c] && c !== ends.s && c !== ends.t) ends[armed] = c; arm(null) }
+      else if (c === ends.s || c === ends.t) return arm(c === ends.s ? 's' : 't')
       else G.b[c] = G.b[c] ? 0 : 1
       return done(false)
     }
@@ -114,13 +133,13 @@ class SpBfs extends Figure {
     this.nums = S('g', { class: 't3', 'font-size': 8, 'text-anchor': 'middle' }, this.L.over)
     this.numEls = Array.from({ length: this.G.W * this.G.H }, (_, c) => S('text', { x: cx(this.G, c), y: cy(this.G, c) + 3 }, this.nums))
     this.rows = textRows(svg, 28, 300, 2)
-    editable(this, this.G, this.ends, (live) => { this.load(); this.seek(this.duration); if (!live && !STILL && !REDUCED) { this.seek(0); this.play() } })
+    editable(this, this.G, this.ends, (live) => { this.load(); this.seek(this.duration); if (!live) replay(this) })
     this.load()
   }
   load() {
     const G = this.G, { s, t } = this.ends, d = new Int32Array(G.W * G.H).fill(-1), par = new Int32Array(G.W * G.H).fill(-1), q = [s]; d[s] = 0
     for (let h = 0; h < q.length; h++) { const c = q[h]; moves(G, c, false, (j) => { if (d[j] < 0) { d[j] = d[c] + 1; par[j] = c; q.push(j) } }) }
-    this.d = d; this.q = q; this.max = d[q.at(-1)]; this.path = pathTo(par, t, d[t] >= 0); this.L.ends(s, t); this.L.paint()
+    this.d = d; this.q = q; this.max = d[q.at(-1)]; this.nt = d[t] >= 0 ? q.filter((c) => d[c] <= d[t]).length : 0; this.path = pathTo(par, t, d[t] >= 0); this.L.ends(s, t); this.L.paint()
     // one path per ring parity, rebuilt per frame from the cells reached so far
     this.rings.replaceChildren(); this.ringP = [0, 1].map((k) => S('path', { class: 'f-green', opacity: k ? .32 : .18 }, this.rings))
     this.numEls.forEach((t, c) => { t.textContent = d[c] >= 0 ? d[c] : '' })
@@ -133,7 +152,7 @@ class SpBfs extends Figure {
     this.ringP.forEach((p, i) => p.setAttribute('d', sqD(G, parts[i])))
     const reached = this.d[this.ends.t] >= 0 && this.d[this.ends.t] < k
     this.line.setAttribute('d', reached ? polyD(G, this.path) : ''); this.shownD = Math.max(0, k - 1)
-    const n = this.q.filter((c) => this.d[c] < k).length, nt = this.q.filter((c) => this.d[c] <= this.d[this.ends.t]).length
+    const n = this.q.filter((c) => this.d[c] < k).length, nt = this.nt
     say(this.rows, reached
       ? `The target is ${this.d[this.ends.t]} steps away. Before reaching it the search went through ${fmt(nt)} cells, every one of them no farther than the target. Drag to draw walls, or drag the dot and the diamond.`
       : this.d[this.ends.t] < 0 && k > this.max ? `Every reachable cell is numbered, and the target isn't among them: the walls cut it off.`
@@ -243,7 +262,7 @@ class SpNegative extends Figure {
         if (u < 0) break
         done[u] = true; const hot = [], notes = []
         edges.forEach(([a, b, w], k) => { if (a !== u) return; hot.push(k); if (done[b]) { if (d[u] + w < d[b]) notes.push(`${NEG.names[b]} could drop to ${d[u] + w}, but it's already final`) } else if (d[u] + w < d[b]) { d[b] = d[u] + w; notes.push(`${NEG.names[b]} = ${d[b]}`) } })
-        F.push({ d: d.slice(), done: done.slice(), hot, cur: u, text: `Settle ${NEG.names[u]} at ${d[u]}. ${notes.join('; ') || 'Nothing to update.'}` })
+        F.push({ d: d.slice(), done: done.slice(), hot, cur: u, text: `Settle ${NEG.names[u]} at ${d[u]}. ${notes.length ? notes.join('; ') + '.' : 'Nothing to update.'}` })
       }
       F.at(-1).text += ` Dijkstra answers T = ${d[3]}. The real shortest path S → B → A → T costs 5 − 4 + 1 = 2: A was made final before B could pay into it.`
     } else {
@@ -290,14 +309,13 @@ class SpAstar extends Figure {
     this.line = S('path', { class: 'f-none s-ink', 'stroke-width': 2.4, 'stroke-linejoin': 'round' }, this.L.over)
     this.rows = textRows(svg, 30, 300, 3)
     this.h = 'octile'
-    pills(this, Object.entries(H4).map(([k, v]) => [k, v[2]]), 'octile', (v) => { this.h = v; this.load(); this.replay() })
-    editable(this, this.G, this.ends, (live) => { this.load(); this.seek(this.duration); if (!live) this.replay() })
+    pills(this, Object.entries(H4).map(([k, v]) => [k, v[2]]), 'octile', (v) => { this.h = v; this.load(); replay(this) })
+    editable(this, this.G, this.ends, (live) => { this.load(); this.seek(this.duration); if (!live) replay(this) })
     this.load()
   }
-  replay() { if (STILL || REDUCED) this.seek(this.duration); else { this.seek(0); this.play() } }
   load() {
     const G = this.G, [hf, w] = H4[this.h], { s, t } = this.ends
-    this.r = bestFirst(G, s, t, (c) => hf(G, c, t), w); this.best = bestFirst(G, s, t, (c) => octile(G, c, t)).cost
+    this.r = bestFirst(G, s, t, (c) => hf(G, c, t), w); this.best = this.h === 'octile' || this.h === 'none' || this.h === 'euclid' ? this.r.cost : bestFirst(G, s, t, (c) => octile(G, c, t)).cost
     this.L.ends(s, t); this.L.paint()
   }
   label() { return `${fmt(this.k || 0)} cells` }
@@ -342,8 +360,8 @@ class SpBidir extends Figure {
     this.p = [S('path', { class: 'f-green', opacity: .3 }, this.L.under), S('path', { class: 'f-ochre', opacity: .38 }, this.L.under)]
     this.line = S('path', { class: 'f-none s-ink', 'stroke-width': 2.4 }, this.L.over); this.dot = S('circle', { r: 5, class: 'f-none s-ink', 'stroke-width': 2 }, this.L.over)
     this.rows = textRows(svg, 30, 314, 2); this.two = true
-    pills(this, [['one', 'one search'], ['two', 'two searches']], 'two', (v) => { this.two = v === 'two'; this.load(); if (STILL || REDUCED) this.seek(this.duration); else { this.seek(0); this.play() } })
-    editable(this, this.G, this.ends, (live) => { this.load(); this.seek(this.duration); if (!live && !STILL && !REDUCED) { this.seek(0); this.play() } })
+    pills(this, [['one', 'one search'], ['two', 'two searches']], 'two', (v) => { this.two = v === 'two'; this.load(); replay(this) })
+    editable(this, this.G, this.ends, (live) => { this.load(); this.seek(this.duration); if (!live) replay(this) })
     this.load()
   }
   load() {
@@ -387,7 +405,7 @@ class SpAlt extends Figure {
     const G = this.G, { s, t } = this.ends, Ls = this.sets[v], D = Ls.map((L) => this.from(L))
     // triangle inequality: |d(L, t) − d(L, v)| never overestimates d(v, t)
     const h = (c) => { let m = octile(G, c, t); for (const d of D) m = Math.max(m, Math.abs(d[t] - d[c])); return m }
-    const r = bestFirst(G, s, t, h), base = bestFirst(G, s, t, (c) => octile(G, c, t))
+    const r = bestFirst(G, s, t, h), base = this.base = this.base || bestFirst(G, s, t, (c) => octile(G, c, t))
     this.vis.setAttribute('d', sqD(G, r.order)); this.line.setAttribute('d', polyD(G, r.path))
     this.lm.replaceChildren(); Ls.forEach((L) => { const x = cx(G, L), y = cy(G, L); S('path', { d: `M${x} ${y - 8}l8 8l-8 8l-8-8z`, class: 'f-ochre s-ink', 'stroke-width': 1.4 }, this.lm) })
     say(this.rows, v === 'none' ? `The octile guess ignores the walls, so A* fills each corridor the path doesn't need: ${fmt(r.order.length)} cells.`
@@ -451,9 +469,7 @@ class SpMulti extends Figure {
     H('span', { class: 'fc-l', text: 'click an open cell to add or remove a source' }, bar)
     svg.style.cursor = 'crosshair'
     svg.addEventListener('click', (e) => {
-      const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const q = p.matrixTransform(svg.getScreenCTM().inverse())
-      const x = Math.floor((q.x - this.G.x0) / this.G.cs), y = Math.floor((q.y - this.G.y0) / this.G.cs), c = y * this.G.W + x
-      if (x < 0 || y < 0 || x >= this.G.W || y >= this.G.H || this.G.b[c]) return
+      const c = cellOf(svg, this.G, e); if (c < 0 || this.G.b[c]) return
       this.S = this.S.includes(c) ? this.S.filter((v) => v !== c) : this.S.length >= 6 ? this.S : [...this.S, c]; this.show()
     })
     this.show()
@@ -515,7 +531,7 @@ class SpAlgebra extends Figure {
 // ── fig 3: what the queue costs, counted live ──
 function dijkstraCount(side, kind, seed) {
   // a grid graph with random weights 1..9, Dijkstra from a corner; counts the queue's basic steps
-  let s = seed; const rnd = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648
+  const rnd = rng(seed)
   const n = side * side, wR = Array.from({ length: n }, () => 1 + Math.floor(rnd() * 9)), wD = Array.from({ length: n }, () => 1 + Math.floor(rnd() * 9))
   const nb = (i, f) => { const x = i % side, y = (i / side) | 0; if (x + 1 < side) f(i + 1, wR[i]); if (x) f(i - 1, wR[i - 1]); if (y + 1 < side) f(i + side, wD[i]); if (y) f(i - side, wD[i - side]) }
   const d = new Float64Array(n).fill(Infinity), done = new Uint8Array(n); d[0] = 0; let ops = 0
