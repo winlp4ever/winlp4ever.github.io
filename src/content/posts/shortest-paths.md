@@ -27,7 +27,7 @@ When every edge costs 1, the distance is the number of steps, and **breadth-firs
 
 <figure class="wide">
 <sp-bfs data-fig data-label="fig 1 · breadth-first search">
-<p class="fallback">A grid of 32 × 16 cells with a few walls. Breadth-first search starts at the dot near the top left and numbers every cell with its number of steps from the dot, ring by ring. The diamond near the bottom right is 55 steps away, round the walls; It is the 456th cell to come off the queue. Walls can be drawn and the ends moved, and the search reruns.</p>
+<p class="fallback">A grid of 32 × 16 cells with a few walls. Breadth-first search starts at the dot near the top left and numbers every cell with its number of steps from the dot, ring by ring. The diamond near the bottom right is 55 steps away, round the walls; it is the 456th cell to come off the queue. Walls can be drawn and the ends moved, and the search reruns.</p>
 </sp-bfs>
 <figcaption><b>fig 1</b>The search spreads in rings of equal distance; each cell shows its number of steps from the dot. Drag on the grid to draw or erase walls, or drag the dot and the diamond. On a touch screen, tap a cell to toggle a wall, or tap the dot or the diamond and then a cell to move it.<span class="m">Moves go to the 4 neighbours, every move costs 1.</span></figcaption>
 </figure>
@@ -96,7 +96,7 @@ Each node is finished once and each edge relaxed once, so the cost depends on th
 <sp-queues data-fig data-label="fig 3 · what the queue costs">
 <p class="fallback">Basic steps Dijkstra takes on square grid graphs of 64, 256, 1,024 and 4,096 nodes. At 4,096 nodes, scanning an array for the smallest takes 16,793,344 steps, a binary heap 76,388 and buckets 21,525. The array's count grows with the square of the size; the other two grow about in proportion to it.</p>
 </sp-queues>
-<figcaption><b>fig 3</b>Basic steps (comparisons, scans and relaxations) Dijkstra takes on grid graphs of growing size, with three kinds of queue. Hover a point for the numbers.<span class="m">Counted in your browser on square grids with random weights from 1 to 9; both scales are logarithmic.</span></figcaption>
+<figcaption><b>fig 3</b>Basic steps (comparisons, scans and relaxations) Dijkstra takes on grid graphs of growing size, with three kinds of queue. Hover a point for the numbers.<span class="m">The heap and the buckets are counted in your browser on square grids with random weights from 1 to 9; the array's count is exact arithmetic (n scans of n entries, plus every relaxation). Both scales are logarithmic.</span></figcaption>
 </figure>
 
 The array line climbs with slope 2 on the log-log chart: four times the nodes, sixteen times the work. The heap and the buckets climb with slope about 1.
@@ -162,7 +162,7 @@ and on an undirected graph the other order works too. The largest of these bound
 
 <figure class="wide">
 <sp-alt data-fig data-label="fig 7 · landmarks">
-<p class="fallback">A 40 × 20 grid with four long walls, from the bottom left to the top right. A* with the octile guess finishes 516 cells, filling corridors the path never uses. With one landmark in a corner it finishes 398; with two, 189; with four, also 189. The path is the same each time, length 70.3.</p>
+<p class="fallback">A 40 × 20 grid with four long walls, from the bottom left to the top right. A* with the octile guess finishes 516 cells, filling corridors the path never uses. With one landmark in a corner it finishes 398; with two, 189; with four, also 189. The path's length is the same each time, 70.3, though the cells it uses can differ.</p>
 </sp-alt>
 <figcaption><b>fig 7</b>A* across four long walls with the octile guess, then with one, two and four landmarks in the corners (ochre diamonds).<span class="m">The landmark distances are computed in your browser with one Dijkstra per landmark.</span></figcaption>
 </figure>

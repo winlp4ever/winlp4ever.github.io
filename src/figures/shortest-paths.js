@@ -20,7 +20,7 @@ class Heap {
   }
   get size() { return this.a.length }
 }
-const fmt = (n) => Math.round(n).toLocaleString('en-US')
+const num = (n) => Math.round(n).toLocaleString('en-US')
 // lines of text under a drawing: as many rows as the text needs, and the viewBox grows to fit them
 function textRows(svg, x, y, n) { const rows = []; Object.assign(rows, { svg, x, y }); while (rows.length < n) addRow(rows); return rows }
 const addRow = (rows) => rows.push(S('text', { x: rows.x, y: rows.y + rows.length * 17, class: 't2', 'font-size': 12.5 }, rows.svg))
@@ -113,7 +113,7 @@ function editable(fig, G, ends, done) {
   })
   svg.addEventListener('pointerup', (e) => {
     if (e.pointerType !== 'mouse') {
-      const c = cellOf(svg, G, e); if (c < 0 || c !== tap) return; tap = null
+      const up = cellOf(svg, G, e); if (up < 0 || tap == null || Math.abs(up % G.W - tap % G.W) > 1 || Math.abs(((up / G.W) | 0) - ((tap / G.W) | 0)) > 1) return; const c = tap; tap = null
       if (armed) { if (!G.b[c] && c !== ends.s && c !== ends.t) ends[armed] = c; arm(null) }
       else if (c === ends.s || c === ends.t) return arm(c === ends.s ? 's' : 't')
       else G.b[c] = G.b[c] ? 0 : 1
@@ -146,7 +146,7 @@ class SpBfs extends Figure {
     this.rings.replaceChildren(); this.ringP = [0, 1].map((k) => S('path', { class: 'f-green', opacity: k ? .32 : .18 }, this.rings))
     this.numEls.forEach((t, c) => { t.textContent = d[c] >= 0 ? d[c] : '' })
   }
-  label() { return `distance ${this.shownD ?? 0}` }
+  label() { return this.shownD == null ? 'start' : `distance ${this.shownD}` }
   render(t) {
     if (!this.d) return
     const G = this.G, k = Math.floor(clamp(t / (this.duration - 1)) * (this.max + 1))
@@ -155,12 +155,12 @@ class SpBfs extends Figure {
     this.numEls.forEach((el, c) => { const on = this.d[c] >= 0 && this.d[c] < k; if (on) parts[this.d[c] % 2].push(c); el.style.display = on ? '' : 'none' })
     this.ringP.forEach((p, i) => p.setAttribute('d', sqD(G, parts[i])))
     const reached = this.d[this.ends.t] >= 0 && this.d[this.ends.t] < k
-    this.line.setAttribute('d', reached ? polyD(G, this.path) : ''); this.shownD = Math.max(0, k - 1)
+    this.line.setAttribute('d', reached ? polyD(G, this.path) : ''); this.shownD = k ? k - 1 : null
     const n = parts[0].length + parts[1].length, nt = this.nt
     say(this.rows, reached
-      ? `The target is ${this.d[this.ends.t]} steps away. It was cell number ${fmt(nt)} to come off the queue; every cell before it is no farther away. Drag to draw walls, or drag the dot and the diamond.`
+      ? `The target is ${this.d[this.ends.t]} steps away. It was cell number ${num(nt)} to come off the queue; every cell before it is no farther away. Drag to draw walls, or drag the dot and the diamond.`
       : this.d[this.ends.t] < 0 && k > this.max ? `Every reachable cell is numbered, and the target isn't among them: the walls cut it off.`
-        : `Ring ${Math.max(0, k - 1)}: ${fmt(n)} cells so far. Every cell in a ring is one step farther than the ring before.`)
+        : k === 0 ? 'Press play: the search starts from the dot.' : `Ring ${k - 1}: ${num(n)} cell${n === 1 ? '' : 's'} so far. Every cell in a ring is one step farther than the ring before.`)
   }
 }
 
@@ -324,16 +324,17 @@ class SpAstar extends Figure {
     this.cells = seen.size; this.again = [...seen.values()].filter((v) => v > 1).length
     this.L.ends(s, t); this.L.paint()
   }
-  label() { return `${fmt(this.k || 0)} cells` }
+  label() { return `${num(this.k || 0)} cells` }
   render(t) {
     if (!this.r) return
-    const G = this.G, o = this.r.order, k = Math.round(clamp(t / (this.duration - .6)) * o.length); this.k = k
+    const G = this.G, o = this.r.order, k = Math.round(clamp(t / (this.duration - .6)) * o.length)
+    if (k === this.k && this.drawnFor === this.r) return; this.k = k; this.drawnFor = this.r
     this.vis.setAttribute('d', sqD(G, o.slice(0, k))); this.front.setAttribute('d', k < o.length ? sqD(G, o.slice(Math.max(0, k - 6), k), 1) : '')
     const end = k >= o.length, ok = this.r.path.length > 0
     this.line.setAttribute('d', end ? polyD(G, this.r.path) : '')
-    const name = H4[this.h][2], over = ok ? (this.r.cost / this.best - 1) * 100 : 0, cells = this.cells, looked = this.again ? `${fmt(cells)} cells looked at, ${fmt(this.again)} of them more than once (${fmt(o.length)} in all)` : `${fmt(cells)} cells looked at`
-    say(this.rows, !end ? `${name}: ${fmt(k)} cells finished so far, each picked by its cost so far plus ${this.h === 'none' ? 'nothing' : this.h === 'greedy' ? 'twice the guess' : 'the guess'}.`
-      : !ok ? `No path: the walls close the target off. ${name} still looked at ${fmt(cells)} cells to be sure.`
+    const name = H4[this.h][2], over = ok ? (this.r.cost / this.best - 1) * 100 : 0, cells = this.cells, looked = this.again ? `${num(cells)} cells looked at, ${num(this.again)} of them more than once (${num(o.length)} in all)` : `${num(cells)} cells looked at`
+    say(this.rows, !end ? `${name}: ${num(k)} cells finished so far, each picked by its cost so far plus ${this.h === 'none' ? 'nothing' : this.h === 'greedy' ? 'twice the guess' : 'the guess'}.`
+      : !ok ? `No path: the walls close the target off. ${name} still looked at ${num(cells)} cells to be sure.`
         : `${name}: ${looked}, path length ${this.r.cost.toFixed(1)}${over > .05 ? `, ${over.toFixed(1)}% longer than the shortest` : ', the shortest there is'}. Drag to draw walls, or move the dot and the diamond.`, 76)
   }
 }
@@ -375,19 +376,20 @@ class SpBidir extends Figure {
     this.one = bestFirst(G, s, t); this.bi = this.two ? bidirectional(G, s, t) : null; this.L.ends(s, t); this.L.paint()
     this.r = this.two ? this.bi : { order: this.one.order.map((c) => [c, 0]), path: this.one.path, cost: this.one.cost, meet: -1 }
   }
-  label() { return `${fmt(this.k || 0)} cells` }
+  label() { return `${num(this.k || 0)} cells` }
   render(t) {
     if (!this.r) return
-    const G = this.G, o = this.r.order, k = Math.round(clamp(t / (this.duration - .6)) * o.length), parts = [[], []]; this.k = k
+    const G = this.G, o = this.r.order, k = Math.round(clamp(t / (this.duration - .6)) * o.length), parts = [[], []]
+    if (k === this.k && this.drawnFor === this.r) return; this.k = k; this.drawnFor = this.r
     for (let i = 0; i < k; i++) parts[o[i][1]].push(o[i][0])
     this.p.forEach((p, i) => p.setAttribute('d', sqD(G, parts[i])))
     const end = k >= o.length
     this.line.setAttribute('d', end ? polyD(G, this.r.path) : '')
     if (end && this.r.meet >= 0) attr(this.dot, { cx: cx(G, this.r.meet), cy: cy(G, this.r.meet), r: 6 }); else attr(this.dot, { r: 0 })
-    say(this.rows, !end ? `${fmt(k)} cells so far.`
-      : this.r.cost === Infinity ? `The walls cut the target off, so there's no path. ${this.two ? 'Two searches' : 'One search'} finished ${fmt(o.length)} cells to be sure.`
-      : this.two ? `Two searches: ${fmt(o.length)} cells, against ${fmt(this.one.order.length)} for one. They met at the ringed cell, path length ${this.r.cost.toFixed(1)}, the same as one search finds.`
-        : `One search: ${fmt(o.length)} cells, a disc out to the target's distance. Two half-size discs cover about half the area.`, 76)
+    say(this.rows, !end ? `${num(k)} cells so far.`
+      : this.r.cost === Infinity ? `The walls cut the target off, so there's no path. ${this.two ? 'Two searches' : 'One search'} finished ${num(o.length)} cells to be sure.`
+      : this.two ? `Two searches: ${num(o.length)} cells, against ${num(this.one.order.length)} for one. They met at the ringed cell, path length ${this.r.cost.toFixed(1)}, the same as one search finds.`
+        : `One search: ${num(o.length)} cells, a disc out to the target's distance. Two half-size discs cover about half the area.`, 76)
   }
 }
 
@@ -414,8 +416,8 @@ class SpAlt extends Figure {
     const r = bestFirst(G, s, t, h), base = this.base = this.base || bestFirst(G, s, t, (c) => octile(G, c, t))
     this.vis.setAttribute('d', sqD(G, r.order)); this.line.setAttribute('d', polyD(G, r.path))
     this.lm.replaceChildren(); Ls.forEach((L) => { const x = cx(G, L), y = cy(G, L); S('path', { d: `M${x} ${y - 8}l8 8l-8 8l-8-8z`, class: 'f-ochre s-ink', 'stroke-width': 1.4 }, this.lm) })
-    say(this.rows, v === 'none' ? `The octile guess ignores the walls, so A* fills each corridor the path doesn't need: ${fmt(r.order.length)} cells.`
-      : `${Ls.length} landmark${Ls.length > 1 ? 's' : ''} (ochre), each with its exact distance to every cell computed in advance: ${fmt(r.order.length)} cells, against ${fmt(base.order.length)} with the octile guess. Same path, length ${r.cost.toFixed(1)}.`, 76)
+    say(this.rows, v === 'none' ? `The octile guess ignores the walls, so A* fills each corridor the path doesn't need: ${num(r.order.length)} cells.`
+      : `${Ls.length} landmark${Ls.length > 1 ? 's' : ''} (ochre), each with its exact distance to every cell computed in advance: ${num(r.order.length)} cells, against ${num(base.order.length)} with the octile guess. The path has the same length, ${r.cost.toFixed(1)}.`, 76)
   }
 }
 
@@ -565,18 +567,18 @@ class SpQueues extends Figure {
     const svg = this.svg, X0 = 70, X1 = 560, Y0 = 20, Y1 = 250, kinds = [['array', 'scan an array', 's-ink2', 'f-ink2'], ['heap', 'binary heap', 's-green', 'f-green'], ['bucket', 'buckets (Dial)', 's-ochre', 'f-ochre']]
     const data = kinds.map(([k]) => this.sides.map((sd) => [sd * sd, dijkstraCount(sd, k, 7 + sd)]))
     const lx = (v) => X0 + (Math.log10(v) - 1.7) / (Math.log10(5000) - 1.7) * (X1 - X0), ly = (v) => Y1 - (Math.log10(v) - 2) / (Math.log10(3e7) - 2) * (Y1 - Y0)
-    for (const v of [100, 300, 1e3, 3e3]) { S('line', { x1: lx(v), x2: lx(v), y1: Y0, y2: Y1, class: 's-rule', 'stroke-width': .6 }, svg); S('text', { x: lx(v), y: Y1 + 16, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: fmt(v) }, svg) }
+    for (const v of [100, 300, 1e3, 3e3]) { S('line', { x1: lx(v), x2: lx(v), y1: Y0, y2: Y1, class: 's-rule', 'stroke-width': .6 }, svg); S('text', { x: lx(v), y: Y1 + 16, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: num(v) }, svg) }
     for (const v of [1e3, 1e4, 1e5, 1e6, 1e7]) { S('line', { x1: X0, x2: X1, y1: ly(v), y2: ly(v), class: 's-rule', 'stroke-width': .6 }, svg); S('text', { x: X0 - 8, y: ly(v) + 4, class: 't3', 'font-size': 11, 'text-anchor': 'end', text: v >= 1e6 ? `${v / 1e6}M` : v >= 1e3 ? `${v / 1e3}k` : v }, svg) }
     S('text', { x: (X0 + X1) / 2, y: Y1 + 32, class: 't3', 'font-size': 11, 'text-anchor': 'middle', text: 'nodes in the graph' }, svg)
     data.forEach((pts, i) => {
       const [, name, sc, fc] = kinds[i]
       S('path', { d: 'M' + pts.map(([x, y]) => `${lx(x)} ${ly(y)}`).join('L'), class: `f-none ${sc}`, 'stroke-width': 2 }, svg)
-      pts.forEach(([x, y]) => { S('circle', { cx: lx(x), cy: ly(y), r: 3.5, class: fc }, svg); hit(svg, this.tip, lx(x), ly(y), `${name}, ${fmt(x)} nodes`, `${fmt(y)} steps (${(y / x).toFixed(1)} per node)`) })
+      pts.forEach(([x, y]) => { S('circle', { cx: lx(x), cy: ly(y), r: 3.5, class: fc }, svg); hit(svg, this.tip, lx(x), ly(y), `${name}, ${num(x)} nodes`, `${num(y)} steps (${(y / x).toFixed(1)} per node)`) })
       S('line', { x1: X0 + 12, x2: X0 + 30, y1: Y0 + 12 + i * 18, y2: Y0 + 12 + i * 18, class: sc, 'stroke-width': 2.5 }, svg)
       S('text', { x: X0 + 38, y: Y0 + 16 + i * 18, class: 't', 'font-size': 11.5, text: name }, svg)
     })
     const a = data[0].at(-1)[1], h = data[1].at(-1)[1], b = data[2].at(-1)[1]
-    say(this.rows, `At ${fmt(this.sides.at(-1) ** 2)} nodes: ${fmt(a)} steps scanning an array, ${fmt(h)} with a heap, ${fmt(b)} with buckets.`, 76)
+    say(this.rows, `At ${num(this.sides.at(-1) ** 2)} nodes: ${num(a)} steps scanning an array, ${num(h)} with a heap, ${num(b)} with buckets.`, 76)
   }
 }
 
