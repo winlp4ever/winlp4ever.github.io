@@ -29,7 +29,7 @@ When every edge costs 1, the distance is the number of steps, and **breadth-firs
 <sp-bfs data-fig data-label="fig 1 · breadth-first search">
 <p class="fallback">A grid of 32 × 16 cells with a few walls. Breadth-first search starts at the dot near the top left and numbers every cell with its number of steps from the dot, ring by ring. The diamond near the bottom right is 55 steps away, round the walls; 458 cells are no farther than that and get finished first. Walls can be drawn and the ends moved, and the search reruns.</p>
 </sp-bfs>
-<figcaption><b>fig 1</b>The search spreads in rings of equal distance; each cell shows its number of steps from the dot. Drag on the grid to draw or erase walls, or drag the dot and the diamond.<span class="m">Moves go to the 4 neighbours, every move costs 1.</span></figcaption>
+<figcaption><b>fig 1</b>The search spreads in rings of equal distance; each cell shows its number of steps from the dot. Drag on the grid to draw or erase walls, or drag the dot and the diamond. On a touch screen, tap a cell to toggle a wall, or tap the dot or the diamond and then a cell to move it.<span class="m">Moves go to the 4 neighbours, every move costs 1.</span></figcaption>
 </figure>
 
 Each node goes through the queue once and each edge is looked at once from each end, so breadth-first search costs O(V + E) time and O(V) memory. That's as fast as anything can be, because a search has to read the graph.
@@ -47,7 +47,7 @@ The algorithm stops when the target is finished, or when no unfinished node has 
 <sp-dijkstra data-fig data-label="fig 2 · Dijkstra, step by step">
 <p class="fallback">Nine Dutch towns and thirteen roads, from Rotterdam. Dijkstra finishes them in this order: Rotterdam 0 km, Den Haag 25, Utrecht 60, Amsterdam 85, Amersfoort 85, Arnhem 125, Zwolle 155, Leeuwarden 225 and Groningen 245. Each step takes the closest unfinished town off the queue and lowers the distances of its neighbours where the road through it is shorter. The shortest route to Groningen goes through Utrecht, Amersfoort and Zwolle, 245 km; the one through Den Haag, Amsterdam and Leeuwarden is 285 km.</p>
 </sp-dijkstra>
-<figcaption><b>fig 2</b>Rotterdam to Groningen, the problem Dijkstra first solved. Step through: ochre is the town just taken off the queue and the roads that lowered a distance, purple towns are final, the solid lines are the best way found to each town. Click a road's length to make it longer.<span class="m">The road lengths are rough and rounded for the figure, not measured.</span></figcaption>
+<figcaption><b>fig 2</b>Rotterdam to Groningen, the problem Dijkstra first solved. Step through: ochre is the town just taken off the queue and the roads that lowered a distance, purple towns are final, the solid lines are the best way found to each town. Click a road's length to add 10 km; after 150 it goes back to 20.<span class="m">The road lengths are rough and rounded for the figure, not measured.</span></figcaption>
 </figure>
 
 In Python, with a binary heap as the queue:
@@ -128,7 +128,7 @@ On a grid the guess is a distance that ignores the walls. With moves in 8 direct
 
 <figure class="wide">
 <sp-astar data-fig data-label="fig 5 · the A* playground">
-<p class="fallback">A 40 × 20 grid with walls, from a dot on the left to a diamond on the right, round the walls. With no guess (Dijkstra) the search finishes 453 cells; with the straight-line guess 314; with the octile guess 275; with the octile guess doubled, 150. All four find a path of length 44.2 here, which is the shortest; the doubled guess is only guaranteed to be within twice the shortest.</p>
+<p class="fallback">A 40 × 20 grid with walls, from a dot on the left to a diamond on the right, round the walls. With no guess (Dijkstra) the search finishes 453 cells; with the straight-line guess 314; with the octile guess 275; with the octile guess doubled, 191, some of them twice, because a guess that overestimates can finish a cell before its cheapest way in turns up. All four find a path of length 44.2 here, which is the shortest; the doubled guess is only guaranteed to be within twice the shortest.</p>
 </sp-astar>
 <figcaption><b>fig 5</b>Pick a guess and watch the cells A* finishes, in purple, with the newest in ochre. Drag on the grid to draw or erase walls, or drag the dot and the diamond.<span class="m">Moves in 8 directions, a diagonal only past two open cells; straight moves cost 1 and diagonals √2.</span></figcaption>
 </figure>

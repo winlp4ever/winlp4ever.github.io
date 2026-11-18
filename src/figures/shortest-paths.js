@@ -50,7 +50,7 @@ function bestFirst(G, s, t, h = () => 0, w = 1) {
   while (q.size) {
     const c = q.pop()[1]; if (done[c]) continue
     done[c] = 1; order.push(c); if (c === t) break
-    moves(G, c, true, (j, l) => { if (g[c] + l < g[j] - 1e-9) { g[j] = g[c] + l; par[j] = c; q.push(g[j] + w * h(j), j) } })
+    moves(G, c, true, (j, l) => { if (g[c] + l < g[j] - 1e-9) { g[j] = g[c] + l; par[j] = c; done[j] = 0; q.push(g[j] + w * h(j), j) } })
   }
   return { order, g, path: pathTo(par, t, done[t]), cost: g[t] }
 }
@@ -71,13 +71,16 @@ function board(svg, G) {
   L.ends = (s, t) => { attr(L.s, { cx: cx(G, s), cy: cy(G, s) }); const r = G.cs * .5; attr(L.t, { d: `M${cx(G, t)} ${cy(G, t) - r}l${r} ${r}l${-r} ${r}l${-r}${-r}z` }) }
   L.paint(); return L
 }
-// drag to draw or erase walls, or drag the start and the target; done() after each change
+// mouse or pen: drag to draw or erase walls, or drag the start and the target.
+// touch: tap a cell to toggle a wall, tap the dot or the diamond and then a cell to move it;
+// a swipe scrolls the page as usual. done(live) after each change.
 function editable(fig, G, ends, done) {
-  const svg = fig.svg; let mode = null
+  const svg = fig.svg; let mode = null, tap = null, armed = null
   const cellAt = (e) => { const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY; const q = p.matrixTransform(svg.getScreenCTM().inverse()); const x = Math.floor((q.x - G.x0) / G.cs), y = Math.floor((q.y - G.y0) / G.cs); return x >= 0 && y >= 0 && x < G.W && y < G.H ? y * G.W + x : -1 }
-  svg.style.touchAction = 'none'; svg.style.cursor = 'crosshair'
+  svg.style.touchAction = 'manipulation'; svg.style.cursor = 'crosshair'
   svg.addEventListener('pointerdown', (e) => {
     const c = cellAt(e); if (c < 0) return
+    if (e.pointerType === 'touch') { tap = c; return }
     mode = c === ends.s ? 's' : c === ends.t ? 't' : G.b[c] ? 0 : 1
     if (mode === 0 || mode === 1) G.b[c] = mode
     svg.setPointerCapture(e.pointerId); done(true)
@@ -87,7 +90,17 @@ function editable(fig, G, ends, done) {
     if (mode === 's' || mode === 't') { if (!G.b[c] && c !== ends[mode === 's' ? 't' : 's'] && c !== ends[mode]) { ends[mode] = c; done(true) } }
     else if (c !== ends.s && c !== ends.t && G.b[c] !== mode) { G.b[c] = mode; done(true) }
   })
-  svg.addEventListener('pointerup', () => { if (mode != null) { mode = null; done(false) } })
+  svg.addEventListener('pointerup', (e) => {
+    if (e.pointerType === 'touch') {
+      const c = cellAt(e); if (c < 0 || c !== tap) return; tap = null
+      if (armed) { if (!G.b[c] && c !== ends.s && c !== ends.t) ends[armed] = c; armed = null }
+      else if (c === ends.s || c === ends.t) { armed = c === ends.s ? 's' : 't'; return }
+      else G.b[c] = G.b[c] ? 0 : 1
+      return done(false)
+    }
+    if (mode != null) { mode = null; done(false) }
+  })
+  svg.addEventListener('pointercancel', () => { tap = null; if (mode != null) { mode = null; done(false) } })
 }
 
 // ── fig 1: breadth-first search, the wave ──
@@ -99,23 +112,24 @@ class SpBfs extends Figure {
     this.L = board(svg, this.G); this.ends = { s: 2 * 32 + 3, t: 13 * 32 + 29 }
     this.rings = S('g', {}, this.L.under); this.line = S('path', { class: 'f-none s-green', 'stroke-width': 2.5, 'stroke-linejoin': 'round' }, this.L.over)
     this.nums = S('g', { class: 't3', 'font-size': 8, 'text-anchor': 'middle' }, this.L.over)
+    this.numEls = Array.from({ length: this.G.W * this.G.H }, (_, c) => S('text', { x: cx(this.G, c), y: cy(this.G, c) + 3 }, this.nums))
     this.rows = textRows(svg, 28, 300, 2)
-    editable(this, this.G, this.ends, (live) => { this.load(); this.seek(live ? this.duration : 0); if (!live && !STILL && !REDUCED) this.play() })
+    editable(this, this.G, this.ends, (live) => { this.load(); this.seek(this.duration); if (!live && !STILL && !REDUCED) { this.seek(0); this.play() } })
     this.load()
   }
   load() {
     const G = this.G, { s, t } = this.ends, d = new Int32Array(G.W * G.H).fill(-1), par = new Int32Array(G.W * G.H).fill(-1), q = [s]; d[s] = 0
     for (let h = 0; h < q.length; h++) { const c = q[h]; moves(G, c, false, (j) => { if (d[j] < 0) { d[j] = d[c] + 1; par[j] = c; q.push(j) } }) }
-    this.d = d; this.q = q; this.max = d[q.at(-1)]; this.path = pathTo(par, t, d[t] >= 0); this.L.ends(s, t)
+    this.d = d; this.q = q; this.max = d[q.at(-1)]; this.path = pathTo(par, t, d[t] >= 0); this.L.ends(s, t); this.L.paint()
     // one path per ring parity, rebuilt per frame from the cells reached so far
     this.rings.replaceChildren(); this.ringP = [0, 1].map((k) => S('path', { class: 'f-green', opacity: k ? .32 : .18 }, this.rings))
-    this.nums.replaceChildren(); this.numEls = q.map((c) => S('text', { x: cx(G, c), y: cy(G, c) + 3, text: d[c] }, this.nums))
+    this.numEls.forEach((t, c) => { t.textContent = d[c] >= 0 ? d[c] : '' })
   }
   label() { return `distance ${this.shownD ?? 0}` }
   render(t) {
     if (!this.d) return
     const G = this.G, k = Math.floor(clamp(t / (this.duration - 1)) * (this.max + 1)), parts = [[], []]
-    this.q.forEach((c, i) => { const on = this.d[c] < k; if (on) parts[this.d[c] % 2].push(c); this.numEls[i].style.display = on ? '' : 'none' })
+    this.numEls.forEach((el, c) => { const on = this.d[c] >= 0 && this.d[c] < k; if (on) parts[this.d[c] % 2].push(c); el.style.display = on ? '' : 'none' })
     this.ringP.forEach((p, i) => p.setAttribute('d', sqD(G, parts[i])))
     const reached = this.d[this.ends.t] >= 0 && this.d[this.ends.t] < k
     this.line.setAttribute('d', reached ? polyD(G, this.path) : ''); this.shownD = Math.max(0, k - 1)
@@ -127,7 +141,7 @@ class SpBfs extends Figure {
   }
 }
 
-// ── the road sketch for figs 2 and 9: towns and roads, lengths rounded and illustrative ──
+// ── the road sketch for figs 2 and 10: towns and roads, lengths rounded and illustrative ──
 const TOWNS = [['Rotterdam', 92, 282, 12, 4, 'start'], ['Den Haag', 58, 214, -12, -12, 'end'], ['Amsterdam', 148, 128, -12, -12, 'end'], ['Utrecht', 180, 222, -12, -10, 'end'], ['Amersfoort', 244, 190, 2, 26, 'start'], ['Arnhem', 318, 254, 12, 4, 'start'], ['Zwolle', 330, 140, 12, 4, 'start'], ['Leeuwarden', 246, 40, -12, -6, 'end'], ['Groningen', 380, 70, 12, 4, 'start']]
 // [a, b, km, lanes each way, chance the road is open]
 const ROADS = [[0, 1, 25, 3, .99], [0, 3, 60, 3, .97], [1, 2, 60, 2, .98], [2, 3, 45, 3, .96], [3, 4, 25, 3, .98], [3, 5, 65, 2, .97], [2, 4, 50, 2, .99],
@@ -159,7 +173,7 @@ class SpDijkstra extends Figure {
     this.roads = ROADS.map((r) => r.slice())
     this.M = roadMap(svg, this.roads, (i) => { const r = this.roads[i]; r[2] = r[2] >= 150 ? 20 : r[2] + 10; this.load(this.step.i) })
     S('text', { x: 432, y: 30, class: 't3', 'font-size': 11, text: 'QUEUE (cheapest first)' }, svg)
-    this.qrows = Array.from({ length: 9 }, (_, i) => S('text', { x: 432, y: 54 + i * 19, class: 't', 'font-size': 12.5 }, svg))
+    this.qrows = Array.from({ length: 9 }, (_, i) => S('text', { x: 432, y: 54 + i * 19, class: 't', 'font-size': 12.5, style: 'white-space:pre' }, svg))
     this.rows = textRows(svg, 20, 322, 3)
     this.idleText = 'interactive'
     this.step = stepper(this, (i) => this.show(i))
@@ -205,7 +219,7 @@ class SpDijkstra extends Figure {
   }
 }
 
-// ── fig 3: a negative edge, Dijkstra against Bellman-Ford ──
+// ── fig 4: a negative edge, Dijkstra against Bellman-Ford ──
 const NEG = { names: ['S', 'A', 'B', 'T'], pos: [[70, 140], [250, 60], [250, 220], [430, 140]], edges: [[0, 1, 2], [0, 2, 5], [2, 1, -4], [1, 3, 1]] }
 class SpNegative extends Figure {
   build() {
@@ -263,7 +277,7 @@ class SpNegative extends Figure {
   }
 }
 
-// ── fig 4: the A* playground ──
+// ── fig 5: the A* playground ──
 const H4 = { none: [() => 0, 1, 'no guess (Dijkstra)'], euclid: [euclid, 1, 'straight line'], octile: [octile, 1, 'octile'], greedy: [octile, 2, 'octile × 2'] }
 class SpAstar extends Figure {
   constructor() { super(); this.duration = 5; this.poster = 5 }
@@ -300,7 +314,7 @@ class SpAstar extends Figure {
   }
 }
 
-// ── fig 5: one search or two ──
+// ── fig 6: one search or two ──
 function bidirectional(G, s, t) {
   const n = G.W * G.H, g = [new Float64Array(n).fill(Infinity), new Float64Array(n).fill(Infinity)], done = [new Uint8Array(n), new Uint8Array(n)], par = [new Int32Array(n).fill(-1), new Int32Array(n).fill(-1)]
   const q = [new Heap(), new Heap()], order = []; g[0][s] = 0; g[1][t] = 0; q[0].push(0, s); q[1].push(0, t)
@@ -347,12 +361,13 @@ class SpBidir extends Figure {
     this.line.setAttribute('d', end ? polyD(G, this.r.path) : '')
     if (end && this.r.meet >= 0) attr(this.dot, { cx: cx(G, this.r.meet), cy: cy(G, this.r.meet), r: 6 }); else attr(this.dot, { r: 0 })
     say(this.rows, !end ? `${fmt(k)} cells so far.`
+      : this.r.cost === Infinity ? `The walls cut the target off, so there's no path. ${this.two ? 'Two searches' : 'One search'} finished ${fmt(o.length)} cells to be sure.`
       : this.two ? `Two searches: ${fmt(o.length)} cells, against ${fmt(this.one.order.length)} for one. They met at the ringed cell, path length ${this.r.cost.toFixed(1)}, the same as one search finds.`
         : `One search: ${fmt(o.length)} cells, a disc out to the target's distance. Two half-size discs cover about half the area.`, 76)
   }
 }
 
-// ── fig 6: landmarks make the guess sharper ──
+// ── fig 7: landmarks make the guess sharper ──
 const CORNERS = (G) => [0, G.W - 1, (G.H - 1) * G.W, G.W * G.H - 1]
 class SpAlt extends Figure {
   build() {
@@ -380,7 +395,7 @@ class SpAlt extends Figure {
   }
 }
 
-// ── fig 7: Floyd-Warshall fills a table ──
+// ── fig 8: Floyd-Warshall fills a table ──
 const FW = { names: ['A', 'B', 'C', 'D', 'E'], pos: [[70, 60], [200, 40], [230, 160], [100, 200], [40, 130]], edges: [[0, 1, 3], [0, 2, 8], [1, 3, 1], [1, 2, 7], [2, 1, 4], [3, 0, 2], [3, 2, 5], [4, 3, 6], [0, 4, 9]] }
 class SpFloyd extends Figure {
   build() {
@@ -421,13 +436,13 @@ class SpFloyd extends Figure {
   }
 }
 
-// ── fig 8: many starts at once, the map splits into territories ──
+// ── fig 9: many starts at once, the map splits into territories ──
 class SpMulti extends Figure {
   build() {
     const svg = this.svgRoot(600, 332, 'Dijkstra from several sources at once: each cell is coloured by its nearest source')
     this.G = makeGrid(40, 20, 13.5, 30, 8, [[10, 0, 10, 8], [10, 12, 10, 19], [24, 4, 24, 19], [25, 4, 34, 4], [16, 9, 20, 9]])
     this.L = board(svg, this.G); attr(this.L.s, { r: 0 }); attr(this.L.t, { d: '' })
-    this.shade = [0, 1, 2].map((k) => S('path', { class: k === 1 ? 'f-ochre' : 'f-green', opacity: [.16, .3, .42][k] }, this.L.under))
+    this.shade = [0, 1, 2, 3, 4, 5].map((k) => S('path', { class: k % 2 ? 'f-ochre' : 'f-green', opacity: [.14, .24, .32, .42, .5, .6][k] }, this.L.under))
     this.edge = S('path', { class: 'f-none s-ink', 'stroke-width': 1.6 }, this.L.over); this.src = S('g', {}, this.L.over)
     this.rows = textRows(svg, 30, 296, 2)
     this.S = [3 * 40 + 4, 15 * 40 + 6, 8 * 40 + 30]
@@ -455,8 +470,8 @@ class SpMulti extends Figure {
       const x = G.x0 + (i % G.W) * G.cs, y = G.y0 + ((i / G.W) | 0) * G.cs
       edge.push(j === i + 1 ? `M${x + G.cs} ${y}v${G.cs}` : `M${x} ${y + G.cs}h${G.cs}`)
     }
-    const col = this.S.map(() => -1); col.forEach((_, k) => { let c = 0; while ([...touch[k]].some((o) => col[o] === c)) c++; col[k] = c % 3 })
-    const parts = [[], [], []]; for (let i = 0; i < n; i++) if (own[i] >= 0) parts[col[own[i]]].push(i)
+    const col = this.S.map(() => -1); col.forEach((_, k) => { let c = 0; while ([...touch[k]].some((o) => col[o] === c)) c++; col[k] = c })
+    const parts = [[], [], [], [], [], []]; for (let i = 0; i < n; i++) if (own[i] >= 0) parts[col[own[i]]].push(i)
     this.shade.forEach((p, k) => p.setAttribute('d', sqD(G, parts[k]))); this.edge.setAttribute('d', edge.join(''))
     this.src.replaceChildren(); this.S.forEach((s, k) => { S('circle', { cx: cx(G, s), cy: cy(G, s), r: 7, class: 'f-ink' }, this.src); S('text', { x: cx(G, s), y: cy(G, s) + 3.5, class: 'f-bg', 'font-size': 9.5, 'text-anchor': 'middle', text: k + 1 }, this.src) })
     const far = Math.max(0, ...Array.from(g).filter((v) => v < Infinity))
@@ -464,7 +479,7 @@ class SpMulti extends Figure {
   }
 }
 
-// ── fig 9: the same algorithm for other path problems ──
+// ── fig 10: the same algorithm for other path problems ──
 const PROBLEMS = {
   short: { label: 'shortest', start: 0, worse: Infinity, join: (a, e) => a + e[2], better: (a, b) => a < b, show: (v) => `${v} km`, edge: (e) => e[2], what: 'add the lengths, keep the smallest total' },
   wide: { label: 'widest', start: Infinity, worse: -Infinity, join: (a, e) => Math.min(a, e[3]), better: (a, b) => a > b, show: (v) => `${v} lane${v > 1 ? 's' : ''}`, edge: (e) => e[3], what: 'a route is as wide as its narrowest road; keep the widest' },
@@ -476,7 +491,7 @@ class SpAlgebra extends Figure {
     const svg = this.svgRoot(600, 352, 'Dijkstra solving four different path problems on the same roads')
     this.M = roadMap(svg, ROADS); this.rows = textRows(svg, 20, 318, 2)
     S('text', { x: 432, y: 30, class: 't3', 'font-size': 11, text: 'FROM ROTTERDAM' }, svg)
-    this.list = Array.from({ length: 8 }, (_, i) => S('text', { x: 432, y: 54 + i * 19, class: 't', 'font-size': 12 }, svg))
+    this.list = Array.from({ length: 8 }, (_, i) => S('text', { x: 432, y: 54 + i * 19, class: 't', 'font-size': 12, style: 'white-space:pre' }, svg))
     pills(this, Object.entries(PROBLEMS).map(([k, p]) => [k, p.label]), 'short', (v) => this.show(v))
     this.show('short')
   }
@@ -497,7 +512,7 @@ class SpAlgebra extends Figure {
   }
 }
 
-// ── fig 10: what the queue costs, counted live ──
+// ── fig 3: what the queue costs, counted live ──
 function dijkstraCount(side, kind, seed) {
   // a grid graph with random weights 1..9, Dijkstra from a corner; counts the queue's basic steps
   let s = seed; const rnd = () => (s = (s * 1103515245 + 12345) % 2147483648) / 2147483648
