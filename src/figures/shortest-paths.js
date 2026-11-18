@@ -99,12 +99,14 @@ function editable(fig, G, ends, done) {
   svg.addEventListener('pointerdown', (e) => {
     const c = cellOf(svg, G, e); if (c < 0) return
     if (e.pointerType !== 'mouse') { tap = c; return }
+    if (e.button !== 0) return
     mode = c === ends.s ? 's' : c === ends.t ? 't' : G.b[c] ? 0 : 1; last = c
     if (mode === 0 || mode === 1) G.b[c] = mode
     svg.setPointerCapture(e.pointerId); done(true)
   })
   svg.addEventListener('pointermove', (e) => {
-    if (mode == null) return; const c = cellOf(svg, G, e); if (c < 0 || c === last) return
+    if (mode == null) return; if (!e.buttons) { mode = null; return done(false) }
+    const c = cellOf(svg, G, e); if (c < 0 || c === last) return
     if (mode === 's' || mode === 't') { if (!G.b[c] && c !== ends[mode === 's' ? 't' : 's']) { ends[mode] = c; done(true) } }
     else { let changed = false; for (const k of line(last, c)) if (k !== ends.s && k !== ends.t && G.b[k] !== mode) { G.b[k] = mode; changed = true } if (changed) done(true) }
     last = c
@@ -199,9 +201,9 @@ class SpDijkstra extends Figure {
     this.load(0)
   }
   load(at) {
-    const adj = adjOf(this.roads), n = TOWNS.length, d = Array(n).fill(Infinity), par = Array(n).fill(-1), done = Array(n).fill(false), F = []
+    const adj = adjOf(this.roads), n = TOWNS.length, d = Array(n).fill(Infinity), par = Array(n).fill(-1), pe = Array(n).fill(-1), done = Array(n).fill(false), F = []
     d[0] = 0
-    const snap = (cur, relax, text) => F.push({ d: d.slice(), par: par.slice(), done: done.slice(), cur, relax, text, queue: d.map((v, i) => [v, i]).filter(([v, i]) => !done[i] && v < Infinity).sort((a, b) => a[0] - b[0] || a[1] - b[1]) })
+    const snap = (cur, relax, text) => F.push({ d: d.slice(), par: par.slice(), pe: pe.slice(), done: done.slice(), cur, relax, text, queue: d.map((v, i) => [v, i]).filter(([v, i]) => !done[i] && v < Infinity).sort((a, b) => a[0] - b[0] || a[1] - b[1]) })
     snap(-1, [], 'Start: Rotterdam is 0 km from itself, every other town is ∞. The queue holds only Rotterdam.')
     for (;;) {
       let u = -1; for (let i = 0; i < n; i++) if (!done[i] && d[i] < Infinity && (u < 0 || d[i] < d[u])) u = i
@@ -210,7 +212,7 @@ class SpDijkstra extends Figure {
       for (const [v, ei] of adj[u]) {
         if (done[v]) continue
         const nd = d[u] + this.roads[ei][2], ok = nd < d[v]
-        relax.push([ei, ok]); if (ok) { better.push(`${TOWNS[v][0]} ${d[v] === Infinity ? '∞' : d[v]} → ${nd}`); d[v] = nd; par[v] = u }
+        relax.push([ei, ok]); if (ok) { better.push(`${TOWNS[v][0]} ${d[v] === Infinity ? '∞' : d[v]} → ${nd}`); d[v] = nd; par[v] = u; pe[v] = ei }
       }
       snap(u, relax, `Take ${TOWNS[u][0]} (${d[u]} km) off the queue: no cheaper way to it can turn up, so it's final. ` +
         (relax.length ? (better.length ? `Through it: ${better.join(', ')}.` : 'No road from it makes a town cheaper.') : 'All its neighbours are final already.') +
@@ -220,9 +222,9 @@ class SpDijkstra extends Figure {
   }
   show(i) {
     const f = this.F[i], { E, N } = this.M
-    const tree = new Set(); f.par.forEach((p, v) => { if (p >= 0) { const e = this.roads.findIndex(([a, b]) => (a === p && b === v) || (a === v && b === p)); tree.add(e) } })
+    const tree = new Set(f.pe.filter((e) => e >= 0))
     // the final route to Groningen once it is settled
-    const route = new Set(); if (f.done[8]) for (let v = 8; f.par[v] >= 0; v = f.par[v]) route.add(this.roads.findIndex(([a, b]) => (a === f.par[v] && b === v) || (a === v && b === f.par[v])))
+    const route = new Set(); if (f.done[8]) for (let v = 8; f.par[v] >= 0; v = f.par[v]) route.add(f.pe[v])
     E.forEach((e, k) => {
       const r = f.relax.find(([ei]) => ei === k)
       attr(e.line, { class: route.has(k) ? 's-green' : r ? (r[1] ? 's-ochre' : 's-ink3') : tree.has(k) ? 's-ink2' : 's-rule', 'stroke-width': route.has(k) ? 4.5 : r ? 3.2 : tree.has(k) ? 2.6 : 2, 'stroke-dasharray': tree.has(k) || route.has(k) || r ? '' : '4 3' })
@@ -325,10 +327,10 @@ class SpAstar extends Figure {
     this.vis.setAttribute('d', sqD(G, o.slice(0, k))); this.front.setAttribute('d', k < o.length ? sqD(G, o.slice(Math.max(0, k - 6), k), 1) : '')
     const end = k >= o.length, ok = this.r.path.length > 0
     this.line.setAttribute('d', end ? polyD(G, this.r.path) : '')
-    const name = H4[this.h][2], over = ok ? (this.r.cost / this.best - 1) * 100 : 0
+    const name = H4[this.h][2], over = ok ? (this.r.cost / this.best - 1) * 100 : 0, cells = new Set(o).size, looked = cells < o.length ? `${fmt(cells)} cells looked at, ${fmt(o.length - cells)} of them twice` : `${fmt(cells)} cells looked at`
     say(this.rows, !end ? `${name}: ${fmt(k)} cells finished so far, each picked by its cost so far plus ${this.h === 'none' ? 'nothing' : this.h === 'greedy' ? 'twice the guess' : 'the guess'}.`
-      : !ok ? `No path: the walls close the target off. ${name} still looked at ${fmt(o.length)} cells to be sure.`
-        : `${name}: ${fmt(o.length)} cells looked at, path length ${this.r.cost.toFixed(1)}${over > .05 ? `, ${over.toFixed(1)}% longer than the shortest` : ', the shortest there is'}. Drag to draw walls, or move the dot and the diamond.`, 76)
+      : !ok ? `No path: the walls close the target off. ${name} still looked at ${fmt(cells)} cells to be sure.`
+        : `${name}: ${looked}, path length ${this.r.cost.toFixed(1)}${over > .05 ? `, ${over.toFixed(1)}% longer than the shortest` : ', the shortest there is'}. Drag to draw walls, or move the dot and the diamond.`, 76)
   }
 }
 
@@ -354,7 +356,7 @@ function bidirectional(G, s, t) {
 class SpBidir extends Figure {
   constructor() { super(); this.duration = 5; this.poster = 5 }
   build() {
-    const svg = this.svgRoot(600, 336, 'Dijkstra from the start only, against two searches from both ends that meet in the middle')
+    const svg = this.svgRoot(600, 352, 'Dijkstra from the start only, against two searches from both ends that meet in the middle')
     this.G = makeGrid(60, 32, 9, 30, 8, [[30, 12, 30, 20]])
     this.L = board(svg, this.G); this.ends = { s: 16 * 60 + 20, t: 16 * 60 + 40 }
     this.p = [S('path', { class: 'f-green', opacity: .3 }, this.L.under), S('path', { class: 'f-ochre', opacity: .38 }, this.L.under)]
@@ -366,7 +368,7 @@ class SpBidir extends Figure {
   }
   load() {
     const G = this.G, { s, t } = this.ends
-    this.one = bestFirst(G, s, t); this.bi = bidirectional(G, s, t); this.L.ends(s, t); this.L.paint()
+    this.one = bestFirst(G, s, t); this.bi = this.two ? bidirectional(G, s, t) : null; this.L.ends(s, t); this.L.paint()
     this.r = this.two ? this.bi : { order: this.one.order.map((c) => [c, 0]), path: this.one.path, cost: this.one.cost, meet: -1 }
   }
   label() { return `${fmt(this.k || 0)} cells` }
@@ -512,15 +514,15 @@ class SpAlgebra extends Figure {
     this.show('short')
   }
   show(key) {
-    const P = PROBLEMS[key], n = TOWNS.length, adj = adjOf(ROADS), best = Array(n).fill(P.worse), par = Array(n).fill(-1), done = Array(n).fill(false)
+    const P = PROBLEMS[key], n = TOWNS.length, adj = adjOf(ROADS), best = Array(n).fill(P.worse), par = Array(n).fill(-1), pe = Array(n).fill(-1), done = Array(n).fill(false)
     best[0] = P.start
     // Dijkstra with "better" in place of "smaller": correct because extending a route never improves it
     for (;;) {
       let u = -1; for (let i = 0; i < n; i++) if (!done[i] && best[i] !== P.worse && (u < 0 || P.better(best[i], best[u]))) u = i
       if (u < 0) break; done[u] = true
-      for (const [v, ei] of adj[u]) { const c = P.join(best[u], ROADS[ei]); if (!done[v] && P.better(c, best[v])) { best[v] = c; par[v] = u } }
+      for (const [v, ei] of adj[u]) { const c = P.join(best[u], ROADS[ei]); if (!done[v] && P.better(c, best[v])) { best[v] = c; par[v] = u; pe[v] = ei } }
     }
-    const route = new Set(); for (let v = 8; par[v] >= 0; v = par[v]) route.add(ROADS.findIndex(([a, b]) => (a === par[v] && b === v) || (a === v && b === par[v])))
+    const route = new Set(); for (let v = 8; par[v] >= 0; v = par[v]) route.add(pe[v])
     this.M.E.forEach((e, k) => { attr(e.line, { class: route.has(k) ? 's-green' : 's-rule', 'stroke-width': route.has(k) ? 4.5 : 2 }); e.tx.textContent = P.edge(ROADS[k]) })
     this.M.N.forEach((nd, k) => { attr(nd.c, { class: k === 0 || k === 8 ? 'f-ink s-ink' : route.size && [...route].some((ei) => ROADS[ei][0] === k || ROADS[ei][1] === k) ? 'f-green s-ink' : 'f-panel s-ink' }); nd.d.textContent = '' })
     this.list.forEach((t, i) => { const k = i + 1; t.textContent = `${TOWNS[k][0].padEnd(11)} ${P.show(best[k])}` })
@@ -535,9 +537,10 @@ function dijkstraCount(side, kind, seed) {
   const n = side * side, wR = Array.from({ length: n }, () => 1 + Math.floor(rnd() * 9)), wD = Array.from({ length: n }, () => 1 + Math.floor(rnd() * 9))
   const nb = (i, f) => { const x = i % side, y = (i / side) | 0; if (x + 1 < side) f(i + 1, wR[i]); if (x) f(i - 1, wR[i - 1]); if (y + 1 < side) f(i + side, wD[i]); if (y) f(i - side, wD[i - side]) }
   const d = new Float64Array(n).fill(Infinity), done = new Uint8Array(n); d[0] = 0; let ops = 0
-  if (kind === 'array') {
-    for (let k = 0; k < n; k++) { let u = -1; for (let i = 0; i < n; i++) { ops++; if (!done[i] && (u < 0 || d[i] < d[u])) u = i } done[u] = 1; nb(u, (v, w) => { ops++; if (d[u] + w < d[v]) d[v] = d[u] + w }) }
-  } else if (kind === 'heap') {
+  // scanning an array looks at all n entries for each of the n pops, then relaxes every edge
+  // from both ends: n² + 4·side·(side − 1), counted without running the 16-million-step loop
+  if (kind === 'array') return n * n + 4 * side * (side - 1)
+  if (kind === 'heap') {
     const q = new Heap(); q.push(0, 0)
     while (q.size) { const [du, u] = q.pop(); if (done[u]) continue; done[u] = 1; nb(u, (v, w) => { ops++; if (du + w < d[v]) { d[v] = du + w; q.push(d[v], v) } }) }
     ops += q.cmp

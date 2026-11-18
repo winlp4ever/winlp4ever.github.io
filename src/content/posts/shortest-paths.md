@@ -66,6 +66,8 @@ def dijkstra(graph, source):
             continue  # an old entry: u was finished with a smaller d
         done.add(u)
         for v, w in graph[u]:
+            if v in done:
+                continue  # finished nodes are final and never touched again
             nd = d + w
             if nd < dist.get(v, float("inf")):
                 dist[v] = nd
@@ -73,7 +75,7 @@ def dijkstra(graph, source):
     return dist
 ```
 
-Python's heap has no way to lower an entry's key, so the code pushes a new entry and skips the old one when it comes out. The queue can then hold up to E entries instead of V, which costs a little memory and nothing else.
+Python's heap has no way to lower an entry's key, so the code pushes a new entry and skips the old one when it comes out. A finished node is never touched again, which is the rule the proof below rests on, and the figures run the same code. The queue can then hold up to E entries instead of V, which costs a little memory and nothing else.
 
 ### why it's right
 
@@ -128,7 +130,7 @@ On a grid the guess is a distance that ignores the walls. With moves in 8 direct
 
 <figure class="wide">
 <sp-astar data-fig data-label="fig 5 · the A* playground">
-<p class="fallback">A 40 × 20 grid with walls, from a dot on the left to a diamond on the right, round the walls. With no guess (Dijkstra) the search finishes 453 cells; with the straight-line guess 314; with the octile guess 275; with the octile guess doubled, 191, some of them twice, because a guess that overestimates can finish a cell before its cheapest way in turns up. All four find a path of length 44.2 here, which is the shortest; the doubled guess is only guaranteed to be within twice the shortest.</p>
+<p class="fallback">A 40 × 20 grid with walls, from a dot on the left to a diamond on the right, round the walls. With no guess (Dijkstra) the search finishes 453 cells; with the straight-line guess 314; with the octile guess 275; with the octile guess doubled, 150, and 41 of them twice, because a guess that overestimates can finish a cell before its cheapest way in turns up, and the search then has to finish it again. All four find a path of length 44.2 here, which is the shortest; the doubled guess is only guaranteed to be within twice the shortest.</p>
 </sp-astar>
 <figcaption><b>fig 5</b>Pick a guess and watch the cells A* finishes, in purple, with the newest in ochre. Drag on the grid to draw or erase walls, or drag the dot and the diamond.<span class="m">Moves in 8 directions, a diagonal only past two open cells; straight moves cost 1 and diagonals √2.</span></figcaption>
 </figure>
@@ -329,7 +331,7 @@ Let P be a shortest path and n the first node of P not yet finished when t is ta
 
 <details><summary>hint</summary>
 
-The lazy version (skip entries whose distance is larger than the stored one) is enough.
+The version above, which skips a queue entry when its node is already finished, is enough.
 
 </details>
 </div>
