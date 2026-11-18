@@ -111,8 +111,6 @@ const sq = (i, inset = 0) => `M${X0 + (i % W) * PX + inset} ${Y0 + ((i / W) | 0)
 const cellsD = (list) => list.map((i) => sq(i)).join('')
 const polyD = (cells) => cells.length ? 'M' + cells.map((c) => `${px(c)} ${py(c)}`).join('L') : ''
 const fmtN = (n) => Math.round(n).toLocaleString('en-US')
-// '3.1 % more than' / '1.5 % less than' / 'the same as'
-const pctOf = (a, b) => { if (!b) return 'the same as'; const d = (a / b - 1) * 100; return Math.abs(d) < .05 ? 'the same as' : d > 0 ? `${d.toFixed(1)} % more than` : `${(-d).toFixed(1)} % less than` }
 const metres = (c) => (c / (OPEN * 200)).toFixed(0) // a cost in "metres of open ground"
 
 // the ground, one path per kind of cell (runs merged along each row)
@@ -137,12 +135,6 @@ function marks(svg) {
 }
 const textRows = (svg, y, n) => Array.from({ length: n }, (_, i) => S('text', { x: X0, y: y + i * 17, class: 't2', 'font-size': 12.5 }, svg))
 const say = (rows, text) => { const r = wrap(text, 75); rows.forEach((t, j) => { t.textContent = r[j] || '' }) }
-// map coordinates of a click, or -1
-function cellFromEvent(svg, e) {
-  const p = svg.createSVGPoint(); p.x = e.clientX; p.y = e.clientY
-  const q = p.matrixTransform(svg.getScreenCTM().inverse()), x = Math.floor((q.x - X0) / PX), y = Math.floor((q.y - Y0) / PX)
-  return x >= 0 && y >= 0 && x < W && y < HH ? y * W + x : -1
-}
 
 const START = cellAt(5, 52), FAR = cellAt(90, 24)
 
@@ -462,7 +454,7 @@ function sight(cost, a, b) {
   let ix = 0, iy = 0; const cells = [a];
   while (ix < ax || iy < ay) {
     const l = (1 + 2 * ix) * ay, r = (1 + 2 * iy) * ax;
-    if (l === r) { if (!cost[y * W + x + sx] && !cost[(y + sy) * W + x]) return null; x += sx; y += sy; ix++; iy++; }
+    if (l === r) { if (!cost[y * W + x + sx] || !cost[(y + sy) * W + x]) return null; x += sx; y += sy; ix++; iy++; }
     else if (l < r) { x += sx; ix++; } else { y += sy; iy++; }
     const c = y * W + x; if (!cost[c]) return null; cells.push(c);
   }
@@ -561,8 +553,8 @@ function planOld(cost, old, s, t) {
 if (false) module.exports = { W, H, C, OLD, buildGround, buildHierarchy, planNew, buildOld, planOld, fineAStar, sight };
 
 (() => {
-const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const PV = document.querySelector('.pv'); const css = (n) => getComputedStyle(PV).getPropertyValue(n).trim();
+const reduce = REDUCED || STILL;
+const PV = document.querySelector('.pv'), CSS = new Map(); const css = (n) => { if (!CSS.has(n)) CSS.set(n, getComputedStyle(PV).getPropertyValue(n).trim()); return CSS.get(n); };
 const $ = (id) => document.getElementById(id);
 const redrawers = [];
 
@@ -898,7 +890,7 @@ function drawLab(now) {
   if (show.old && o.path) {
     line(g, o.path, s, css('--violet'), 2.2, 1, [6, 4]);
     const last = o.path[o.path.length - 1], [lx, ly] = ctr(last, s); g.fillStyle = css('--violet'); g.fillRect(lx - 5, ly - 5, 10, 10);
-    if (!o.reached && !n.moved) { const [tx, ty] = ctr(o.target, s); g.setLineDash([2, 3]); g.strokeStyle = css('--violet'); g.lineWidth = 1.2; g.beginPath(); g.moveTo(lx, ly); g.lineTo(tx, ty); g.stroke(); g.setLineDash([]); tag(g, `coarse: stops ${o.endGap.toFixed(0)} m away, behind a wall`, lx + 8, ly + 16, css('--violet')); }
+    if (!o.reached && !n.moved) { const [tx, ty] = ctr(o.target, s); g.setLineDash([2, 3]); g.strokeStyle = css('--violet'); g.lineWidth = 1.2; g.beginPath(); g.moveTo(lx, ly); g.lineTo(tx, ty); g.stroke(); g.setLineDash([]); tag(g, `coarse: stops ${o.endGap.toFixed(0)} m away${o.endSeesTarget ? '' : ', behind a wall'}`, lx + 8, ly + 16, css('--violet')); }
   }
   // the final path
   if (n.path) {
@@ -924,7 +916,7 @@ function stats() {
     ['Exact A*: cells looked at', f(ex.order.length)], ['Longer than the best path', (over < 0.005 ? '0.0' : over.toFixed(1)) + ' %'], ['Coarse: squares looked at', f(o.expanded || 0)]];
   $('stats').innerHTML = rows.map(([a, b], i) => `<dt>${a}</dt><dd class="${i === 2 ? 'big' : ''}">${b}</dd>`).join('');
   const gap = Math.hypot(n.g % W - n.target % W, ((n.g / W) | 0) - ((n.target / W) | 0));
-  const vn = n.moved ? `<b>Blocks, areas, doors:</b> the target is inside the walled garden, its own region, so no path exists. One check tells. The unit goes to the nearest point it can reach, ${gap.toFixed(0)} m away.` : `<b>Blocks, areas, doors:</b> reaches the target.`;
+  const vn = n.moved ? `<b>Blocks, areas, doors:</b> ${n.unreachable ? 'the target is in another region, such as the walled garden, so no path exists. One check tells.' : 'the target is on blocked ground.'} The unit goes to the nearest point it can reach, ${gap.toFixed(0)} m away.` : `<b>Blocks, areas, doors:</b> reaches the target.`;
   const vo = !o.path ? '<b>Coarse grid:</b> no path.' : o.reached ? `<b>Coarse grid:</b> also reaches it.` : `<b>Coarse grid:</b> stops ${o.endGap.toFixed(1)} m from the target${o.endSeesTarget ? '' : ', with a wall between'}. ${o.notes[0] ? 'Why: ' + o.notes[0].replace('target cell closed', 'the target\'s square is closed').replace('nothing open in 24 m sees it', 'no open square nearby can see it').replace('goal not reached; ends at the reached cell nearest the target', 'it stops at the nearest square it reached') + '.' : ''}`;
   $('verdicts').innerHTML = `<div class="v-new">${vn}</div><div class="v-old">${vo}</div>`;
 }
@@ -1159,7 +1151,8 @@ function drawGt(el, now) {
 }
 function drawGames(now) { GAMES.forEach((gm, i) => gm.draw(gameEls[i], now)); }
 redrawers.push(() => drawGames(performance.now()));
-if (!reduce) { const anim = (now) => { GAMES.forEach((gm, i) => { if (gm.anim) gm.draw(gameEls[i], now); }); requestAnimationFrame(anim); }; requestAnimationFrame(anim); }
+const onScreen = (el) => { const r = el.getBoundingClientRect(); return r.bottom > 0 && r.top < innerHeight; };
+if (!reduce) { const anim = (now) => { GAMES.forEach((gm, i) => { if (gm.anim && onScreen(gameEls[i])) gm.draw(gameEls[i], now); }); requestAnimationFrame(anim); }; requestAnimationFrame(anim); }
 
 /* =================== GLOSSARY FIGURES =================== */
 const FIG = {};
@@ -1331,15 +1324,15 @@ function drawIdea() {
     if (D.near != null) { const [nx, ny] = C(D.near); g.strokeStyle = css('--carmine'); g.lineWidth = 2.5; g.beginPath(); g.arc(nx, ny, 9, 0, 7); g.stroke(); } }
   $('ideaText').innerHTML = `<b>${ideaStage + 1} · ${IDEA_TEXT[ideaStage][0]}.</b> ${text}`;
 }
-chips($('ideaSteps'), IDEA_TEXT.map((t, i) => `${i + 1} · ${t[0]}`), 0, (i) => { ideaStage = i; ideaAuto = false; drawIdea(); });
+chips($('ideaSteps'), IDEA_TEXT.map((t, i) => `${i + 1} · ${t[0]}`), reduce ? 5 : 0, (i) => { ideaStage = i; ideaAuto = false; drawIdea(); });
 let ideaAuto = !reduce; if (reduce) ideaStage = 5;
 $('ideaClosed').onchange = (e) => { ideaClosed = e.target.checked; ideaData = null; drawIdea(); };
 if (ideaAuto) setInterval(() => { if (!ideaAuto) return; ideaStage = (ideaStage + 1) % 6; [...$('ideaSteps').children].forEach((c, j) => c.setAttribute('aria-pressed', j === ideaStage)); drawIdea(); }, 4200);
 redrawers.push(drawIdea);
 
 /* hero animation loop and global redraws */
-if (!reduce) { const hl = (now) => { drawHero(now); requestAnimationFrame(hl); }; requestAnimationFrame(hl); }
-const all = () => { baseCv = null; redrawers.forEach((f) => f()); };
+if (!reduce) { const hl = (now) => { if (now - heroT0 < 1200 && onScreen($('hero'))) drawHero(now); requestAnimationFrame(hl); }; requestAnimationFrame(hl); }
+const all = () => { CSS.clear(); baseCv = null; redrawers.forEach((f) => f()); };
 addEventListener('resize', () => requestAnimationFrame(all));
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', all);
 new MutationObserver(all).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
