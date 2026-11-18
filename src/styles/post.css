@@ -200,3 +200,7 @@
 .prose .fn:target { color: var(--ink); }
 .prose .fn > a:first-child, .prose sup > a[href^="#fn-"] { font-weight: 600; text-decoration: none; border: 0; background: none; }
 .prose .fn > a:first-child { margin-right: 0.2em; }
+
+/* pathfinding-for-games: the ground's kinds of cell */
+.pf-road { fill: var(--rule-2); } .pf-wood { fill: var(--ink-3); opacity: .2; } .pf-marsh { fill: var(--ochre); opacity: .25; }
+.pf-water { fill: var(--ink-3); opacity: .6; } .pf-ford { fill: var(--ink-3); opacity: .28; } .pf-house { fill: var(--ink-2); } .pf-wall { fill: var(--ink); }
