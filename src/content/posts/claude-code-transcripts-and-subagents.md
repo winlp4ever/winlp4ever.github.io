@@ -42,7 +42,9 @@ Three fields carry the structure. `uuid` names a record. `parentUuid` names the 
 
 Following `parentUuid` from the newest record back to the first gives the conversation in order. That newest record is the **leaf**, and the path from it to the start is what gets sent to the model.
 
-Most records have one child, so the path is a line. Two things make it a tree. A reply that calls two tools at once is saved as separate records, and each result attaches to its own call. And going back to an earlier prompt to send a different one leaves the old continuation in the file as a side branch: I found 18 records in my transcripts with two prompts as children, the shape a rewind followed by a new prompt would leave. The docs don't say how a rewind is stored.
+In my transcripts a record's parent was the record written just before it 104,677 times out of 107,221, about 98% of the time. The field is called parent, and not previous, because of the other 2%. Two things make the chain a tree. A reply that calls two tools at once is saved as separate records, and each result attaches to its own call. And going back to an earlier prompt to send a different one leaves the old continuation in the file as a side branch: I found 18 records in my transcripts with two prompts as children, the shape a rewind followed by a new prompt would leave. The docs don't say how a rewind is stored.
+
+The line above a record is whatever was written before it. Its parent is the record it continues from. To rebuild a conversation, Claude Code follows parents from the leaf and skips the side branches.
 
 <figure class="wide">
 <ts-chain data-fig data-label="fig 3 · one turn">
@@ -72,7 +74,11 @@ The file is also what makes the model look like it remembers the conversation. A
 
 A conversation that keeps growing reaches the context window's limit. **Compaction** replaces the conversation with a structured summary, either when you run `/compact` or automatically as you approach the limit<sup><a href="#src-4">4</a></sup>.
 
-On disk nothing is removed. Claude Code appends a `compact_boundary` record with no parent, then a summary, and the chain continues from there. The boundary keeps a `logicalParentUuid` that points at the old chain's last record. My transcripts hold 173 of these boundaries, and one of them recorded 409,043 tokens of context before it ran.
+On disk nothing is removed. Claude Code appends a `compact_boundary` record with no parent, then a summary, and the chain continues from there. The boundary keeps a `logicalParentUuid` that points at the old chain's last record.
+
+Those two fields do different jobs at a boundary. With `parentUuid` set to null, a walk back from the leaf stops there, so only the summary and later records are loaded into context. `logicalParentUuid` keeps the link to what came before, so the full history can be traced. In the transcripts I scanned, every record that has a `logicalParentUuid` is a compaction boundary. This is my reading of the files, and the docs describe neither field.
+
+ My transcripts hold 173 of these boundaries, and one of them recorded 409,043 tokens of context before it ran.
 
 <figure class="wide">
 <ts-compact data-fig data-label="fig 5 · compaction">
