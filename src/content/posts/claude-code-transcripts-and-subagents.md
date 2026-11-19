@@ -5,7 +5,7 @@ description: A Claude Code session is a file of JSON records, one per line. This
 tags: [ai, agents, claude-code, subagents]
 category: ai
 glyph: log
-figures: 8
+figures: 10
 ---
 
 My last post covered Claude Code's memory, the notes it keeps between sessions<sup><a href="#src-8">8</a></sup>. This one covers the record of a single session, and then subagents, which are recorded the same way. I wrote it as a lesson: each term is defined where it first appears, and most figures are built from files on my laptop as they were on 19 November 2026, running Claude Code 2.1.328. Where the docs say something, I cite them. Where I only saw it on disk, I say so, because the docs call the record format internal and warn that it changes between versions<sup><a href="#src-1">1</a></sup>.
@@ -20,7 +20,7 @@ A session leaves a few more files next to its transcript.
 
 <figure class="wide">
 <ts-folder data-fig data-label="fig 1 · the files of one session">
-<p class="fallback">The files one session leaves under ~/.claude. In projects/&lt;project&gt;/: the main transcript &lt;session-id&gt;.jsonl (757 lines and 13.7 MB on my machine); a folder &lt;session-id&gt;/subagents/ with one transcript and one small metadata file per subagent (three subagents, of 85, 134 and 42 lines); a folder &lt;session-id&gt;/tool-results/ for tool outputs too large to keep inline (one file of 55 KB); and the project's memory folder, shared by all sessions. In file-history/&lt;session-id&gt;/: backups of files from before each edit (5 backups of 2 files). After 30 days by default, everything except memory is deleted together with the session.</p>
+<p class="fallback">The files one session leaves under ~/.claude. In projects/&lt;project&gt;/: the main transcript &lt;session-id&gt;.jsonl (757 lines and 13.7 MB on my machine); a folder &lt;session-id&gt;/subagents/ with one transcript and one small metadata file per subagent (four subagents, of 42 to 167 lines); a folder &lt;session-id&gt;/tool-results/ for tool outputs too large to keep inline (one file of 55 KB); and the project's memory folder, shared by all sessions. In file-history/&lt;session-id&gt;/: backups of files from before each edit (5 backups of 2 files). After 30 days by default, everything except memory is deleted together with the session.</p>
 </ts-folder>
 <figcaption><b>fig 1</b>One session of mine and the files it left. <span class="m">Paths and sizes are from the session that wrote my last post, with ids shortened. The folder layout and the 30-day cleanup are in the docs<sup><a href="#src-5">5</a></sup>. Pick a file to see what it holds.</span></figcaption>
 </figure>
@@ -105,6 +105,8 @@ A backup is a whole copy of the file, with a name like `88f0125b…@v3`. The fir
 
 A snapshot is tied to a prompt. Its `messageId` holds the `uuid` of a `user` record, and in that session all 35 snapshots pointed at one of my prompts. It is written when the prompt is sent, before Claude acts on it, so it describes the files at the start of that turn. Tool calls and replies in the middle of a turn get no snapshot of their own.
 
+Write and Edit both count as file editing tools: I created my last post with Write, and its tracking started at that call. A file that only shell commands have changed is never tracked. Once a file tool has touched a file, later shell changes to it are captured too<sup><a href="#src-3">3</a></sup>. That post's later versions came from scripts run through Bash, and each got a backup at the next prompt.
+
 `/rewind` goes back to a checkpoint. It can restore the code, the conversation, or both<sup><a href="#src-3">3</a></sup>. Restoring the code copies back the backups that the prompt's snapshot lists.
 
 <figure class="wide">
@@ -120,13 +122,23 @@ The history has two limits. Claude Code keeps the 100 most recent checkpoints, a
 
 ## subagents
 
-A **subagent** is a second Claude that the main session starts to do one task. The main session calls a tool named Agent with a written task, and the subagent runs its own loop of tool calls and replies.
+A **subagent** is a second Claude that the main session starts to do one task. The main session calls a tool named Agent with a written task, the subagent runs its own loop of tool calls and replies, and its last message comes back.
 
-Each subagent starts with a fresh, isolated context window. It doesn't see your conversation history, the skills you've already invoked, or the files Claude has already read<sup><a href="#src-6">6</a></sup>. Three terms describe what it does get:
+The reason to use one is the context window. Searching a codebase or checking a claim against documentation means reading a lot of text that the main conversation has no use for afterwards. A subagent reads it in a context of its own and returns the conclusion. Independent tasks can also run side by side.
 
-- The **agent definition** is a Markdown file with frontmatter, in `.claude/agents/` for a project or `~/.claude/agents/` for all your projects. Its body becomes the subagent's system prompt, in place of Claude Code's own.
+Three terms describe the exchange:
+
+- The **agent definition** is a Markdown file with frontmatter. Its body becomes the subagent's system prompt, in place of Claude Code's own.
 - The **task** is the message the main session writes. It is the only part of your conversation the subagent ever sees.
 - The **final report** is the subagent's last message. It goes back to the main session, and nothing else does.
+
+Both handoffs lose detail. The subagent knows only what the task says, and the main session sees only what the report says. A report also sounds equally sure of itself whether the subagent was right or wrong, so a claim that matters is worth checking again in the main session.
+
+## what a subagent starts with
+
+Each subagent starts with a fresh, isolated context window. It doesn't see your conversation history, the skills you've already invoked, or the files Claude has already read<sup><a href="#src-6">6</a></sup>.
+
+It does get its own system prompt, the task, the full hierarchy of CLAUDE.md files, the git status and any skills listed in its definition. Its tools are the built-in and MCP tools of the main conversation, narrowed by the definition. Output style and auto memory from the main conversation are not loaded<sup><a href="#src-6">6</a></sup>.
 
 <figure class="wide">
 <ts-start data-fig data-label="fig 7 · what each agent starts with">
@@ -135,21 +147,37 @@ Each subagent starts with a fresh, isolated context window. It doesn't see your 
 <figcaption><b>fig 7</b>A fresh subagent starts nearly empty, and a fork starts with everything the parent has. <span class="m">From the subagents page of the docs<sup><a href="#src-6">6</a></sup>. My transcripts agree on CLAUDE.md: two general subagents had it attached at startup and a web-fetch agent didn't.</span></figcaption>
 </figure>
 
-A **fork** is the other way to start one. It inherits the parent conversation, so it needs no briefing, and it gets the parent's exact tool pool<sup><a href="#src-6">6</a></sup>. On my disk a fork's transcript begins with a `fork-context-ref` record that names the parent session and the last parent record it inherited. So a fork's file points at the parent's history, with no copy of it.
+## agent definitions
 
-Choosing between them is a trade. A fresh subagent costs a written task and loses whatever the task leaves out, and in return it reads the problem without the parent's assumptions. A fork knows everything, including the parent's mistakes, and every fork carries the full conversation in its context.
+A definition can live in five places. From highest priority to lowest: managed settings, the `--agents` flag for one session, `.claude/agents/` in a project, `~/.claude/agents/` for all your projects, and a plugin's `agents/` directory. When two definitions share a name, the higher one wins, and the name comes from the `name` field, whatever the file is called<sup><a href="#src-6">6</a></sup>.
 
-An agent definition only needs a `name` and a `description`. These are the optional fields I'd reach for first<sup><a href="#src-6">6</a></sup>:
+Only `name` and `description` are required. The description tells Claude when to delegate to this agent. These are the optional fields<sup><a href="#src-6">6</a></sup>:
 
 | field | what it sets |
 |---|---|
 | `tools`, `disallowedTools` | which tools it may use; it inherits all of them if you say nothing |
-| `model`, `effort` | which model runs it and how hard it thinks |
+| `model` | `sonnet`, `opus`, `haiku`, `fable`, a model ID, or `inherit` |
+| `effort` | how hard it thinks: `low` to `max` |
+| `permissionMode` | how it asks for permission, for example `plan` or `acceptEdits` |
+| `maxTurns` | a cap on its turns; output past the cap is marked partial |
+| `skills` | skills whose content is injected at startup |
+| `mcpServers`, `hooks` | MCP servers and lifecycle hooks scoped to this agent |
 | `memory` | a memory folder of its own: `user`, `project` or `local` |
-| `isolation: worktree` | it works in a temporary git worktree, removed if it changed nothing |
 | `background` | it runs alongside the main conversation |
-| `maxTurns` | a cap on its turns |
+| `isolation: worktree` | it works in a temporary git worktree |
 | `omitClaudeMd` | it starts without your CLAUDE.md files |
+
+Claude Code ships a few definitions of its own. **Explore** is a fast, read-only agent for searching and analyzing code, with Write and Edit denied. **Plan** is a read-only research agent used in plan mode. **General-purpose** is for multi-step tasks that need both exploration and action<sup><a href="#src-6">6</a></sup>.
+
+## fresh or fork
+
+A **fork** is the other way to start a subagent. It inherits the parent conversation, so it needs no briefing, and it gets the parent's exact tool pool. Fork mode is on by default, `/subtask` starts one by hand, and `CLAUDE_CODE_FORK_SUBAGENT=0` turns it off<sup><a href="#src-6">6</a></sup>.
+
+On my disk a fork's transcript begins with a `fork-context-ref` record that names the parent session and the last parent record it inherited. So a fork's file points at the parent's history, with no copy of it. Its meta file says `model: inherit`.
+
+A fork doesn't fill the parent's context. Its tool calls and results go to its own file like any subagent's, and the parent gets a report. What a fork costs is tokens and independence. Every fork starts with the whole conversation in its context, so five forks of a long session read that conversation five times. And a fork knows everything the parent knows, including the parent's mistakes.
+
+That decides which one to use. A second opinion on a piece of work should come from a fresh subagent that has never seen the reasoning behind it. A task that depends on everything the conversation has established goes to a fork. Only 20 of my 1,989 subagents were forks.
 
 ## a subagent is another transcript
 
@@ -157,18 +185,66 @@ A subagent's records go to `~/.claude/projects/{project}/{sessionId}/subagents/a
 
 <figure class="wide">
 <ts-life data-fig data-label="fig 8 · the life of a subagent">
-<p class="fallback">One subagent in five steps. Spawn: the main session calls the Agent tool, and Claude Code creates agent-a58d….jsonl with a meta file saying agentType claude-code-guide, spawnDepth 1, background. Work: the subagent's prompts, tool calls and results go into its own file, marked isSidechain true, and the main transcript gets only the launch result. A progress check: the main session reads the end of the subagent's file, which you can also open from /tasks. The report comes back: the subagent finishes after 58 lines and its final message arrives in the main session as a completion notification. Resume: an hour later the main session sends a second question with SendMessage, the subagent continues with its history intact, and the same file grows to 85 lines.</p>
+<p class="fallback">One subagent in five steps. Spawn: the main session calls the Agent tool, and Claude Code creates agent-a58d….jsonl with a meta file saying agentType claude-code-guide, spawnDepth 1, background. Work: the subagent's prompts, tool calls and results go into its own file, marked isSidechain true, and the main transcript gets only the launch result. A progress check: the main session reads the end of the subagent's file, which you can also open from /tasks. The report comes back: the subagent finishes after 58 lines and its final message arrives in the main session as a completion notification. Resume: an hour later the main session sends a second question with SendMessage, the subagent continues with its history intact, and the same file grows to 88 lines.</p>
 </ts-life>
-<figcaption><b>fig 8</b>A subagent writes its own file, and all it sends back to the main session is its report. <span class="m">This is the subagent that checked my last post against the docs. 58 and 85 lines, the meta fields and the resume are real. The progress check and the two counts in between are illustrative.</span></figcaption>
+<figcaption><b>fig 8</b>A subagent writes its own file, and all it sends back to the main session is its report. <span class="m">This is the subagent that checked my last post against the docs. 58 and 88 lines, the meta fields and the resume are real. The progress check and the two counts in between are illustrative.</span></figcaption>
 </figure>
+
+## what comes back
+
+The final report returns to Claude after Claude Code scans it<sup><a href="#src-6">6</a></sup>. Everything else the subagent read stays in its own file.
+
+The session behind these two posts started four subagents. The one that reviewed this post made 35 tool calls and had 170,247 tokens in its context at its largest request. Its report was 8,795 characters, about 2,200 tokens.
+
+<figure class="wide">
+<ts-return data-fig data-label="fig 9 · what a subagent reads and what it returns">
+<p class="fallback">Four subagents from one session, each with the tokens in its context at its largest request and the size of the report it returned. The docs fact-check, on Haiku: 126,566 tokens in context after 16 tool calls, and a report of about 2,400 tokens. The review of the memory post, on Fable: 167,262 tokens after 30 tool calls, and about 2,000 tokens returned. A web-fetch helper that review started, on Haiku: 84,517 tokens after 7 tool calls, and about 1,200 tokens returned. The review of this post, on Fable: 170,247 tokens after 35 tool calls, and about 2,200 tokens returned.</p>
+</ts-return>
+<figcaption><b>fig 9</b>Each subagent had between 85,000 and 170,000 tokens in its context and returned between 1 and 2% of that. <span class="m">Context sizes are the token counts logged in each subagent's transcript. Report sizes are estimated at 4 characters per token.</span></figcaption>
+</figure>
+
+**The main session paid about 2,000 tokens of context for work that took 170,000.** Had it done the same review itself, those 35 tool results would have gone into the main conversation and stayed there until the next compaction.
+
+## foreground, background and nesting
+
+A subagent runs in the foreground, where the main conversation waits for it, or in the background, where the result arrives later as a completion notification. Ctrl+B moves a running one to the background. A background subagent's permission prompts show up in your main session<sup><a href="#src-6">6</a></sup>.
+
+Subagents can start subagents, up to three layers below the main conversation, and up to 20 can run at once by default. `CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH` and `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` change those limits<sup><a href="#src-6">6</a></sup>.
+
+A subagent can also run on a different model from its parent. In my session the main conversation ran on Fable while the docs fact-check and the web-fetch helper ran on Haiku.
+
+<figure class="wide">
+<ts-tree data-fig data-label="fig 10 · one session's subagents">
+<p class="fallback">The subagents of one session as a tree. The main session, on Fable, started three subagents at depth 1, all in the background: a docs fact-check (agent type claude-code-guide, on Haiku, 88 lines, 16 tool calls, resumed once with SendMessage), a review of the memory post (general-purpose, on Fable, 134 lines, 30 tool calls) and a review of this post (general-purpose, on Fable, 167 lines, 35 tool calls). The review of the memory post started one subagent of its own at depth 2, in the foreground: a web-fetch helper on Haiku, 42 lines and 7 tool calls.</p>
+</ts-tree>
+<figcaption><b>fig 10</b>Four subagents, two models, two depths. <span class="m">Read from the meta files and transcripts in this session's <code>subagents/</code> folder. Pick an agent to see its numbers.</span></figcaption>
+</figure>
+
+Across my machine, 37 of 136 sessions used subagents and left 1,989 subagent transcripts. 1,867 were started by a main session and 122 by another subagent. 1,906 were general-purpose, 49 Explore and 20 forks, and the other 14 were web-fetch, Plan and claude-code-guide agents.
+
+## progress, resume and interruption
 
 A separate file is why a subagent's work can be watched. `/tasks` lists running subagents and Enter opens a transcript<sup><a href="#src-6">6</a></sup>, and the main session can read the same file when you ask how a subagent is doing.
 
-Resuming works the same way as for a session. Claude gets the agent's ID and continues it with `SendMessage`, and resumed subagents keep their full history<sup><a href="#src-6">6</a></sup>. If Claude Code restarts, you resume the subagent by resuming its session. Explore and Plan are one-shot and can't be resumed. Compacting the main conversation doesn't touch a subagent's transcript either, since the two histories are separate files<sup><a href="#src-6">6</a></sup>.
+Resuming works the same way as for a session. Claude gets the agent's ID and continues it with `SendMessage`, and resumed subagents keep their full history<sup><a href="#src-6">6</a></sup>. Explore and Plan are one-shot and can't be resumed.
 
-A subagent runs in the foreground, where the main conversation waits for it, or in the background, where the result arrives later as a completion notification. A background subagent's permission prompts show up in your main session. Subagents can start subagents, up to three layers below the main conversation, and up to 20 can run at once by default<sup><a href="#src-6">6</a></sup>.
+An interruption is handled through the session. If Claude Code restarts, you resume the subagent by resuming its session<sup><a href="#src-6">6</a></sup>, and a background subagent that ended with the process shows up as a note that it didn't finish<sup><a href="#src-1">1</a></sup>. A subagent you stopped yourself in `/tasks` doesn't resume on its own. Compacting the main conversation doesn't touch a subagent's transcript, since the two histories are separate files<sup><a href="#src-6">6</a></sup>.
 
-My own numbers: 37 of my 136 sessions used subagents and left 1,989 subagent transcripts. 1,867 were started by a main session and 122 by another subagent. 1,906 were general-purpose, 49 Explore and 20 forks, and the other 14 were web-fetch, Plan and claude-code-guide agents.
+## a memory of its own
+
+The main conversation's auto memory isn't loaded into a subagent. A definition can give the agent a persistent memory with the `memory` field, and the scope picks the folder<sup><a href="#src-6">6</a></sup>:
+
+| scope | folder |
+|---|---|
+| `user` | `~/.claude/agent-memory/<name>/` |
+| `project` | `.claude/agent-memory/<name>/` |
+| `local` | `.claude/agent-memory-local/<name>/` |
+
+It works like the memory from my last post<sup><a href="#src-8">8</a></sup>: the first 200 lines or 25 KB of that folder's `MEMORY.md` go into the subagent's system prompt.
+
+## isolation in a worktree
+
+With `isolation: worktree`, a subagent works in a temporary git worktree, so its edits don't touch the files the main session is working on. The worktree is branched by default from your default branch, not from the parent session's HEAD, and it is cleaned up automatically if the subagent makes no changes. A `.worktreeinclude` file lists gitignored files to copy into new worktrees<sup><a href="#src-6">6</a></sup>.
 
 ## cleanup
 
