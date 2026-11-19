@@ -101,7 +101,11 @@ Because a session is a file, resuming and branching a conversation are file oper
 
 A transcript records what was said. **File history** records what the files looked like. Before Claude Code changes a file with one of its file editing tools, it saves a copy under `~/.claude/file-history/<session-id>/`, and each prompt gets a **snapshot** record that lists which backup of each file was current at that point. A **checkpoint** is that pair: a place in the conversation plus the files as they were then.
 
-`/rewind` goes back to a checkpoint. It can restore the code, the conversation, or both<sup><a href="#src-3">3</a></sup>.
+A backup is a whole copy of the file, with a name like `88f0125b…@v3`. The first part is the same for every backup of one file, so I take it to be a hash of the file's path. The `@v3` part tells the copies apart: without it each new backup would overwrite the last, and there would be one state to go back to. In the session that wrote my last post, that post has backups `@v2` to `@v5`.
+
+A snapshot is tied to a prompt. Its `messageId` holds the `uuid` of a `user` record, and in that session all 35 snapshots pointed at one of my prompts. It is written when the prompt is sent, before Claude acts on it, so it describes the files at the start of that turn. Tool calls and replies in the middle of a turn get no snapshot of their own.
+
+`/rewind` goes back to a checkpoint. It can restore the code, the conversation, or both<sup><a href="#src-3">3</a></sup>. Restoring the code copies back the backups that the prompt's snapshot lists.
 
 <figure class="wide">
 <ts-rewind data-fig data-label="fig 6 · snapshots and rewind">
@@ -110,7 +114,9 @@ A transcript records what was said. **File history** records what the files look
 <figcaption><b>fig 6</b>A rewind restores the versions listed in that prompt's snapshot. <span class="m">The session is an example I wrote. The figure computes each version from the list of edits, and v1 stands for a file as it was before the session. The rules are from the docs<sup><a href="#src-3">3</a></sup>: file editing tools are tracked, and a file that only Bash commands changed isn't.</span></figcaption>
 </figure>
 
-Claude Code keeps the 100 most recent checkpoints, and the docs say plainly that this is not a replacement for version control<sup><a href="#src-3">3</a></sup>.
+Snapshots are bookkeeping for Claude Code and for you. They aren't sent to the model, so they cost no tokens and Claude doesn't see them while it works. Compaction leaves them alone for the same reason: it summarizes the conversation in the context, and snapshots were never in it. I haven't tested whether `/rewind` can reach a prompt from before a compaction.
+
+The history has two limits. Claude Code keeps the 100 most recent checkpoints, and a session's backups are deleted about 30 days after it last saved one<sup><a href="#src-3">3</a></sup>. Each session has a backup folder of its own. The docs say plainly that this is not a replacement for version control<sup><a href="#src-3">3</a></sup>.
 
 ## subagents
 
