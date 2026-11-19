@@ -20,9 +20,9 @@ A session leaves a few more files next to its transcript.
 
 <figure class="wide">
 <ts-folder data-fig data-label="fig 1 · the files of one session">
-<p class="fallback">The files one session leaves under ~/.claude. In projects/&lt;project&gt;/: the main transcript &lt;session-id&gt;.jsonl (757 lines and 13.7 MB on my machine); a folder &lt;session-id&gt;/subagents/ with one transcript and one small metadata file per subagent (four subagents, of 42 to 167 lines); a folder &lt;session-id&gt;/tool-results/ for tool outputs too large to keep inline (one file of 55 KB); and the project's memory folder, shared by all sessions. In file-history/&lt;session-id&gt;/: backups of files from before each edit (5 backups of 2 files). After 30 days by default, everything except memory is deleted together with the session.</p>
+<p class="fallback">The files one session leaves under ~/.claude. In projects/&lt;project&gt;/: the main transcript &lt;session-id&gt;.jsonl (757 lines and 13.7 MB on my machine); a folder &lt;session-id&gt;/subagents/ with one transcript and one small metadata file per subagent (three subagents, of 58, 134 and 42 lines); a folder &lt;session-id&gt;/tool-results/ for tool outputs too large to keep inline (one file of 55 KB); and the project's memory folder, shared by all sessions. In file-history/&lt;session-id&gt;/: backups of files from before each edit (5 backups of 2 files). After 30 days by default, everything except memory is deleted together with the session.</p>
 </ts-folder>
-<figcaption><b>fig 1</b>One session of mine and the files it left. <span class="m">Paths and sizes are from the session that wrote my last post, with ids shortened. The folder layout and the 30-day cleanup are in the docs<sup><a href="#src-5">5</a></sup>. Pick a file to see what it holds.</span></figcaption>
+<figcaption><b>fig 1</b>One session of mine and the files it left. <span class="m">Paths and sizes are from the session that wrote my last post, as they were when I first measured it, with ids shortened. The folder layout and the 30-day cleanup are in the docs<sup><a href="#src-5">5</a></sup>. Pick a file to see what it holds.</span></figcaption>
 </figure>
 
 ## one record
@@ -151,7 +151,7 @@ It does get its own system prompt, the task, the full hierarchy of CLAUDE.md fil
 
 A definition can live in five places. From highest priority to lowest: managed settings, the `--agents` flag for one session, `.claude/agents/` in a project, `~/.claude/agents/` for all your projects, and a plugin's `agents/` directory. When two definitions share a name, the higher one wins, and the name comes from the `name` field, whatever the file is called<sup><a href="#src-6">6</a></sup>.
 
-Only `name` and `description` are required. The description tells Claude when to delegate to this agent. These are the optional fields<sup><a href="#src-6">6</a></sup>:
+Only `name` and `description` are required. The description tells Claude when to delegate to this agent. These are the main optional fields<sup><a href="#src-6">6</a></sup>:
 
 | field | what it sets |
 |---|---|
@@ -177,14 +177,14 @@ A subagent gets started in four ways:
 
 - **Claude decides.** It delegates based on your request, the `description` field of each definition and the current context<sup><a href="#src-6">6</a></sup>.
 - **You name one.** There is no special syntax: name the subagent and Claude typically delegates. Typing `@` and picking it from the list also works<sup><a href="#src-6">6</a></sup>.
-- **A command does it.** A skill with `context: fork` in its frontmatter runs in a subagent. Claude Code starts a new subagent of the type set in the skill's `agent` field, `general-purpose` if there is none, and gives it the skill content as its prompt<sup><a href="#src-9">9</a></sup>. `/code-review` is one of these. On my disk each review has an `agent-….forked-skill.json` next to its meta file, with `skillName: code-review` and `effort: high`.
+- **A command does it.** A skill with `context: fork` in its frontmatter runs in a subagent. Claude Code starts a new subagent of the type set in the skill's `agent` field, `general-purpose` if there is none, and gives it the skill content as its prompt<sup><a href="#src-9">9</a></sup>. Despite the word fork in that setting, this starts a fresh subagent, and it is a different thing from the fork in the next section. `/code-review` is one of these. On my disk each review has an `agent-….forked-skill.json` next to its meta file, with `skillName: code-review` and `effort: high`.
 - **Plan mode does it.** You enter plan mode with Shift+Tab, or for a single prompt by prefixing it with `/plan`<sup><a href="#src-10">10</a></sup>. When Claude needs to understand your codebase there, it delegates research to the Plan subagent, so exploration output stays in a separate context window while the main conversation remains read-only<sup><a href="#src-6">6</a></sup>.
 
 A definition can also take over a whole session. With `claude --agent code-reviewer`, the main thread itself takes on that agent's tool restrictions and model<sup><a href="#src-6">6</a></sup>.
 
 ## fresh or fork
 
-A **fork** is the other way to start a subagent. It inherits the parent conversation, so it needs no briefing, and it gets the parent's exact tool pool. Fork mode is on by default, `/subtask` starts one by hand, and `CLAUDE_CODE_FORK_SUBAGENT=0` turns it off<sup><a href="#src-6">6</a></sup>.
+A **fork** is a subagent that starts with the parent's conversation. It needs no briefing, and it gets the parent's exact tool pool. Fork mode is on by default, `/subtask` starts one by hand, and `CLAUDE_CODE_FORK_SUBAGENT=0` turns it off<sup><a href="#src-6">6</a></sup>.
 
 On my disk a fork's transcript begins with a `fork-context-ref` record that names the parent session and the last parent record it inherited. So a fork's file points at the parent's history, with no copy of it. Its meta file says `model: inherit`.
 
@@ -200,23 +200,23 @@ A subagent's records go to `~/.claude/projects/{project}/{sessionId}/subagents/a
 <ts-life data-fig data-label="fig 8 · the life of a subagent">
 <p class="fallback">One subagent in five steps. Spawn: the main session calls the Agent tool, and Claude Code creates agent-a58d….jsonl with a meta file saying agentType claude-code-guide, spawnDepth 1, background. Work: the subagent's prompts, tool calls and results go into its own file, marked isSidechain true, and the main transcript gets only the launch result. A progress check: the main session reads the end of the subagent's file, which you can also open from /tasks. The report comes back: the subagent finishes after 58 lines and its final message arrives in the main session as a completion notification. Resume: an hour later the main session sends a second question with SendMessage, the subagent continues with its history intact, and the same file grows to 88 lines.</p>
 </ts-life>
-<figcaption><b>fig 8</b>A subagent writes its own file, and all it sends back to the main session is its report. <span class="m">This is the subagent that checked my last post against the docs. 58 and 88 lines, the meta fields and the resume are real. The progress check and the two counts in between are illustrative.</span></figcaption>
+<figcaption><b>fig 8</b>A subagent writes its own file, and all it sends back to the main session is its report. <span class="m">This is the subagent that checked my last post against the docs. 58 and 88 lines, the meta fields and the resume are real, counted after its second run. The progress check and the two counts in between are illustrative.</span></figcaption>
 </figure>
 
 ## what comes back
 
 The final report returns to Claude after Claude Code scans it<sup><a href="#src-6">6</a></sup>. Everything else the subagent read stays in its own file.
 
-The session behind these two posts started four subagents. The one that reviewed this post made 35 tool calls and had 170,247 tokens in its context at its largest request. Its report was 8,795 characters, about 2,200 tokens.
+The session behind these two posts ran four subagents: the main session started three, and one of those started a fourth. The one that reviewed this post made 35 tool calls and had 170,247 tokens in its context at its largest request. Its report was 8,795 characters, about 2,200 tokens.
 
 <figure class="wide">
 <ts-return data-fig data-label="fig 9 · what a subagent reads and what it returns">
-<p class="fallback">Four subagents from one session, each with the tokens in its context at its largest request and the size of the report it returned. The docs fact-check, on Haiku: 126,566 tokens in context after 16 tool calls, and a report of about 2,400 tokens. The review of the memory post, on Fable: 167,262 tokens after 30 tool calls, and about 2,000 tokens returned. A web-fetch helper that review started, on Haiku: 84,517 tokens after 7 tool calls, and about 1,200 tokens returned. The review of this post, on Fable: 170,247 tokens after 35 tool calls, and about 2,200 tokens returned.</p>
+<p class="fallback">Four subagents from one session, each with the tokens in its context at its largest request and the size of the report it returned. The docs fact-check, on Haiku: 126,566 tokens in context after 16 tool calls over two runs, and two reports of about 3,800 tokens together. The review of the memory post, on Fable: 167,262 tokens after 30 tool calls, and about 2,000 tokens returned. A web-fetch helper that review started, on Haiku: 84,517 tokens after 7 tool calls, and about 1,200 tokens returned. The review of this post, on Fable: 170,247 tokens after 35 tool calls, and about 2,200 tokens returned.</p>
 </ts-return>
-<figcaption><b>fig 9</b>Each subagent had between 85,000 and 170,000 tokens in its context and returned between 1 and 2% of that. <span class="m">Context sizes are the token counts logged in each subagent's transcript. Report sizes are estimated at 4 characters per token.</span></figcaption>
+<figcaption><b>fig 9</b>Each subagent had between 85,000 and 170,000 tokens in its context and returned between 1 and 3% of that. <span class="m">Context sizes are the token counts logged in each subagent's transcript. Report sizes are estimated at 4 characters per token. The fact-check row covers its first two runs.</span></figcaption>
 </figure>
 
-**The main session paid about 2,000 tokens of context for work that took 170,000.** Had it done the same review itself, those 35 tool results would have gone into the main conversation and stayed there until the next compaction.
+The main session paid about 2,200 tokens of context for a review whose own context reached 170,000. Had it done the same review itself, those 35 tool results would have gone into the main conversation and stayed there until the next compaction.
 
 ## foreground, background and nesting
 
@@ -257,7 +257,7 @@ It works like the memory from my last post<sup><a href="#src-8">8</a></sup>: the
 
 ## isolation in a worktree
 
-With `isolation: worktree`, a subagent works in a temporary git worktree, so its edits don't touch the files the main session is working on. The worktree is branched by default from your default branch, not from the parent session's HEAD, and it is cleaned up automatically if the subagent makes no changes. A `.worktreeinclude` file lists gitignored files to copy into new worktrees<sup><a href="#src-6">6</a></sup>.
+With `isolation: worktree`, a subagent works in a temporary git worktree, so its edits don't touch the files the main session is working on. The worktree is branched by default from your default branch, not from the parent session's HEAD, and it is cleaned up automatically if the subagent makes no changes<sup><a href="#src-6">6</a></sup>.
 
 ## cleanup
 

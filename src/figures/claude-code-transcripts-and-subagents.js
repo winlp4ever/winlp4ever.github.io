@@ -17,11 +17,22 @@ function chooser(fig, rows, labels, pick, start = 0) {
   go(start);
 }
 
+// the subagents of one session, as they were after the fact-check's second run:
+// [label, agent type, model, parent (index, or null for the main session), mode, transcript lines, tool calls,
+//  tokens in context at its largest request, characters of report returned, note]
+const AGENTS = [
+  ['docs fact-check', 'claude-code-guide', 'Haiku', null, 'background', 88, 16, 126566, 15358, 'resumed once with SendMessage'],
+  ['review, memory post', 'general-purpose', 'Fable', null, 'background', 134, 30, 167262, 7969, ''],
+  ['web-fetch helper', 'web-fetch', 'Haiku', 1, 'foreground', 42, 7, 84517, 4870, 'its parent waited for it'],
+  ['review, this post', 'general-purpose', 'Fable', null, 'background', 167, 35, 170247, 8795, ''],
+];
+const FACT_LINES = AGENTS[0][5];
+
 // ── fig 1 · the files one session leaves behind ────────────────────────────
 // [tree line, pill, what it is, on the author's machine, description, deleted by the 30-day sweep?]
 const FILES = [
   ['    9be769af….jsonl', 'transcript', 'the main transcript', '757 lines, 13.7 MB', 'One JSON record per line, appended while the session runs: prompts, replies, tool calls, tool results and bookkeeping.', 1],
-  ['    9be769af…/subagents/agent-a58d….jsonl', 'subagent', 'a subagent transcript', '4 subagents: 42 to 167 lines', 'Same format, one file per subagent. A subagent’s records stay in its own file and never enter the main one.', 1],
+  ['    9be769af…/subagents/agent-a58d….jsonl', 'subagent', 'a subagent transcript', '3 subagents: 58, 134 and 42 lines', 'Same format, one file per subagent. A subagent’s records stay in its own file and never enter the main one.', 1],
   ['    9be769af…/subagents/agent-a58d….meta.json', 'meta', 'subagent metadata', 'agentType, spawnDepth, model', 'A small JSON file about one subagent: its type, the task label, how deep it was spawned and whether it finished.', 1],
   ['    9be769af…/tool-results/toolu_01JJ….txt', 'tool output', 'a spilled tool output', '1 file, 55 KB', 'A tool output too large to keep inline is written here, and the transcript keeps a pointer to it.', 1],
   ['    memory/MEMORY.md', 'memory', 'auto memory', 'empty for this project', 'Notes Claude keeps across sessions. Every session of the repository shares this folder.', 0],
@@ -263,13 +274,13 @@ class TsStart extends Figure {
 }
 
 // ── fig 8 · the life of one subagent ───────────────────────────────────────
-// the docs fact-check agent of the session this post came from: 58 lines, then 88 after a resume
+// the docs fact-check agent of the session this post came from: 58 lines, then more after a resume
 const LIFE = [
   { main: ['assistant · tool_use: Agent'], lines: 0, meta: 'finished: no', text: 'The main session calls the Agent tool with a task. Claude Code creates agent-a58d….jsonl and a meta file: agentType claude-code-guide, spawnDepth 1, background.' },
   { main: ['assistant · tool_use: Agent', 'user · tool_result: launched, agent id'], lines: 31, meta: 'finished: no', text: 'The subagent works. Its prompts, tool calls and results go into its own file, marked isSidechain: true. The main transcript gets the launch result and nothing else.' },
   { main: ['assistant · tool_use: Agent', 'user · tool_result: launched, agent id', 'assistant · tool_use: Bash tail …'], lines: 44, peek: 1, meta: 'finished: no', text: 'Asked for progress, the main session reads the end of the subagent’s file. You can do the same from /tasks, where Enter opens the transcript.' },
   { main: ['assistant · tool_use: Agent', 'user · tool_result: launched, agent id', 'assistant · tool_use: Bash tail …', 'the final report, as a message'], lines: 58, back: 1, meta: 'finished: yes', text: 'The subagent finishes after 58 lines. Its final message arrives in the main session as a completion notification. The subagent sends nothing else back.' },
-  { main: ['assistant · tool_use: Agent', 'user · tool_result: launched, agent id', 'assistant · tool_use: Bash tail …', 'the final report, as a message', 'assistant · tool_use: SendMessage'], lines: 88, send: 1, meta: 'finished: yes', text: 'An hour later the main session sends it a second question with SendMessage. The subagent resumes with its history intact, and the same file grows to 88 lines.' },
+  { main: ['assistant · tool_use: Agent', 'user · tool_result: launched, agent id', 'assistant · tool_use: Bash tail …', 'the final report, as a message', 'assistant · tool_use: SendMessage'], lines: FACT_LINES, send: 1, meta: 'finished: yes', text: `An hour later the main session sends it a second question with SendMessage. The subagent resumes with its history intact, and the same file grows to ${FACT_LINES} lines.` },
 ];
 class TsLife extends Figure {
   build() {
@@ -287,7 +298,7 @@ class TsLife extends Figure {
     fill(this.lines, [f.text], 80);
     f.main.forEach((l, i) => { const last = i === f.main.length - 1; box(g, 26, 44 + i * 32, 270, 24, 'f-panel ' + (last ? 's-green' : 's-rule')); txt(g, 36, 60 + i * 32, l, last ? 't' : 't2', 10); });
     // the subagent's file as a column that fills with lines
-    const h = f.lines / 88 * 136;
+    const h = f.lines / FACT_LINES * 136;
     box(g, 356, 48, 60, 140, 'f-none s-ink3'); if (h) S('rect', { x: 358, y: 186 - h, width: 56, height: h, rx: 5, class: 'f-green' }, g);
     txt(g, 430, 64, f.lines + ' lines', 't', 12); txt(g, 430, 82, f.lines ? 'isSidechain: true' : 'file created', 't3', 10);
     txt(g, 430, 150, 'agent-a58d….meta.json', 't3', 9.5); txt(g, 430, 164, f.meta, 't2', 10);
@@ -300,23 +311,18 @@ class TsLife extends Figure {
 }
 
 // ── fig 9 · what a subagent reads and what it returns ──────────────────────
-// [who, tokens in context at its largest request, report characters, tool calls], from one session
-const RETURNS = [
-  ['docs fact-check · Haiku', 126566, 9531, 16],
-  ['review of the memory post · Fable', 167262, 7969, 30],
-  ['its web-fetch helper · Haiku', 84517, 4870, 7],
-  ['review of this post · Fable', 170247, 8795, 35],
-];
+const back = (chars) => Math.round(chars / 400) * 100; // about 4 characters per token, to the nearest hundred
 class TsReturn extends Figure {
   build() {
     const svg = this.svgRoot(600, 262, 'Four subagents: the tokens each had in context and the much smaller report each returned');
     key(svg, 20, 'f-ink3', 'tokens in the subagent’s context'); key(svg, 290, 'f-green', 'tokens returned to the main session');
-    this.rows = RETURNS.map(([n, ctx, chars, tools], i) => {
-      const y = 52 + i * 52, back = Math.round(chars / 4);
-      txt(svg, 20, y, n, 't', 11.5); txt(svg, 580, y, tools + ' tool calls', 't3', 10.5, { 'text-anchor': 'end' });
+    const top = Math.max(...AGENTS.map((a) => a[7]));
+    this.rows = AGENTS.map(([n, , model, , , , tools, ctx, chars], i) => {
+      const y = 52 + i * 52, ret = back(chars);
+      txt(svg, 20, y, `${n} · ${model}`, 't', 11.5); txt(svg, 580, y, tools + ' tool calls', 't3', 10.5, { 'text-anchor': 'end' });
       return {
-        a: S('rect', { x: 20, y: y + 7, height: 10, rx: 2, class: 'f-ink3' }, svg), at: txt(svg, 0, y + 16, ctx.toLocaleString('en'), 't2', 10.5), aw: ctx / 170247 * 440,
-        b: S('rect', { x: 20, y: y + 20, height: 10, rx: 2, class: 'f-green' }, svg), bt: txt(svg, 0, y + 29, `about ${back.toLocaleString('en')} (${(back / ctx * 100).toFixed(1)}%)`, 't', 10.5), bw: back / 170247 * 440,
+        a: S('rect', { x: 20, y: y + 7, height: 10, rx: 2, class: 'f-ink3' }, svg), at: txt(svg, 0, y + 16, ctx.toLocaleString('en'), 't2', 10.5), aw: ctx / top * 440,
+        b: S('rect', { x: 20, y: y + 20, height: 10, rx: 2, class: 'f-green' }, svg), bt: txt(svg, 0, y + 29, `about ${ret.toLocaleString('en')} (${(ret / ctx * 100).toFixed(1)}%)`, 't', 10.5), bw: ret / top * 440,
       };
     });
     entrance(this, (k) => this.rows.forEach((r, i) => {
@@ -328,27 +334,31 @@ class TsReturn extends Figure {
 }
 
 // ── fig 10 · one session's subagents as a tree ─────────────────────────────
-// [label, x, y, parent index, line 1, line 2], read from the meta files of one session
-const TREE = [
-  ['main session', 225, 20, null, 'the conversation you type into · Fable', 'it started three subagents, all in the background'],
-  ['docs fact-check', 50, 96, 0, 'claude-code-guide · Haiku · depth 1 · background', '88 lines, 16 tool calls, resumed once with SendMessage'],
-  ['review, memory post', 225, 96, 0, 'general-purpose · Fable · depth 1 · background', '134 lines, 30 tool calls, started one subagent itself'],
-  ['review, this post', 400, 96, 0, 'general-purpose · Fable · depth 1 · background', '167 lines, 35 tool calls'],
-  ['web-fetch helper', 225, 172, 2, 'web-fetch · Haiku · depth 2 · foreground', '42 lines, 7 tool calls; its parent waited for it'],
-];
+// depth, child counts, positions and the text under the tree are all derived from AGENTS
 class TsTree extends Figure {
   build() {
     const svg = this.svgRoot(600, 268, 'The subagents of one session as a tree: three started by the main session and one started by a subagent');
+    const depth = (i) => AGENTS[i][3] == null ? 1 : 1 + depth(AGENTS[i][3]);
+    const kids = (p) => AGENTS.filter((a) => a[3] === p);
+    const plural = (n) => `${['no', 'one', 'two', 'three', 'four'][n] || n} subagent${n === 1 ? '' : 's'}`;
+    const firsts = AGENTS.map((a, i) => i).filter((i) => AGENTS[i][3] == null);
+    const xOf = (i) => AGENTS[i][3] == null ? 50 + firsts.indexOf(i) * 175 : xOf(AGENTS[i][3]);
+    // node -1 is the main session
+    const nodes = [{ n: 'main session', x: 225, y: 20, p: null, a: 'the conversation you type into · Fable', b: `it started ${plural(firsts.length)}${firsts.every((i) => AGENTS[i][4] === 'background') ? ', all in the background' : ''}` },
+      ...AGENTS.map(([n, type, model, p, mode, lines, tools, , , note], i) => {
+        const k = kids(i).length, extra = [k ? `started ${plural(k)} itself` : '', note].filter(Boolean).join(', ');
+        return { n, x: xOf(i), y: 20 + depth(i) * 76, p: p == null ? 0 : p + 1, a: `${type} · ${model} · depth ${depth(i)} · ${mode}`, b: `${lines} lines, ${tools} tool calls${extra ? ', ' + extra : ''}` };
+      })];
     ['MAIN', 'DEPTH 1', 'DEPTH 2'].forEach((l, i) => txt(svg, 584, 41 + i * 76, l, 'sl', 9, { 'text-anchor': 'end' }));
-    TREE.forEach(([, x, y, p]) => { if (p != null) S('path', { d: `M${TREE[p][1] + 65} ${TREE[p][2] + 34} C${TREE[p][1] + 65} ${y - 14} ${x + 65} ${TREE[p][2] + 48} ${x + 65} ${y}`, class: 'f-none s-ink3', 'stroke-width': 1.3 }, svg); });
-    this.boxes = []; const rows = TREE.map(([n, x, y]) => {
-      const g = S('g', {}, svg); this.boxes.push(box(g, x, y, 130, 34)); txt(g, x + 65, y + 21, n, 't', 10, { 'text-anchor': 'middle' });
+    nodes.forEach(({ x, y, p }) => { if (p != null) { const q = nodes[p]; S('path', { d: `M${q.x + 65} ${q.y + 34} C${q.x + 65} ${y - 14} ${x + 65} ${q.y + 48} ${x + 65} ${y}`, class: 'f-none s-ink3', 'stroke-width': 1.3 }, svg); } });
+    const boxes = [], rows = nodes.map(({ n, x, y }) => {
+      const g = S('g', {}, svg); boxes.push(box(g, x, y, 130, 34)); txt(g, x + 65, y + 21, n, 't', 10, { 'text-anchor': 'middle' });
       return g;
     });
     this.out = [0, 1].map((i) => txt(svg, 20, 238 + i * 18, '', i ? 't2' : 't', 11.5));
-    chooser(this, rows, TREE.map((t) => t[0]), (i) => {
-      this.boxes.forEach((b, j) => b.setAttribute('class', 'f-panel ' + (j === i ? 's-green' : 's-rule')));
-      this.out[0].textContent = TREE[i][4]; this.out[1].textContent = TREE[i][5];
+    chooser(this, rows, nodes.map((t) => t.n), (i) => {
+      boxes.forEach((b, j) => b.setAttribute('class', 'f-panel ' + (j === i ? 's-green' : 's-rule')));
+      this.out[0].textContent = nodes[i].a; this.out[1].textContent = nodes[i].b;
     }, 2);
   }
 }
