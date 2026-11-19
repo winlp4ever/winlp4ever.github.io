@@ -25,6 +25,8 @@ Git is what ties a worktree to its repo. A linked worktree's `.git` is a small f
 <figcaption><b>fig 1</b>The memory folder follows the repository, and transcripts follow the directory you started in. <span class="m">The figure applies the docs' rules for memory<sup><a href="#src-1">1</a></sup> and for transcripts<sup><a href="#src-2">2</a></sup> to example paths. The dash naming is what I see on my machine; the docs don't spell out the folder name for memory.</span></figcaption>
 </figure>
 
+So git is the key and plain files are the store. Git only identifies the project. The memories sit under `~/.claude`, outside the repo, with no commits and no branches, and every branch and worktree of a checkout reads and writes one set of them.
+
 Memory is tied to a path on one machine. It isn't synced to other machines or to a cloud session<sup><a href="#src-1">1</a></sup>, and it isn't in git, so a teammate who clones my repo gets none of it. Anything a team should share belongs in `CLAUDE.md`.
 
 I ran into the path rule myself. The voice rules for this blog were saved by sessions I started in a sibling folder, `~/workspace/blog`. Sessions started in the blog's repo, `~/workspace/my-website`, load a different memory folder, and that one was empty.
