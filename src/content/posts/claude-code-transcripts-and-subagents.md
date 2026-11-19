@@ -169,6 +169,19 @@ Only `name` and `description` are required. The description tells Claude when to
 
 Claude Code ships a few definitions of its own. **Explore** is a fast, read-only agent for searching and analyzing code, with Write and Edit denied. **Plan** is a read-only research agent used in plan mode. **General-purpose** is for multi-step tasks that need both exploration and action<sup><a href="#src-6">6</a></sup>.
 
+## agent types and who starts a subagent
+
+Every subagent has an **agent type**. The main session passes it to the Agent tool as `subagent_type`, and the meta file records it as `agentType`. On my machine it is the name of the definition the subagent was started from. In fig 10 the fact-check has type `claude-code-guide`, both reviews have `general-purpose` and the helper has `web-fetch`.
+
+A subagent gets started in four ways:
+
+- **Claude decides.** It delegates based on your request, the `description` field of each definition and the current context<sup><a href="#src-6">6</a></sup>.
+- **You name one.** There is no special syntax: name the subagent and Claude typically delegates. Typing `@` and picking it from the list also works<sup><a href="#src-6">6</a></sup>.
+- **A command does it.** A skill with `context: fork` in its frontmatter runs in a subagent. Claude Code starts a new subagent of the type set in the skill's `agent` field, `general-purpose` if there is none, and gives it the skill content as its prompt<sup><a href="#src-9">9</a></sup>. `/code-review` is one of these. On my disk each review has an `agent-….forked-skill.json` next to its meta file, with `skillName: code-review` and `effort: high`.
+- **Plan mode does it.** You enter plan mode with Shift+Tab, or for a single prompt by prefixing it with `/plan`<sup><a href="#src-10">10</a></sup>. When Claude needs to understand your codebase there, it delegates research to the Plan subagent, so exploration output stays in a separate context window while the main conversation remains read-only<sup><a href="#src-6">6</a></sup>.
+
+A definition can also take over a whole session. With `claude --agent code-reviewer`, the main thread itself takes on that agent's tool restrictions and model<sup><a href="#src-6">6</a></sup>.
+
 ## fresh or fork
 
 A **fork** is the other way to start a subagent. It inherits the parent conversation, so it needs no briefing, and it gets the parent's exact tool pool. Fork mode is on by default, `/subtask` starts one by hand, and `CLAUDE_CODE_FORK_SUBAGENT=0` turns it off<sup><a href="#src-6">6</a></sup>.
@@ -263,5 +276,7 @@ So a subagent's work, a rewind point and the full text of a compacted conversati
 <li id="src-6"><a href="https://code.claude.com/docs/en/sub-agents">Claude Code docs, subagents (read 19 November 2026)</a></li>
 <li id="src-7"><a href="https://code.claude.com/docs/en/cli-reference">Claude Code docs, CLI reference (read 19 November 2026)</a></li>
 <li id="src-8"><a href="/blog/how-claude-code-memory-works/">How Claude Code's memory works (this blog, 19 November 2026)</a></li>
+<li id="src-9"><a href="https://code.claude.com/docs/en/skills">Claude Code docs, skills (read 20 November 2026)</a></li>
+<li id="src-10"><a href="https://code.claude.com/docs/en/permission-modes">Claude Code docs, permission modes (read 20 November 2026)</a></li>
 </ol>
 </details>
