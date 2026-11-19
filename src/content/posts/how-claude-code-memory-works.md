@@ -35,7 +35,7 @@ I ran into the path rule myself. The voice rules for this blog were saved by ses
 
 Each memory is a Markdown file holding one fact. The frontmatter has a name, a one-line description and a type: `user`, `feedback`, `project` or `reference`. Claude Code stamps each file with a `modified` time<sup><a href="#src-1">1</a></sup>, and on my machine also with the id of the session that wrote it. Of my 170 memory files, 84 are feedback, 78 are project notes, 6 are references and 2 describe me.
 
-Next to those files sits `MEMORY.md`, the index. It has one line per memory: a title, the file name and a short hook that says what the memory is about.
+Next to those files sits `MEMORY.md`, the index. It has one line per memory: a title, the file name and, after a dash, a few words that say what the memory is about. I call those few words the **hook**. A session sees a memory's hook without opening its file, and nothing else of it. The word is mine, and it is unrelated to Claude Code's hooks, the scripts that run on events such as a tool call.
 
 <figure class="wide">
 <mem-index data-fig data-label="fig 2 · the index and its files">
