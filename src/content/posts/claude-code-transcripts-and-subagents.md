@@ -78,7 +78,7 @@ On disk nothing is removed. Claude Code appends a `compact_boundary` record with
 
 Those two fields do different jobs at a boundary. With `parentUuid` set to null, a walk back from the leaf stops there, so only the summary and later records are loaded into context. `logicalParentUuid` keeps the link to what came before, so the full history can be traced. In the transcripts I scanned, every record that has a `logicalParentUuid` is a compaction boundary. This is my reading of the files, and the docs describe neither field.
 
- My transcripts hold 173 of these boundaries, and one of them recorded 409,043 tokens of context before it ran.
+My transcripts hold 173 of these boundaries, and one of them recorded 409,043 tokens of context before it ran.
 
 <figure class="wide">
 <ts-compact data-fig data-label="fig 5 · compaction">
