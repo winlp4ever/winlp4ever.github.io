@@ -133,6 +133,13 @@ const { name, size = 52 } = Astro.props
       <path class="ka mv" d="M19 21h9" />
     </g>
   )}
+  {name === 'log' && (
+    <g>
+      <path class="k3" d="M9 11h20 M9 19h20 M9 27h20 M9 35h20 M9 43h12" />
+      <path class="ka mv" d="M29 19 q9 0 9 8 v6" />
+      <rect class="fa" x="33" y="34" width="10" height="9" rx="1.5" />
+    </g>
+  )}
   {name === 'cursor' && (
     <g><path class="k" d="M15 15 L6 26 L15 37 M37 15 L46 26 L37 37" /><rect class="fa mv" x="21" y="17" width="10" height="18" /></g>
   )}
